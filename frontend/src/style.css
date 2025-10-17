@@ -58,6 +58,51 @@ body {
     font-weight: 600;
 }
 
+/* Phase 1.5.1: Search box */
+.search-box {
+    margin: 15px 0;
+}
+
+#search-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #2a2a2a;
+    border: 2px solid #333;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+#search-input::placeholder {
+    color: #666;
+}
+
+.stats {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.stat-item {
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    color: #aaa;
+}
+
+.stat-item.warning {
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
+}
+
 /* Liste des lames */
 .slide-list {
     list-style: none;
@@ -83,11 +128,28 @@ body {
     border-color: #4a9eff;
 }
 
+/* Phase 1.5: Header avec nom + format info */
+.slide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
 .slide-name {
     font-size: 14px;
-    margin-bottom: 4px;
     word-break: break-word;
     color: #e0e0e0;
+    flex: 1;
+}
+
+/* Phase 1.5: Format info avec icône structure */
+.slide-format-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .slide-format {
@@ -98,6 +160,63 @@ body {
     padding: 2px 6px;
     border-radius: 3px;
     font-weight: 600;
+}
+
+.slide-structure {
+    font-size: 16px;
+    line-height: 1;
+    cursor: help;
+}
+
+/* Phase 1.5: File structure details */
+.slide-details {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.file-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #aaa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: help;
+}
+
+.file-detail.joint-files {
+    background: rgba(74, 158, 255, 0.15);
+    color: #4a9eff;
+}
+
+.file-detail.companion-dirs {
+    background: rgba(255, 184, 0, 0.15);
+    color: #ffb800;
+}
+
+.file-detail.unsupported-notice {
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+/* Phase 1.5.1: Unsupported slides styling */
+.slide-item.slide-unsupported {
+    opacity: 0.7;
+    border-left: 3px solid #ff6b6b;
+}
+
+.slide-item.slide-unsupported:hover {
+    opacity: 1;
+    background: #3a2a2a;
+}
+
+.slide-format.unsupported {
+    background: #ff6b6b;
 }
 
 .empty {
