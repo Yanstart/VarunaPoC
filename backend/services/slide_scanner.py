@@ -1,95 +1,118 @@
 """
-Slide Scanner Service
-Détecte automatiquement les lames dans le dossier Slides/.
+Slide Scanner Service - Version 1.5
+Utilise FormatDetector pour détection robuste multi-format.
 
-Formats supportés:
-- .mrxs (3DHistech) - nécessite répertoire compagnon
-- .bif (Roche/Ventana)
-- .tif (Generic TIFF)
+NOUVEAUTÉ Phase 1.5:
+- Détection intelligente basée sur documentation OpenSlide officielle
+- Support complet des structures multi-fichiers (VMS, VMU, MIRAX, etc.)
+- Validation avec OpenSlide.detect_format() comme autorité finale
+- Métadonnées enrichies (structure_type, fichiers joints, etc.)
 
-Documentation:
-- pathlib: https://docs.python.org/3/library/pathlib.html
+Author: VarunaPoC Team
+Version: 1.5.0
 """
 
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 import hashlib
+import logging
+from services.format_detector import FormatDetector
+
+logger = logging.getLogger(__name__)
 
 
 def scan_slides_directory(slides_dir: str = "../Slides") -> List[Dict]:
     """
-    Scan récursif du dossier Slides/ pour détecter les lames.
+    Scan ROBUSTE avec détection de structure multi-format.
+
+    RETOURNE SEULEMENT:
+    - Lames supportées par OpenSlide
+    - Lames validées par detect_format()
+    - Avec structures complètes (fichiers joints, companions)
 
     Args:
-        slides_dir: Chemin relatif vers dossier Slides
+        slides_dir: Chemin vers dossier Slides
 
     Returns:
-        Liste de dicts:
+        Liste de dicts avec métadonnées enrichies:
         {
-            "id": str (hash du path),
-            "name": str (nom fichier),
-            "path": str (chemin absolu),
-            "format": str (extension),
-            "has_companions": bool (True si .mrxs avec dossier compagnon)
+            "id": str (hash MD5 unique),
+            "name": str (nom fichier point d'entrée),
+            "path": str (chemin absolu point d'entrée),
+            "format": str (nom lisible - "Hamamatsu VMS", "MIRAX", etc.),
+            "format_string": str (retour OpenSlide - "hamamatsu", "mirax", etc.),
+            "structure_type": str ("single-file", "multi-file", "with-companion-dir"),
+            "has_joint_files": bool,
+            "joint_files_count": int,
+            "has_companion_dirs": bool,
+            "companion_dirs_count": int,
+            "detection_method": str (méthode utilisée pour debug),
+            "is_validated": bool (toujours True - filtre fait avant),
+            "notes": str (infos additionnelles)
         }
 
     Technical Notes:
-        - Scan récursif pour supporter sous-dossiers (3Dhistec/, ROCHE/)
-        - Hash MD5 du path pour ID unique et stable
-        - Vérifie structure compagnon pour .mrxs (CRITICAL pour OpenSlide)
+        - Utilise FormatDetector basé sur https://openslide.org/formats/
+        - Seules les lames passant detect_format() sont retournées
+        - Fichiers .jpg/.dat isolés (non liés à VMS/MIRAX) sont ignorés
+        - Performance: O(n) avec n = nombre total de fichiers
     """
     slides_path = Path(slides_dir).resolve()
 
     if not slides_path.exists():
+        logger.warning(f"Slides directory not found: {slides_path}")
         return []
 
+    # Créer détecteur
+    detector = FormatDetector()
+
+    # Scan complet
+    detected_formats = detector.scan_directory(slides_path, recursive=True)
+
+    # Convertir en format API
     slides = []
-    supported_extensions = ['.mrxs', '.bif', '.tif', '.tiff']
+    for slide_format in detected_formats:
+        # Générer ID stable (hash du path point d'entrée)
+        slide_id = hashlib.md5(str(slide_format.entry_point).encode()).hexdigest()[:12]
 
-    # Scan récursif de tous les fichiers
-    for slide_file in slides_path.rglob('*'):
-        if slide_file.suffix.lower() in supported_extensions:
+        slides.append({
+            "id": slide_id,
+            "name": slide_format.entry_point.name,
+            "path": str(slide_format.entry_point),
+            "format": slide_format.name,
+            "format_string": slide_format.format_string if slide_format.format_string else "unknown",
+            "structure_type": slide_format.structure_type,
+            "has_joint_files": len(slide_format.joint_files) > 0,
+            "joint_files_count": len(slide_format.joint_files),
+            "has_companion_dirs": len(slide_format.companion_dirs) > 0,
+            "companion_dirs_count": len(slide_format.companion_dirs),
+            "detection_method": slide_format.detection_method,
+            "is_supported": slide_format.is_supported,  # Phase 1.5.1: inclure supporté/non supporté
+            "notes": slide_format.notes
+        })
 
-            # Vérifier compagnons pour .mrxs
-            # Structure attendue: slide.mrxs + slide/ (contient Slidedat.ini, Data*.dat)
-            has_companions = False
-            if slide_file.suffix.lower() == '.mrxs':
-                companion_dir = slide_file.parent / slide_file.stem
-                has_companions = companion_dir.exists() and companion_dir.is_dir()
-
-            # Générer ID unique (hash du path absolu)
-            slide_id = hashlib.md5(str(slide_file).encode()).hexdigest()[:12]
-
-            slides.append({
-                "id": slide_id,
-                "name": slide_file.name,
-                "path": str(slide_file),
-                "format": slide_file.suffix.lower().replace('.', ''),
-                "has_companions": has_companions
-            })
-
+    logger.info(f"Scan complete: {len(slides)} validated slides ready for API")
     return slides
 
 
-# Cache simple pour ID->Path mapping (évite rescans répétés)
+# Cache ID->Path (évite rescans répétés)
 _slide_cache = {}
 
 
-def get_slide_path_by_id(slide_id: str) -> str:
+def get_slide_path_by_id(slide_id: str) -> Optional[str]:
     """
-    Trouve le path d'une lame depuis son ID.
-    Utilise un cache simple pour éviter rescans répétés.
+    Trouve path depuis ID.
 
     Args:
-        slide_id: ID de la lame (hash MD5)
+        slide_id: ID unique (hash MD5)
 
     Returns:
-        str: Chemin absolu vers la lame, ou None si introuvable
+        Chemin absolu vers point d'entrée, ou None
 
     Technical Notes:
-        - Cache global rempli au premier appel
-        - Reste en mémoire pendant session serveur
+        - Cache rempli au premier appel
         - Redémarrer serveur pour forcer rescan
+        - Retourne toujours le POINT D'ENTRÉE (pas fichiers joints)
     """
     global _slide_cache
 

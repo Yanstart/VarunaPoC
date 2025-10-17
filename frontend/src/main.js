@@ -34,6 +34,10 @@ async function init() {
         <div class="container">
             <aside class="sidebar">
                 <h1>VarunaPoC</h1>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Rechercher une lame..." />
+                    <div class="stats" id="stats"></div>
+                </div>
                 <h2>Slides</h2>
                 <div id="slide-list"></div>
             </aside>
@@ -54,15 +58,55 @@ async function init() {
     try {
         const { slides } = await fetchSlides();
 
+        // Afficher stats
+        updateStats(slides, slides);
+
+        // Afficher liste
         const listContainer = document.querySelector('#slide-list');
         const list = createSlideList(slides, handleSlideClick);
         listContainer.appendChild(list);
+
+        // Ajouter filtre de recherche
+        const searchInput = document.querySelector('#search-input');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = slides.filter(s =>
+                s.name.toLowerCase().includes(query) ||
+                s.format.toLowerCase().includes(query) ||
+                (s.notes && s.notes.toLowerCase().includes(query))
+            );
+
+            // Mettre à jour liste
+            listContainer.innerHTML = '';
+            const newList = createSlideList(filtered, handleSlideClick);
+            listContainer.appendChild(newList);
+
+            // Mettre à jour stats
+            updateStats(filtered, slides);
+        });
 
     } catch (err) {
         console.error('Init failed:', err);
         document.querySelector('#app').innerHTML =
             `<div class="error">Error: ${err.message}<br><br>Is backend running? (uvicorn main:app --reload)</div>`;
     }
+}
+
+/**
+ * Met à jour les statistiques affichées.
+ *
+ * @param {Array} filtered - Lames filtrées actuellement affichées
+ * @param {Array} total - Toutes les lames
+ */
+function updateStats(filtered, total) {
+    const statsDiv = document.querySelector('#stats');
+    const supported = filtered.filter(s => s.is_supported !== false).length;
+    const unsupported = filtered.filter(s => s.is_supported === false).length;
+
+    statsDiv.innerHTML = `
+        <span class="stat-item">${filtered.length} / ${total.length} lames</span>
+        ${unsupported > 0 ? `<span class="stat-item warning">${unsupported} non supportées</span>` : ''}
+    `;
 }
 
 /**
