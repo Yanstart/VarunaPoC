@@ -1,0 +1,18 @@
+{
+  "name": "varuna-poc-frontend",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "VarunaPoC - Digital Pathology Slide Viewer Frontend",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.52.4",
+    "openseadragon": "^4.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}

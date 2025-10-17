@@ -1,3 +1,69 @@
+# =========================
+# Ignorer les fichiers d'images (toutes extensions)
+# =========================
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tif
+*.tiff
+*.svs
+*.bif
+*.mrxs
+*.ndpi
+*.vsi
+*.scn
+*.dat
+
+# =========================
+# Ignorer tout le dossier Slides et son contenu
+# =========================
+Slides/
+Slides/**
+
+# =========================
+# Fichiers temporaires et systèmes
+# =========================
+*.log
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# =========================
+# Environnements Python / IDE
+# =========================
+__pycache__/
+*.py[cod]
+.env
+.venv
+venv/
+.vscode/
+.idea/
+
+# =========================
+# Node.js / Frontend
+# =========================
+node_modules/
+package-lock.json
+.vite/
+dist/
+
+# =========================
+# Fichiers spécifiques à Git
+# =========================
+# (évite d'ignorer .gitignore lui-même)
+!.gitignore
+
+# =========================
+# Claude Code
+# =========================
+CLAUDE.md
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
