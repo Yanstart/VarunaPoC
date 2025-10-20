@@ -1,4 +1,5 @@
-# Script PowerShell pour fixer le problème npm rollup
+# Script PowerShell pour fixer le problème npm rollup car npm insatlle une version trop récente de rollup qui casse Vite.
+# Ce script supprime node_modules et package-lock.json, nettoie le cache npm, réinstalle les dépendances avec --legacy-peer-deps, puis réinstalle le module rollup
 # Exécuter avec: .\fix-npm.ps1
 
 Write-Host "================================" -ForegroundColor Cyan

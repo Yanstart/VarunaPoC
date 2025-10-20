@@ -22,7 +22,7 @@ const API_BASE = 'http://localhost:8000';
  *   - Retourne toutes lames détectées dans /Slides
  */
 export async function fetchSlides() {
-    const res = await fetch(`${API_BASE}/api/slides`);
+    const res = await fetch(`${API_BASE}/api/slides/`);
     if (!res.ok) throw new Error('Failed to fetch slides');
     return res.json();
 }
