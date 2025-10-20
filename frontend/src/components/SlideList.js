@@ -73,12 +73,34 @@ export function createSlideList(slides, onClick) {
             fileDetails += `<span class="file-detail unsupported-notice" title="${slide.notes}">⚠️ Non supporté</span>`;
         }
 
+        // Build metadata section
+        let metaInfo = '';
+        if (slide.format_string) {
+            metaInfo = `
+                <div class="slide-body">
+                    <div class="slide-meta">
+                        <span class="slide-meta-label">Format:</span>
+                        <span class="slide-meta-value"><code>${slide.format_string}</code></span>
+
+                        <span class="slide-meta-label">Structure:</span>
+                        <span class="slide-meta-value">${getStructureLabel(slide.structure_type)}</span>
+
+                        ${slide.path ? `
+                            <span class="slide-meta-label">Chemin:</span>
+                            <span class="slide-meta-value" style="word-break: break-all; font-size: 10px;">${slide.path.replace(/\\/g, '/')}</span>
+                        ` : ''}
+                    </div>
+                    ${fileDetails ? `<div class="slide-details">${fileDetails}</div>` : ''}
+                </div>
+            `;
+        }
+
         item.innerHTML = `
             <div class="slide-header">
                 <div class="slide-name" title="${slide.path}">${slide.name}</div>
                 ${formatInfo}
             </div>
-            ${fileDetails ? `<div class="slide-details">${fileDetails}</div>` : ''}
+            ${metaInfo}
         `;
 
         // Click handler
@@ -117,5 +139,24 @@ function getStructureIcon(structureType) {
             return '🗂️';
         default:
             return '❓';
+    }
+}
+
+/**
+ * Retourne label descriptif pour type de structure.
+ *
+ * @param {string} structureType - "single-file", "multi-file", "with-companion-dir"
+ * @returns {string} Label descriptif
+ */
+function getStructureLabel(structureType) {
+    switch (structureType) {
+        case 'single-file':
+            return 'Fichier unique';
+        case 'multi-file':
+            return 'Multi-fichiers';
+        case 'with-companion-dir':
+            return 'Avec dossier companion';
+        default:
+            return 'Inconnu';
     }
 }
