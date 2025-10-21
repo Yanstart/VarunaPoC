@@ -25,9 +25,50 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import slides
 
 app = FastAPI(
-    title="VarunaPoC Backend",
-    description="Digital Pathology Slide Viewer API - Phase 1 Hello World",
-    version="0.1.0"
+    title="VarunaPoC Backend API",
+    description="""
+## Digital Pathology Slide Viewer API
+
+VarunaPoC est une visionneuse web de lames histologiques haute résolution développée pour le CHU UCL Namur.
+
+### Fonctionnalités Principales
+
+* **Navigation Hiérarchique** - Explorateur de dossiers dans `/Slides`
+* **Détection Multi-Format** - Support MRXS, BIF, SVS, NDPI, TIFF et plus
+* **Streaming de Tuiles** - Chargement à la demande (pas de fichier complet en mémoire)
+* **Vendor-Neutral** - Compatible avec tous les fabricants de scanners
+
+### Endpoints Disponibles
+
+#### 🗂️ Navigation & Détection
+* `GET /api/slides/browse` - Navigation dossier par dossier
+* `GET /api/slides/` - Liste complète (scan récursif)
+
+#### 🔬 Visualisation
+* `GET /api/slides/{id}/info` - Métadonnées d'une lame
+* `GET /api/slides/{id}/overview` - Image d'aperçu (JPEG)
+
+### Documentation Complète
+
+Voir `/docs/Manuel/` pour le guide utilisateur complet.
+    """,
+    version="1.7.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "health",
+            "description": "Points de contrôle de santé du service"
+        },
+        {
+            "name": "navigation",
+            "description": "Navigation hiérarchique et détection de lames"
+        },
+        {
+            "name": "visualization",
+            "description": "Chargement et affichage des lames"
+        }
+    ]
 )
 
 # CORS pour Vite dev server (http://localhost:5173)
@@ -44,7 +85,7 @@ app.add_middleware(
 app.include_router(slides.router)
 
 
-@app.get("/")
+@app.get("/", tags=["health"])
 async def root():
     """
     Health check endpoint.
@@ -55,12 +96,18 @@ async def root():
     return {
         "service": "VarunaPoC Backend",
         "status": "running",
-        "version": "0.1.0",
-        "docs": "/docs"
+        "version": "1.7.0",
+        "docs": "/docs",
+        "endpoints": {
+            "navigation": "/api/slides/browse",
+            "list_all": "/api/slides/",
+            "slide_info": "/api/slides/{id}/info",
+            "slide_overview": "/api/slides/{id}/overview"
+        }
     }
 
 
-@app.get("/api/health")
+@app.get("/api/health", tags=["health"])
 async def health():
     """
     API health check.

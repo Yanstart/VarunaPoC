@@ -58,3 +58,26 @@ export async function getSlideInfo(slideId) {
 export function getOverviewUrl(slideId) {
     return `${API_BASE}/api/slides/${slideId}/overview`;
 }
+
+/**
+ * Navigation hiérarchique - Récupère le contenu d'un dossier.
+ *
+ * @param {string} path - Chemin relatif depuis /Slides (ex: "/", "/3DHistech")
+ * @returns {Promise<Object>} { current_path, parent_path, breadcrumb, folders, slides, files }
+ * @throws {Error} Si requête échoue ou chemin invalide
+ *
+ * Technical Notes:
+ *   - Appelle GET /api/slides/browse?path={path}
+ *   - Lecture non-récursive (un seul niveau de profondeur)
+ *   - Sécurité: path traversal bloqué par backend
+ *   - Voir docs/Manuel/02-NAVIGATION_DOSSIERS.md
+ */
+export async function fetchBrowse(path = '/') {
+    const encodedPath = encodeURIComponent(path);
+    const res = await fetch(`${API_BASE}/api/slides/browse?path=${encodedPath}`);
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(error.detail || 'Failed to browse directory');
+    }
+    return res.json();
+}
