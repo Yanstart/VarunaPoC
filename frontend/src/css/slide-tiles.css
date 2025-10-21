@@ -1,0 +1,188 @@
+/**
+ * Slide Tiles - Layout en grille pour les lames
+ */
+
+.slide-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    list-style: none;
+    padding: 0;
+}
+
+/* Tuile individuelle */
+.slide-item {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid #333;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.slide-item:hover {
+    transform: translateY(-4px);
+    border-color: #4a9eff;
+    box-shadow: 0 8px 24px rgba(74, 158, 255, 0.2);
+}
+
+.slide-item.active {
+    border-color: #4a9eff;
+    background: linear-gradient(135deg, #1a3a5a 0%, #2a4a6a 100%);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.slide-item.slide-unsupported {
+    opacity: 0.7;
+    border-left: 4px solid #ff6b6b;
+}
+
+.slide-item.slide-unsupported:hover {
+    opacity: 1;
+    background: linear-gradient(135deg, #2a1a1a 0%, #3a2a2a 100%);
+}
+
+/* En-tête de la tuile */
+.slide-header {
+    padding: 16px;
+    border-bottom: 1px solid #333;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.slide-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 8px;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+/* Badges format et structure */
+.slide-format-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.slide-format {
+    display: inline-block;
+    font-size: 11px;
+    background: #4a9eff;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.slide-format.unsupported {
+    background: #ff6b6b;
+}
+
+.slide-structure {
+    font-size: 18px;
+    line-height: 1;
+    cursor: help;
+}
+
+/* Corps de la tuile avec détails */
+.slide-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Métadonnées de la lame */
+.slide-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 12px;
+    font-size: 12px;
+}
+
+.slide-meta-label {
+    color: #888;
+    font-weight: 600;
+}
+
+.slide-meta-value {
+    color: #e0e0e0;
+}
+
+.slide-meta-value code {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+/* Détails fichiers (joints, companion) */
+.slide-details {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: auto;
+}
+
+.file-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #aaa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: help;
+}
+
+.file-detail.joint-files {
+    background: rgba(74, 158, 255, 0.15);
+    color: #4a9eff;
+}
+
+.file-detail.companion-dirs {
+    background: rgba(255, 184, 0, 0.15);
+    color: #ffb800;
+}
+
+.file-detail.unsupported-notice {
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+/* Badge dimensions */
+.slide-dimensions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(74, 158, 255, 0.1);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #4a9eff;
+    border: 1px solid rgba(74, 158, 255, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .slide-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 1400px) {
+    .slide-list {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+}
