@@ -4,23 +4,25 @@ Slides API Routes
 Endpoints pour lister et charger les lames histologiques.
 
 API Design:
-- GET /api/slides → Liste toutes les lames
+- GET /api/slides → Liste toutes les lames (scan récursif complet)
+- GET /api/browse?path={path} → Navigation hiérarchique dans /Slides
 - GET /api/slides/{id}/info → Métadonnées d'une lame
 - GET /api/slides/{id}/overview → Image overview (JPEG)
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from services.slide_scanner import scan_slides_directory, get_slide_path_by_id
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
+from services.folder_browser import browse_directory
 
-router = APIRouter(prefix="/api/slides", tags=["slides"])
+router = APIRouter(prefix="/api/slides")
 
 
-@router.get("/")
+@router.get("/", tags=["navigation"])
 async def list_slides():
     """
-    Liste toutes les lames détectées dans /Slides.
+    Liste toutes les lames détectées dans /Slides (scan récursif complet).
 
     Returns:
         {
@@ -40,12 +42,80 @@ async def list_slides():
     Technical Notes:
         - Scan récursif de /Slides et sous-dossiers
         - has_companions indique si .mrxs a son dossier compagnon
+        - Pour navigation hiérarchique, utiliser /api/browse
     """
     slides = scan_slides_directory()
     return {"count": len(slides), "slides": slides}
 
 
-@router.get("/{slide_id}/info")
+@router.get("/browse", tags=["navigation"])
+async def browse_slides_directory(path: str = Query("/", description="Chemin relatif depuis /Slides")):
+    """
+    Navigation hiérarchique dans le répertoire /Slides.
+
+    Args:
+        path: Chemin relatif depuis la racine /Slides (ex: "/", "/3DHistech", "/projects/2024")
+
+    Returns:
+        {
+            "current_path": str,           # Chemin actuel
+            "parent_path": str | null,     # Chemin parent (null si racine)
+            "breadcrumb": [str],           # Fil d'Ariane
+            "folders": [                   # Sous-dossiers
+                {
+                    "name": str,
+                    "path": str,
+                    "item_count": int      # Nombre d'items dans le dossier
+                }
+            ],
+            "slides": [                    # Lames détectées dans ce dossier
+                {
+                    "name": str,
+                    "path": str,
+                    "id": str,
+                    "format_string": str,
+                    "structure_type": str,
+                    "is_supported": bool,
+                    "notes": str,
+                    "dependencies": [str]  # Fichiers/dossiers associés
+                }
+            ],
+            "files": [                     # Fichiers non-slides (sans extension, etc.)
+                {
+                    "name": str,
+                    "extension": str | null,
+                    "is_supported": false,
+                    "notes": str
+                }
+            ]
+        }
+
+    Raises:
+        400: Chemin invalide ou tentative de path traversal
+        404: Dossier introuvable
+
+    Security:
+        - Path traversal bloqué (../ interdit)
+        - Accès limité à la racine /Slides uniquement
+
+    Technical Notes:
+        - Lecture NON récursive (un seul niveau de profondeur)
+        - Détection des slides avec format_detector
+        - Fichiers sans extension marqués non supportés
+        - Voir docs/USER_GUIDE_SLIDE_STRUCTURE.md pour règles complètes
+    """
+    try:
+        result = browse_directory(path)
+        return result
+    except PermissionError as e:
+        raise HTTPException(400, f"Invalid path: {e}")
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Error browsing directory: {e}")
+
+
+@router.get("/{slide_id}/info", tags=["visualization"])
 async def get_slide_info(slide_id: str):
     """
     Récupère métadonnées d'une lame.
@@ -82,7 +152,7 @@ async def get_slide_info(slide_id: str):
         raise HTTPException(500, str(e))
 
 
-@router.get("/{slide_id}/overview")
+@router.get("/{slide_id}/overview", tags=["visualization"])
 async def get_overview(slide_id: str):
     """
     Extrait image overview d'une lame.

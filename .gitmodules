@@ -1,0 +1,3 @@
+[submodule "openslide-patch/openslide"]
+	path = openslide-patch/openslide
+	url = https://github.com/openslide/openslide.git

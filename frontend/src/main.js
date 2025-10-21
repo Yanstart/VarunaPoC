@@ -1,38 +1,35 @@
 /**
  * VarunaPoC Frontend - Entry Point
  *
- * Architecture Phase 1.6:
- *   - Page HOME: Détection + Listing des lames
+ * Architecture Phase 1.7:
+ *   - Page HOME: Navigation hiérarchique dans /Slides (explorateur de dossiers)
  *   - Page VIEWER: Ouverture + Visualisation
  *
  * Flow:
- *   1. Charger lames depuis /Slides (récursif)
- *   2. Afficher Home page avec liste + stats
- *   3. Au clic sur lame → Navigation vers Viewer
- *   4. Viewer: Charger lame + Afficher OpenSeadragon
+ *   1. Afficher explorateur de dossiers (racine /Slides)
+ *   2. Navigation dossier par dossier (fil d'Ariane)
+ *   3. Détection lames dans dossier actuel
+ *   4. Au clic sur lame → Navigation vers Viewer
+ *   5. Viewer: Charger lame + Afficher OpenSeadragon
  */
 
 import './style.css';
-import { fetchSlides, getSlideInfo, getOverviewUrl } from './utils/api.js';
-import { createHomePage } from './components/Home.js';
+import { getSlideInfo, getOverviewUrl } from './utils/api.js';
+import { createFolderBrowser } from './components/FolderBrowser.js';
 import { initViewer, loadOverview } from './components/Viewer.js';
 
 // Global state
 let currentPage = 'home'; // 'home' | 'viewer'
-let allSlides = [];
 let selectedSlide = null;
 let viewer = null;
+let folderBrowser = null;
 
 /**
  * Initialise l'application.
  */
 async function init() {
     try {
-        // Charger toutes les lames
-        const { slides } = await fetchSlides();
-        allSlides = slides;
-
-        // Afficher page d'accueil
+        // Afficher page d'accueil (explorateur de dossiers)
         showHomePage();
 
     } catch (err) {
@@ -48,15 +45,16 @@ async function init() {
 }
 
 /**
- * Affiche la page d'accueil (liste des lames).
+ * Affiche la page d'accueil (explorateur de dossiers).
  */
 function showHomePage() {
     currentPage = 'home';
     const app = document.querySelector('#app');
     app.innerHTML = '';
 
-    const homePage = createHomePage(allSlides, handleSlideSelect);
-    app.appendChild(homePage);
+    // Créer le folder browser (charge la racine automatiquement)
+    folderBrowser = createFolderBrowser(handleSlideSelect);
+    app.appendChild(folderBrowser);
 }
 
 /**

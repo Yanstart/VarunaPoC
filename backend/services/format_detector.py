@@ -380,23 +380,57 @@ class FormatDetector:
     def _detect_ventana_bif(self, bif_file: Path) -> Optional[SlideFormat]:
         """
         Ventana BIF - Single-file.
+
+        IMPORTANT: Certains fichiers BIF peuvent être détectés mais non ouvrables.
+        Erreur connue: "Bad direction attribute LEFT" (voir docs/ERROR_BIF_DIRECTION_LEFT.md)
+
         Doc: https://openslide.org/formats/ventana/
         """
         format_str = self._validate_with_openslide(bif_file)
         if format_str is None:
             return None
 
+        # Workaround pour docs/ERROR_BIF_DIRECTION_LEFT.md
+        # Tester si le fichier peut réellement être ouvert
+        # OpenSlide.detect_format() peut réussir même si OpenSlide() échoue
+        is_openable = True
+        error_note = "Single-file BIF format"
+
+        try:
+            # Test d'ouverture réelle (pas juste détection)
+            test_slide = openslide.OpenSlide(str(bif_file))
+            test_slide.close()
+        except openslide.OpenSlideError as e:
+            error_msg = str(e)
+            if "Bad direction attribute" in error_msg:
+                # Erreur spécifique direction LEFT
+                is_openable = False
+                # Extraire la valeur de direction (LEFT, RIGHT, etc.)
+                direction = error_msg.split('"')[-2] if '"' in error_msg else "unknown"
+                error_note = f"BIF with direction={direction} (unsupported by OpenSlide - see docs/ERROR_BIF_DIRECTION_LEFT.md)"
+                logger.warning(f"BIF detected but cannot open: {bif_file.name} - {error_msg}")
+            else:
+                # Autre erreur OpenSlide
+                is_openable = False
+                error_note = f"BIF detected but OpenSlide error: {error_msg[:100]}"
+                logger.warning(f"BIF error: {bif_file.name} - {error_msg}")
+        except Exception as e:
+            # Erreur inattendue
+            is_openable = False
+            error_note = f"Unexpected error: {str(e)[:100]}"
+            logger.error(f"Unexpected BIF error: {bif_file.name} - {e}")
+
         return SlideFormat(
             name="Ventana BIF",
             entry_point=bif_file,
-            is_supported=True,
+            is_supported=is_openable,
             joint_files=[],
             companion_dirs=[],
             metadata_files=[],
             format_string=format_str,
             structure_type="single-file",
-            detection_method="OpenSlide detect_format validation",
-            notes="Single-file BIF format"
+            detection_method="OpenSlide detect_format + open test",
+            notes=error_note
         )
 
     def _detect_sakura(self, svslide_file: Path) -> Optional[SlideFormat]:
