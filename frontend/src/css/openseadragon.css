@@ -1,0 +1,20 @@
+/**
+ * OpenSeadragon Customization
+ */
+
+/* Mini-map (navigator) styling */
+.navigator {
+    border: 2px solid #4a9eff !important;
+    box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+    background: #000 !important;
+}
+
+/* Boutons OpenSeadragon */
+.openseadragon-container .openseadragon-controls {
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.openseadragon-container:hover .openseadragon-controls {
+    opacity: 1;
+}
