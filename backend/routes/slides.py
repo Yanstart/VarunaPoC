@@ -11,10 +11,11 @@ API Design:
 """
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from services.slide_scanner import scan_slides_directory, get_slide_path_by_id
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.folder_browser import browse_directory
+from services.tile_server import tile_server
 
 router = APIRouter(prefix="/api/slides")
 
@@ -181,3 +182,94 @@ async def get_overview(slide_id: str):
         return Response(content=img_bytes, media_type="image/jpeg")
     except RuntimeError as e:
         raise HTTPException(500, str(e))
+
+
+@router.get("/{slide_id}/dzi.json", tags=["visualization"])
+async def get_dzi_metadata(slide_id: str):
+    """
+    Récupère métadonnées DZI pour OpenSeadragon (streaming de tuiles).
+
+    Args:
+        slide_id: ID unique de la lame
+
+    Returns:
+        {
+            "width": int,               # Largeur niveau 0 (pixels)
+            "height": int,              # Hauteur niveau 0 (pixels)
+            "tile_size": int,           # Taille tuile (256px standard)
+            "overlap": int,             # Chevauchement tuiles (0 pour simplicité)
+            "format": "jpeg",
+            "levels": int,              # Nombre de niveaux pyramidaux
+            "level_dimensions": [[w,h], ...],   # Dimensions par niveau
+            "level_downsamples": [1.0, 2.0, ...]  # Facteurs de réduction
+        }
+
+    Raises:
+        404: Lame introuvable
+        500: Erreur OpenSlide
+
+    Technical Notes:
+        - Format compatible OpenSeadragon DziTileSource
+        - overlap=0 pour simplifier (pas de chevauchement)
+        - tile_size=256 (standard DZI/OpenSeadragon)
+        - Voir: docs/CLAUDE.md section "Coordinate Mapping"
+    """
+    slide_path = get_slide_path_by_id(slide_id)
+    if not slide_path:
+        raise HTTPException(404, f"Slide {slide_id} not found")
+
+    try:
+        metadata = tile_server.get_dzi_metadata(slide_path)
+        return JSONResponse(content=metadata)
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Error getting DZI metadata: {e}")
+
+
+@router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
+async def get_tile(slide_id: str, level: int, col: int, row: int):
+    """
+    Extrait une tuile JPEG depuis une lame (streaming à la demande).
+
+    Args:
+        slide_id: ID unique de la lame
+        level: Niveau pyramidal (0 = haute résolution, max = niveau le plus bas)
+        col: Colonne de la tuile (x / tile_size)
+        row: Ligne de la tuile (y / tile_size)
+
+    Returns:
+        Image JPEG de la tuile (256x256 pixels, quality 85)
+
+    Raises:
+        404: Lame introuvable ou tuile hors limites
+        500: Erreur OpenSlide
+
+    Technical Notes:
+        - Coordonnées tuile converties en coordonnées niveau 0 pour OpenSlide
+        - RGBA converti en RGB (OpenSlide retourne RGBA)
+        - Tuiles hors limites retournent 404 (pas d'image noire)
+        - Cache des slides ouverts (max 5 simultanés)
+        - Voir: tile_server.py pour logique d'extraction
+
+    Examples:
+        GET /api/slides/a1b2c3d4e5f6/tiles/2/5_3.jpg
+        → Tuile au niveau 2, colonne 5, ligne 3
+    """
+    slide_path = get_slide_path_by_id(slide_id)
+    if not slide_path:
+        raise HTTPException(404, f"Slide {slide_id} not found")
+
+    try:
+        tile_bytes = tile_server.get_tile(slide_path, level, col, row, tile_size=256)
+
+        if tile_bytes is None:
+            # Tuile hors limites (pas d'erreur, juste pas de contenu)
+            raise HTTPException(404, "Tile out of bounds")
+
+        return Response(content=tile_bytes, media_type="image/jpeg")
+
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Error extracting tile: {e}")
