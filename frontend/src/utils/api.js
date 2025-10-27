@@ -9,7 +9,7 @@
  *   - Erreurs HTTP propagées comme exceptions
  */
 
-const API_BASE = 'http://localhost:8000';
+export const API_BASE = 'http://localhost:8000';
 
 /**
  * Récupère liste des lames depuis backend.

@@ -1,22 +1,23 @@
 /**
  * VarunaPoC Frontend - Entry Point
  *
- * Architecture Phase 1.7:
+ * Architecture Phase 1.8:
  *   - Page HOME: Navigation hiérarchique dans /Slides (explorateur de dossiers)
- *   - Page VIEWER: Ouverture + Visualisation
+ *   - Page VIEWER: Streaming de tuiles + Navigation interactive
  *
  * Flow:
  *   1. Afficher explorateur de dossiers (racine /Slides)
  *   2. Navigation dossier par dossier (fil d'Ariane)
  *   3. Détection lames dans dossier actuel
  *   4. Au clic sur lame → Navigation vers Viewer
- *   5. Viewer: Charger lame + Afficher OpenSeadragon
+ *   5. Viewer: Charger lame avec streaming de tuiles DZI
+ *   6. Mini-carte (navigator) affiche overview pour orientation
  */
 
 import './style.css';
-import { getSlideInfo, getOverviewUrl } from './utils/api.js';
+import { getSlideInfo } from './utils/api.js';
 import { createFolderBrowser } from './components/FolderBrowser.js';
-import { initViewer, loadOverview } from './components/Viewer.js';
+import { initViewer, loadSlideWithTiles } from './components/Viewer.js';
 
 // Global state
 let currentPage = 'home'; // 'home' | 'viewer'
@@ -114,7 +115,12 @@ function handleSlideSelect(slide) {
 }
 
 /**
- * Charge une lame dans le viewer.
+ * Charge une lame dans le viewer avec streaming de tuiles.
+ *
+ * Phase 1.8: Streaming DZI
+ *   - Récupère métadonnées DZI depuis backend
+ *   - Configure OpenSeadragon pour chargement tuiles à la demande
+ *   - Mini-map affiche overview pour orientation
  *
  * @param {Object} slide - Lame à charger
  */
@@ -127,11 +133,10 @@ async function loadSlide(slide) {
         // Récupérer métadonnées
         const metadata = await getSlideInfo(slide.id);
 
-        infoPanel.innerHTML = '<div class="loading">Chargement overview...</div>';
+        infoPanel.innerHTML = '<div class="loading">Chargement tuiles (streaming DZI)...</div>';
 
-        // Charger overview dans viewer
-        const overviewUrl = getOverviewUrl(slide.id);
-        loadOverview(viewer, overviewUrl);
+        // Charger lame avec streaming de tuiles
+        await loadSlideWithTiles(viewer, slide.id);
 
         // Afficher métadonnées
         const [w, h] = metadata.dimensions;
@@ -143,7 +148,7 @@ async function loadSlide(slide) {
                 <dt>Dimensions</dt>
                 <dd>${w.toLocaleString()} × ${h.toLocaleString()} px</dd>
                 <dt>Niveaux</dt>
-                <dd>${metadata.level_count}</dd>
+                <dd>${metadata.level_count} niveaux pyramidaux</dd>
                 <dt>Structure</dt>
                 <dd>${slide.structure_type}</dd>
                 ${slide.has_joint_files ? `
@@ -156,9 +161,11 @@ async function loadSlide(slide) {
                 ` : ''}
             </dl>
             <p class="note">
-                <strong>Phase 1.6:</strong>
-                Overview affiché dans mini-map (bas-droite).
-                Navigation complète à venir en Phase 2.
+                <strong>Phase 1.8 - Streaming actif:</strong><br>
+                • Tuiles 256x256 chargées à la demande<br>
+                • ${metadata.level_count} niveaux de zoom disponibles<br>
+                • Mini-carte (bas-droite) affiche position actuelle<br>
+                • Formats supportés: .bif, .tif, .mrxs
             </p>
         `;
 
