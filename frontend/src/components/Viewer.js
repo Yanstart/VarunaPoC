@@ -107,31 +107,49 @@ export async function loadSlideWithTiles(viewer, slideId) {
         console.log(`[Viewer] DZI metadata loaded:`, dziMetadata);
 
         // 2. Configurer TileSource pour OpenSeadragon
+        // IMPORTANT: OpenSlide utilise des downsamples non-puissance-de-2 (ex: 1.0, 4.0, 16.0)
+        // Il faut implémenter getLevelScale() pour que OpenSeadragon calcule correctement
+        // le nombre de tuiles à chaque niveau
         const tileSource = {
-            // Dimensions niveau 0 (pleine résolution)
+            // Dimensions niveau 0 OpenSlide (= niveau max OpenSeadragon)
             width: dziMetadata.width,
             height: dziMetadata.height,
 
             // Configuration tuiles
-            tileSize: dziMetadata.tile_size,  // 256px standard
-            tileOverlap: dziMetadata.overlap, // 0 pour simplicité
-            format: dziMetadata.format,       // "jpeg"
+            tileSize: dziMetadata.tile_size,
+            tileOverlap: dziMetadata.overlap,
 
             // Niveaux pyramidaux
-            minLevel: 0,                      // Niveau 0 = haute résolution
-            maxLevel: dziMetadata.levels - 1, // Niveau max = overview
+            minLevel: 0,
+            maxLevel: dziMetadata.levels - 1,
+
+            // CRITIQUE: Fonction retournant le facteur d'échelle de chaque niveau
+            // OpenSeadragon utilise ça pour calculer les dimensions réelles de chaque niveau
+            getLevelScale: function(level) {
+                // Mapping: OSD level → OpenSlide level
+                const openslideLevel = dziMetadata.levels - 1 - level;
+                const downsample = dziMetadata.level_downsamples[openslideLevel];
+
+                // Retourner l'inverse du downsample (= scale factor)
+                // Exemple: downsample 4.0 → scale 0.25 (25% de la taille originale)
+                return 1.0 / downsample;
+            },
+
+            // CRITIQUE: Fonction retournant le nombre de tuiles en largeur pour un niveau
+            getNumTiles: function(level) {
+                const openslideLevel = dziMetadata.levels - 1 - level;
+                const [width, height] = dziMetadata.level_dimensions[openslideLevel];
+
+                return {
+                    x: Math.ceil(width / dziMetadata.tile_size),
+                    y: Math.ceil(height / dziMetadata.tile_size)
+                };
+            },
 
             // Fonction génération URL tuiles
-            // OpenSeadragon appelle cette fonction pour chaque tuile visible
             getTileUrl: function(level, x, y) {
-                // Mapping niveaux OpenSeadragon → OpenSlide
-                // OpenSeadragon: level 0 = bas, level max = haut
-                // OpenSlide: level 0 = haut, level max = bas
-                // Donc: openslide_level = (max_level - osd_level)
                 const openslideLevel = dziMetadata.levels - 1 - level;
-
-                const url = `${API_BASE}/api/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
-                return url;
+                return `${API_BASE}/api/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
             }
         };
 
