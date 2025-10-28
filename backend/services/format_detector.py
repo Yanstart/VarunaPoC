@@ -116,6 +116,8 @@ class FormatDetector:
             '.bif': self._detect_ventana_bif,
             '.svslide': self._detect_sakura,
             '.czi': self._detect_zeiss_czi,
+            '.zvi': self._detect_zeiss_zvi,
+            '.dcm': self._detect_dicom,
             '.tif': self._detect_tiff_variant,
             '.tiff': self._detect_tiff_variant,
         }
@@ -520,6 +522,105 @@ class FormatDetector:
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation",
             notes="Single-file CZI with embedded image pyramid"
+        )
+
+    def _detect_zeiss_zvi(self, zvi_file: Path) -> Optional[SlideFormat]:
+        """
+        Zeiss ZVI - NOT SUPPORTED by OpenSlide.
+
+        IMPORTANT: ZVI (Zeiss Vision Image) is an older Zeiss format that is
+        NOT supported by OpenSlide. Only CZI (Carl Zeiss Image) format is supported.
+
+        This detector exists to:
+        1. Identify ZVI files in the directory scan
+        2. Clearly inform users that ZVI cannot be opened
+        3. Suggest conversion to CZI or other supported formats
+
+        Doc: https://openslide.org/formats/ (Zeiss section - CZI only)
+
+        Returns:
+            SlideFormat with is_supported=False
+        """
+        logger.warning(f"ZVI format detected but NOT SUPPORTED by OpenSlide: {zvi_file.name}")
+
+        return SlideFormat(
+            name="Zeiss ZVI",
+            entry_point=zvi_file,
+            is_supported=False,
+            joint_files=[],
+            companion_dirs=[],
+            metadata_files=[],
+            format_string=None,
+            structure_type="single-file",
+            detection_method="File extension (.zvi)",
+            notes="ZVI format NOT SUPPORTED by OpenSlide (only CZI is supported). Please convert to CZI or other supported format."
+        )
+
+    # =========================================================================
+    # DICOM
+    # Doc: https://openslide.org/formats/dicom/
+    # =========================================================================
+
+    def _detect_dicom(self, dcm_file: Path) -> Optional[SlideFormat]:
+        """
+        DICOM - Whole-slide imaging format.
+
+        DICOM (Digital Imaging and Communications in Medicine) support was added
+        in OpenSlide 4.0.0.
+
+        Structure types:
+            - Single-file DICOM: One .dcm file contains complete slide
+            - Multi-file DICOM: Multiple .dcm files in same directory (linked)
+
+        IMPORTANT NOTES:
+            - DICOMDIR files are NOT entry points (just indexes)
+            - Some multi-file DICOM structures may have issues (vendor-specific)
+            - Each .dcm file is detected individually
+
+        Doc: https://openslide.org/formats/dicom/
+
+        Returns:
+            SlideFormat if valid DICOM slide, None otherwise
+        """
+        format_str = self._validate_with_openslide(dcm_file)
+        if format_str is None:
+            return None
+
+        # Test si le fichier peut réellement être ouvert
+        # Certaines structures DICOM multi-fichiers peuvent être détectées
+        # mais impossibles à ouvrir (erreurs "unexpected image")
+        is_openable = True
+        error_note = "Single DICOM file"
+
+        try:
+            test_slide = openslide.OpenSlide(str(dcm_file))
+            test_slide.close()
+        except openslide.OpenSlideError as e:
+            error_msg = str(e)
+            if "unexpected image" in error_msg.lower():
+                is_openable = False
+                error_note = f"DICOM detected but cannot open: {error_msg[:100]}"
+                logger.warning(f"DICOM error: {dcm_file.name} - {error_msg}")
+            else:
+                is_openable = False
+                error_note = f"DICOM error: {error_msg[:100]}"
+                logger.error(f"DICOM unexpected error: {dcm_file.name} - {error_msg}")
+        except Exception as e:
+            is_openable = False
+            error_note = f"Unexpected error: {str(e)[:100]}"
+            logger.error(f"DICOM unexpected error: {dcm_file.name} - {e}")
+
+        return SlideFormat(
+            name="DICOM",
+            entry_point=dcm_file,
+            is_supported=is_openable,
+            joint_files=[],
+            companion_dirs=[],
+            metadata_files=[],
+            format_string=format_str,
+            structure_type="single-file",
+            detection_method="OpenSlide detect_format validation + open test",
+            notes=error_note
         )
 
     # =========================================================================
