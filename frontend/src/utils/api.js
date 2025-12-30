@@ -9,7 +9,8 @@
  *   - Erreurs HTTP propagées comme exceptions
  */
 
-export const API_BASE = 'http://localhost:8000';
+const envApiUrl = (import.meta.env?.VITE_API_URL || '').replace(/\/$/, '');
+export const API_BASE = envApiUrl || 'http://localhost:8000';
 
 /**
  * Récupère liste des lames depuis backend.

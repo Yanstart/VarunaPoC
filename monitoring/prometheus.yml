@@ -1,0 +1,111 @@
+# Prometheus Configuration for VarunaPoC
+# WSI Performance Monitoring for Benchmarking
+
+global:
+  scrape_interval: 15s # Scrape targets every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+  scrape_timeout: 60s # Timeout after 10 seconds
+
+  # External labels attached to all time series
+  external_labels:
+    monitor: "varuna-poc"
+    environment: "chu-ucl-namur"
+    institution: "CHU UCL Namur"
+    application: "VarunaPoC"
+
+# Alertmanager configuration (optional, for production)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # ============================================================================
+  # VarunaPoC Backend - Primary metrics source
+  # ============================================================================
+  - job_name: "varuna-backend"
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: "varuna-backend"
+          tier: "application"
+
+    metrics_path: "/metrics"
+    scrape_interval: 5s # High frequency for accurate tile load metrics
+    scrape_timeout: 4s
+
+    # Relabeling for better metric organization
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "varuna_.*"
+        action: keep
+
+  # ============================================================================
+  # Prometheus Self-Monitoring
+  # ============================================================================
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: "prometheus"
+          tier: "monitoring"
+
+    scrape_interval: 30s
+    scrape_timeout: 60s
+
+  # ============================================================================
+  # Node Exporter - System Metrics (Optional - uncomment if added)
+  # ============================================================================
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+  #       labels:
+  #         service: 'node-exporter'
+  #         tier: 'infrastructure'
+  #
+  #   scrape_interval: 60s
+  #   scrape_timeout: 5s
+
+  # ============================================================================
+  # cAdvisor - Container Metrics (Optional - uncomment if added)
+  # ============================================================================
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']
+  #       labels:
+  #         service: 'cadvisor'
+  #         tier: 'infrastructure'
+  #
+  #   scrape_interval: 15s
+  #   scrape_timeout: 60s
+  #
+  #   # Filter out unnecessary metrics
+  #   metric_relabel_configs:
+  #     - source_labels: [__name__]
+  #       regex: 'container_(cpu|memory|network|fs).*'
+  #       action: keep
+
+  # ============================================================================
+  # Grafana - Monitoring the monitoring (Optional)
+  # ============================================================================
+  # - job_name: 'grafana'
+  #   static_configs:
+  #     - targets: ['grafana:3000']
+  #       labels:
+  #         service: 'grafana'
+  #         tier: 'monitoring'
+  #
+  #   scrape_interval: 30s
+  #   scrape_timeout: 60s
+# ============================================================================
+# Storage Configuration
+# ============================================================================
+# Data retention: 30 days (configured in docker-compose.yml)
+# Storage path: /prometheus (mounted volume)
+# TSDB settings: Set via command-line flags in docker-compose.yml

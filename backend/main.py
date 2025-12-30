@@ -20,9 +20,11 @@ API Docs:
 # (Nécessaire sur Windows pour trouver libopenslide-0.dll)
 import config_openslide
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import slides
+from monitoring import prometheus_middleware, metrics_endpoint
 
 app = FastAPI(
     title="VarunaPoC Backend API",
@@ -71,15 +73,30 @@ Voir `/docs/Manuel/` pour le guide utilisateur complet.
     ]
 )
 
-# CORS pour Vite dev server (http://localhost:5173)
-# IMPORTANT: Restreindre origins en production!
+# CORS configuration
+# Read from environment variable (Phase 2.1+) or use defaults (Phase 1)
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+if cors_origins_env:
+    # Phase 2.1: Read from env (comma-separated list)
+    allow_origins = [origin.strip() for origin in cors_origins_env.split(",")]
+else:
+    # Phase 1: Default localhost origins
+    allow_origins = [
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8080",  # Docker frontend
+        "http://localhost",       # Frontend on port 80
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite default port
+    allow_origins=allow_origins,
     allow_credentials=True,
-    allow_methods=["GET"],  # Read-only pour PoC
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Prometheus monitoring middleware
+app.middleware("http")(prometheus_middleware)
 
 # Routes
 app.include_router(slides.router)
@@ -117,3 +134,22 @@ async def health():
         - Pas de dépendances externes (OpenSlide, filesystem)
     """
     return {"status": "healthy"}
+
+
+@app.get("/metrics")
+async def metrics(request):
+    """
+    Prometheus metrics endpoint.
+
+    Expose metrics for Prometheus scraping including:
+    - HTTP request counts and durations
+    - Tile load times (key metric for WSI benchmarking)
+    - Time to first tile (TTFT)
+    - Slides opened by format/vendor
+
+    Technical Notes:
+        - Scraped by Prometheus every 5 seconds
+        - Metrics format: Prometheus text exposition format
+        - See monitoring.py for metric definitions
+    """
+    return await metrics_endpoint(request)

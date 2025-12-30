@@ -1,0 +1,102 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: varuna-backend-phase2.2
+    ports:
+      - "0.0.0.0:8000:8000" # Exposed on all network interfaces
+    volumes:
+      # Network share mounted via host system at /mnt/chu-slides
+      # Windows: \\imgsv-01-p\anapath_storage_nimble mounted to /mnt/chu-slides
+      - /mnt/chu-slides:/slides:ro # CHU infrastructure slides (read-only)
+      - ./backend/logs:/app/logs
+    env_file:
+      - ./backend/.env.phase2.2
+    environment:
+      - SLIDES_REPOSITORY_PATH=/slides
+      - SERVER_HOST=0.0.0.0
+      - CORS_ORIGINS=http://varun-p-01,http://localhost
+    restart: unless-stopped
+    networks:
+      - varuna-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 40s
+    # Alternative: Mount SMB share directly in container (requires cifs-utils in Dockerfile)
+    # volumes:
+    #   - type: volume
+    #     source: chu-slides
+    #     target: /slides
+    #     read_only: true
+    #     volume:
+    #       nocopy: true
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://varun-p-01:8000
+        - VITE_ENVIRONMENT=phase2.2-network-chu
+    container_name: varuna-frontend-phase2.2
+    ports:
+      - "0.0.0.0:80:80" # Exposed on all network interfaces
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - varuna-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 60s
+
+networks:
+  varuna-network:
+    driver: bridge
+# Uncomment if mounting SMB share directly in Docker
+# volumes:
+#   chu-slides:
+#     driver: local
+#     driver_opts:
+#       type: cifs
+#       o: "username=${SMB_USERNAME},password=${SMB_PASSWORD},vers=3.0,uid=1000,gid=1000"
+#       device: "//imgsv-01-p/anapath_storage_nimble"
+
+# Phase 2.2 Configuration Notes:
+# - Backend exposed on 0.0.0.0:8000 (accessible from network)
+# - Frontend exposed on 0.0.0.0:80 (accessible from network)
+# - Slides from CHU network share: \\imgsv-01-p\anapath_storage_nimble
+# - Network share must be mounted on host at /mnt/chu-slides
+# - CORS configured for http://varun-p-01
+#
+# Prerequisites:
+# - Network share mounted: \\imgsv-01-p\anapath_storage_nimble → /mnt/chu-slides
+# - SMB/CIFS credentials configured (if needed)
+# - Ports 80 and 8000 open in firewall
+# - DNS entry for varun-p-01 and imgsv-01-p
+# - Network access from server to CHU storage infrastructure
+#
+# Mounting Network Share (Windows Server):
+# net use Z: \\imgsv-01-p\anapath_storage_nimble /persistent:yes
+# Then symlink or use Z:\ as /mnt/chu-slides in Docker
+#
+# Mounting Network Share (Linux):
+# sudo mount -t cifs -o username=USER,password=PASS,vers=3.0 \
+#   //imgsv-01-p/anapath_storage_nimble /mnt/chu-slides
+#
+# Deployment:
+# ./Scripts/Deployment/deploy-phase2.2.sh
+#
+# Testing:
+# From server: ls /mnt/chu-slides (should show slides)
+# From PC client: curl http://varun-p-01/api/health
+# From PC client: Open Chrome → http://varun-p-01

@@ -16,12 +16,13 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import hashlib
 import logging
+import os
 from services.format_detector import FormatDetector
 
 logger = logging.getLogger(__name__)
 
 
-def scan_slides_directory(slides_dir: str = "../Slides") -> List[Dict]:
+def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
     """
     Scan ROBUSTE avec détection de structure multi-format.
 
@@ -57,6 +58,10 @@ def scan_slides_directory(slides_dir: str = "../Slides") -> List[Dict]:
         - Fichiers .jpg/.dat isolés (non liés à VMS/MIRAX) sont ignorés
         - Performance: O(n) avec n = nombre total de fichiers
     """
+    # Utiliser la variable d'environnement si slides_dir n'est pas fourni
+    if slides_dir is None:
+        slides_dir = os.getenv("SLIDES_REPOSITORY_PATH", "/slides")
+
     slides_path = Path(slides_dir).resolve()
 
     if not slides_path.exists():

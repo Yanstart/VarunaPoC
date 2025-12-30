@@ -18,8 +18,10 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from services.format_detector import FormatDetector
 
-# Répertoire racine des slides (configurable)
-SLIDES_ROOT = Path(__file__).parent.parent.parent / "Slides"
+# Répertoire racine des slides (configurable via env var)
+# En production Docker: SLIDES_REPOSITORY_PATH=/slides
+# En développement local: peut pointer vers ./Slides ou autre chemin
+SLIDES_ROOT = Path(os.getenv("SLIDES_REPOSITORY_PATH", "/slides"))
 
 
 def is_safe_path(requested_path: str) -> bool:

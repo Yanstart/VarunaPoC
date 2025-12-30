@@ -1,0 +1,389 @@
+{
+  "dashboard": {
+    "title": "VarunaPoC - WSI Usage Analytics",
+    "tags": ["varuna", "usage", "wsi", "analytics"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Slides Opened by Format",
+        "type": "piechart",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 9 },
+        "targets": [
+          {
+            "expr": "sum(varuna_slides_opened_total) by (slide_format)",
+            "legendFormat": "{{slide_format}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie",
+          "displayLabels": ["name", "percent"]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Slides Opened by Vendor",
+        "type": "piechart",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 9 },
+        "targets": [
+          {
+            "expr": "sum(varuna_slides_opened_total) by (vendor)",
+            "legendFormat": "{{vendor}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie",
+          "displayLabels": ["name", "percent"]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Pyramid Levels Distribution",
+        "type": "bargauge",
+        "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(varuna_pyramid_level_accessed_total) by (level)",
+            "legendFormat": "Level {{level}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 50, "color": "green" },
+                { "value": 80, "color": "yellow" }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Zoom Level Usage Distribution",
+        "type": "bargauge",
+        "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(varuna_zoom_level_used_total) by (zoom_range)",
+            "legendFormat": "{{zoom_range}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 50, "color": "green" },
+                { "value": 80, "color": "yellow" }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Slide Size Distribution (Megapixels)",
+        "type": "histogram",
+        "gridPos": { "x": 0, "y": 17, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_slide_size_megapixels_bucket[1h])) by (le)",
+            "legendFormat": "{{le}} MP",
+            "refId": "A",
+            "format": "heatmap"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {},
+          "cellGap": 2,
+          "color": {
+            "exponent": 0.5,
+            "fill": "dark-orange",
+            "mode": "scheme",
+            "reverse": false,
+            "scale": "exponential",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "exemplars": {
+            "color": "rgba(255,0,255,0.7)"
+          },
+          "filterValues": {
+            "le": 1e-9
+          },
+          "legend": {
+            "show": true
+          },
+          "rowsFrame": {
+            "layout": "auto"
+          },
+          "tooltip": {
+            "show": true,
+            "yHistogram": true
+          },
+          "yAxis": {
+            "axisPlacement": "left",
+            "reverse": false,
+            "unit": "short"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {
+                "tooltip": false,
+                "viz": false,
+                "legend": false
+              },
+              "scaleDistribution": {
+                "type": "linear"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Navigation Time per Slide (by format)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 25, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(varuna_navigation_time_seconds_bucket[1h])) by (le, slide_format))",
+            "legendFormat": "P50 - {{slide_format}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_navigation_time_seconds_bucket[1h])) by (le, slide_format))",
+            "legendFormat": "P95 - {{slide_format}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Navigation Time"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "alignAsTable": true,
+          "avg": true,
+          "current": true,
+          "max": true,
+          "min": true,
+          "values": true
+        }
+      },
+      {
+        "id": 7,
+        "title": "Format Requests Over Time",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 33, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_slide_format_requests_total[5m])) by (format)",
+            "legendFormat": "{{format}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "reqps",
+            "label": "Requests/sec"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "stack": true
+      },
+      {
+        "id": 8,
+        "title": "Total Slides Opened (Counter)",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 33, "w": 6, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(varuna_slides_opened_total)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 100, "color": "green" },
+                { "value": 1000, "color": "yellow" }
+              ]
+            },
+            "unit": "short",
+            "decimals": 0
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Slides Opened per Hour",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 33, "w": 6, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_slides_opened_total[1h])) * 3600",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 10, "color": "green" },
+                { "value": 50, "color": "yellow" }
+              ]
+            },
+            "unit": "short",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Tile Load Time Heatmap (by pyramid level)",
+        "type": "heatmap",
+        "gridPos": { "x": 0, "y": 40, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_tile_load_seconds_bucket[5m])) by (le, pyramid_level)",
+            "legendFormat": "Level {{pyramid_level}}",
+            "refId": "A",
+            "format": "heatmap"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {},
+          "cellGap": 2,
+          "color": {
+            "exponent": 0.5,
+            "fill": "dark-orange",
+            "mode": "scheme",
+            "reverse": false,
+            "scale": "exponential",
+            "scheme": "RdYlGn",
+            "steps": 128
+          },
+          "exemplars": {
+            "color": "rgba(255,0,255,0.7)"
+          },
+          "filterValues": {
+            "le": 1e-9
+          },
+          "legend": {
+            "show": true
+          },
+          "rowsFrame": {
+            "layout": "auto"
+          },
+          "tooltip": {
+            "show": true,
+            "yHistogram": true
+          },
+          "yAxis": {
+            "axisPlacement": "left",
+            "reverse": false,
+            "unit": "s"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {
+                "tooltip": false,
+                "viz": false,
+                "legend": false
+              },
+              "scaleDistribution": {
+                "type": "linear"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

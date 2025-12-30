@@ -1,0 +1,154 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: varuna-backend-phase2.1
+    ports:
+      - "0.0.0.0:8000:8000" # Exposed on all network interfaces
+    volumes:
+      # Chemin relatif (portable Windows/Linux)
+      - ./Slides:/slides:ro
+      - ./backend/logs:/app/logs
+    env_file:
+      - ./backend/.env.phase2.1
+    environment:
+      - SLIDES_REPOSITORY_PATH=/slides
+      - SERVER_HOST=0.0.0.0
+      - CORS_ORIGINS=http://172.0.0.135:8080,http://172.0.0.135,http://localhost:8080,http://localhost,http://localhost:5173
+    restart: unless-stopped
+    networks:
+      - varuna-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://172.0.0.135:8000
+        - VITE_ENVIRONMENT=phase2.1-network
+    container_name: varuna-frontend-phase2.1
+    ports:
+      - "0.0.0.0:8080:80" # Port 80 blocked by Windows, using 8080
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - varuna-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 60s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: varuna-prometheus-phase2.1
+    ports:
+      - "0.0.0.0:9090:9090" # Exposed on all network interfaces
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - varuna-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9090/-/healthy",
+        ]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 60s
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: varuna-grafana-phase2.1
+    ports:
+      - "0.0.0.0:3001:3000" # Port 3000 already in use, using 3001
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=varuna2024
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://172.0.0.135:3001
+      - GF_INSTALL_PLUGINS=
+    depends_on:
+      - prometheus
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 20s
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+networks:
+  varuna-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+    name: varuna-prometheus-phase2.1-data
+  grafana-data:
+    name: varuna-grafana-phase2.1-data
+# Phase 2.1 Configuration Notes:
+# - Backend exposed on 0.0.0.0:8000 (accessible from network)
+# - Frontend exposed on 0.0.0.0:80 (accessible from network)
+# - Prometheus exposed on 0.0.0.0:9090 (accessible from network)
+# - Grafana exposed on 0.0.0.0:3000 (accessible from network)
+# - Slides from local mount: /local/slides
+# - CORS configured for http://varun-p-01
+# - Network name: varun-p-01 (must be resolvable via DNS or hosts file)
+#
+# Prerequisites:
+# - Local slides directory mounted at /local/slides
+# - Ports 80, 8000, 3000, and 9090 open in firewall
+# - DNS entry for varun-p-01 or hosts file entry
+# - Network access from PC clients to server
+#
+# Deployment:
+# ./Scripts/Deployment/deploy-phase2.1.sh
+#
+# Testing:
+# From PC client: curl http://varun-p-01/api/health
+# From PC client: Open Chrome → http://varun-p-01
+# From PC client: View metrics → http://varun-p-01:9090
+# From PC client: View dashboards → http://varun-p-01:3000 (admin/varuna2024)

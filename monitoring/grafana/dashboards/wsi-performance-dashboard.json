@@ -1,0 +1,402 @@
+{
+  "dashboard": {
+    "title": "VarunaPoC - WSI Performance",
+    "tags": ["varuna", "performance", "wsi", "benchmark"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Tile Load Time (P50, P95, P99) - CRITICAL METRIC",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(varuna_tile_load_seconds_bucket[1m])) by (le, slide_format))",
+            "legendFormat": "P50 - {{slide_format}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_tile_load_seconds_bucket[1m])) by (le, slide_format))",
+            "legendFormat": "P95 - {{slide_format}}",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(varuna_tile_load_seconds_bucket[1m])) by (le, slide_format))",
+            "legendFormat": "P99 - {{slide_format}}",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Time (seconds)",
+            "logBase": 1
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "tooltip": {
+          "shared": true,
+          "sort": 0,
+          "value_type": "individual"
+        },
+        "legend": {
+          "show": true,
+          "alignAsTable": true,
+          "avg": true,
+          "current": true,
+          "max": true,
+          "min": true,
+          "values": true
+        }
+      },
+      {
+        "id": 2,
+        "title": "Time to First Tile (TTFT)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(varuna_time_to_first_tile_seconds_bucket[5m])) by (le, slide_format))",
+            "legendFormat": "P50 - {{slide_format}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_time_to_first_tile_seconds_bucket[5m])) by (le, slide_format))",
+            "legendFormat": "P95 - {{slide_format}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Time (seconds)"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2
+      },
+      {
+        "id": 3,
+        "title": "Requests per Second",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 8, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_http_requests_total[1m]))",
+            "legendFormat": "Total RPS",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(varuna_http_requests_total{endpoint=~\".*tile.*\"}[1m]))",
+            "legendFormat": "Tile RPS",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "reqps",
+            "label": "Requests/sec"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 15, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_errors_total[1m])) by (error_type)",
+            "legendFormat": "{{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ops",
+            "label": "Errors/sec"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.1],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "High Error Rate",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 5,
+        "title": "Concurrent Users",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 15, "w": 6, "h": 7 },
+        "targets": [
+          {
+            "expr": "varuna_concurrent_users",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 50, "color": "yellow" },
+                { "value": 80, "color": "red" }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Slides in Memory",
+        "type": "gauge",
+        "gridPos": { "x": 18, "y": 15, "w": 6, "h": 7 },
+        "targets": [
+          {
+            "expr": "varuna_active_slides",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 50,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 30, "color": "yellow" },
+                { "value": 40, "color": "red" }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Competitor Comparison - Tile Load Time (P95)",
+        "type": "bargauge",
+        "gridPos": { "x": 0, "y": 22, "w": 24, "h": 8 },
+        "description": "Comparison with commercial WSI viewers (target: < 100ms P95)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_tile_load_seconds_bucket[5m])) by (le))",
+            "legendFormat": "VarunaPoC (Current)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 0.5,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 0.1, "color": "yellow" },
+                { "value": 0.2, "color": "red" }
+              ]
+            },
+            "unit": "s",
+            "decimals": 3
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "seriesToRows",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "API Response Time by Endpoint",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 30, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_http_request_duration_seconds_bucket[1m])) by (le, endpoint))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Response Time (P95)"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2
+      },
+      {
+        "id": 9,
+        "title": "Storage Read Time by Operation",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 30, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_storage_read_seconds_bucket[1m])) by (le, operation))",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Read Time (P95)"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2
+      },
+      {
+        "id": 10,
+        "title": "Cache Hit Rate",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 37, "w": 8, "h": 5 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_tile_cache_hits_total[5m])) / (sum(rate(varuna_tile_cache_hits_total[5m])) + sum(rate(varuna_tile_cache_misses_total[5m]))) * 100",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 50, "color": "yellow" },
+                { "value": 80, "color": "green" }
+              ]
+            },
+            "unit": "percent",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Network Bandwidth",
+        "type": "graph",
+        "gridPos": { "x": 8, "y": 37, "w": 16, "h": 5 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_bandwidth_bytes_total{direction=\"sent\"}[1m]))",
+            "legendFormat": "Sent",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(varuna_bandwidth_bytes_total{direction=\"received\"}[1m]))",
+            "legendFormat": "Received",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "Bps",
+            "label": "Bytes/sec"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2
+      }
+    ]
+  }
+}

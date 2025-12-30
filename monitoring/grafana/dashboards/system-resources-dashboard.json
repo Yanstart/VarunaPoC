@@ -1,0 +1,458 @@
+{
+  "dashboard": {
+    "title": "VarunaPoC - System Resources",
+    "tags": ["varuna", "system", "resources", "infrastructure"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "60s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "OpenSlide Cache Size",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "varuna_openslide_cache_size",
+            "legendFormat": "Cached Slides",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Number of Slides"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [40],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "High Cache Usage",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 2,
+        "title": "Slide Cache Memory Usage",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "varuna_slide_cache_memory_bytes",
+            "legendFormat": "Cache Memory",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "bytes",
+            "label": "Memory Usage"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2
+      },
+      {
+        "id": 3,
+        "title": "Storage Network Latency",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(varuna_storage_network_latency_seconds_bucket[1m])) by (le, storage_type))",
+            "legendFormat": "P50 - {{storage_type}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_storage_network_latency_seconds_bucket[1m])) by (le, storage_type))",
+            "legendFormat": "P95 - {{storage_type}}",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(varuna_storage_network_latency_seconds_bucket[1m])) by (le, storage_type))",
+            "legendFormat": "P99 - {{storage_type}}",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Latency",
+            "logBase": 1
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "alignAsTable": true,
+          "avg": true,
+          "current": true,
+          "max": true,
+          "values": true
+        }
+      },
+      {
+        "id": 4,
+        "title": "Storage Read Time by Operation Type",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(varuna_storage_read_seconds_bucket[1m])) by (le, operation))",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Read Time (P95)"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "alignAsTable": true,
+          "avg": true,
+          "current": true,
+          "max": true,
+          "values": true
+        }
+      },
+      {
+        "id": 5,
+        "title": "Network Bandwidth Utilization",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 15, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_bandwidth_bytes_total{direction=\"sent\"}[1m]))",
+            "legendFormat": "Sent",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(varuna_bandwidth_bytes_total{direction=\"received\"}[1m]))",
+            "legendFormat": "Received",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(varuna_bandwidth_bytes_total{direction=\"sent\", content_type=\"tile\"}[1m]))",
+            "legendFormat": "Sent (Tiles)",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "Bps",
+            "label": "Bandwidth"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "alignAsTable": true,
+          "avg": true,
+          "current": true,
+          "max": true,
+          "values": true
+        }
+      },
+      {
+        "id": 6,
+        "title": "Network Errors Rate",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 23, "w": 12, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_network_errors_total[1m])) by (error_type, storage_type)",
+            "legendFormat": "{{error_type}} - {{storage_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ops",
+            "label": "Errors/sec"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.01],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "Network Errors Detected",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 7,
+        "title": "Total Bandwidth Transferred",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 23, "w": 6, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(varuna_bandwidth_bytes_total)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 1e9, "color": "green" },
+                { "value": 1e12, "color": "yellow" }
+              ]
+            },
+            "unit": "bytes",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Current Bandwidth Rate",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 23, "w": 6, "h": 7 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_bandwidth_bytes_total[1m]))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 1e6, "color": "green" },
+                { "value": 1e8, "color": "yellow" }
+              ]
+            },
+            "unit": "Bps",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Request Duration Distribution",
+        "type": "heatmap",
+        "gridPos": { "x": 0, "y": 30, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_http_request_duration_seconds_bucket[5m])) by (le)",
+            "legendFormat": "{{le}}s",
+            "refId": "A",
+            "format": "heatmap"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {},
+          "cellGap": 2,
+          "color": {
+            "exponent": 0.5,
+            "fill": "dark-orange",
+            "mode": "scheme",
+            "reverse": false,
+            "scale": "exponential",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "exemplars": {
+            "color": "rgba(255,0,255,0.7)"
+          },
+          "filterValues": {
+            "le": 1e-9
+          },
+          "legend": {
+            "show": true
+          },
+          "rowsFrame": {
+            "layout": "auto"
+          },
+          "tooltip": {
+            "show": true,
+            "yHistogram": true
+          },
+          "yAxis": {
+            "axisPlacement": "left",
+            "reverse": false,
+            "unit": "s"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {
+                "tooltip": false,
+                "viz": false,
+                "legend": false
+              },
+              "scaleDistribution": {
+                "type": "linear"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Cache Performance Summary",
+        "type": "table",
+        "gridPos": { "x": 0, "y": 38, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(varuna_tile_cache_hits_total[5m])) by (cache_type)",
+            "legendFormat": "{{cache_type}} - Hits",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "sum(rate(varuna_tile_cache_misses_total[5m]))",
+            "legendFormat": "Misses",
+            "refId": "B",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "sum(rate(varuna_tile_cache_hits_total[5m])) / (sum(rate(varuna_tile_cache_hits_total[5m])) + sum(rate(varuna_tile_cache_misses_total[5m]))) * 100",
+            "legendFormat": "Hit Rate %",
+            "refId": "C",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": []
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 50, "color": "yellow" },
+                { "value": 80, "color": "green" }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
