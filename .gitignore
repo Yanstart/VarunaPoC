@@ -44,6 +44,15 @@ __pycache__/
 venv/
 .vscode/
 .idea/
+# *.md  # DISABLED: We need to track markdown docs
+*.ipynb
+*.pdf
+# *.Claude  # DISABLED: Was blocking .claude/ directory
+# *.claude  # DISABLED: We need to track .claude/ orchestration directory
+
+# Explicitly track .claude/ orchestration directory
+!.claude/
+!.claude/**
 
 # =========================
 # Node.js / Frontend
@@ -60,9 +69,9 @@ dist/
 !.gitignore
 
 # =========================
-# Claude Code
+# Claude Code - Track .claude/ orchestration but ignore CLAUDE.md (too large)
 # =========================
-CLAUDE.md
+# CLAUDE.md  # DISABLED: Important project config, should be tracked
 
 
 
