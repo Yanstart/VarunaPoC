@@ -1,10 +1,23 @@
 /**
  * VarunaPoC - Frontend Styles
  * Main entry point - imports all modular CSS files
+ *
+ * Import order matters:
+ * 1. Variables (CSS custom properties)
+ * 2. Base (reset, foundations)
+ * 3. Component styles
+ * 4. Layout styles
  */
 
+/* 1. CSS Variables - Theme configuration */
+@import './css/variables.css';
+
+/* 2. Base styles - Reset and foundations */
 @import './css/base.css';
 @import './css/home.css';
 @import './css/slide-tiles.css';
 @import './css/viewer.css';
 @import './css/openseadragon.css';
+
+/* 4. Layout styles - Multi-viewer layouts */
+@import './css/layouts/compare-layout.css';

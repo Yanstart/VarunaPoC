@@ -1,0 +1,503 @@
+/**
+ * Compare Layout - CSS Grid styles for multi-viewer layouts
+ *
+ * Provides responsive grid layouts for 1, 2, 4, or more viewers.
+ * Uses CSS Grid for flexible and equal-sized panels.
+ *
+ * @module css/layouts/compare-layout
+ */
+
+/* ==========================================
+ * COMPARE LAYOUT CONTAINER
+ * ========================================== */
+
+.compare-layout {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    gap: var(--grid-gap, 8px);
+    padding: var(--spacing-sm);
+    background: var(--color-bg-base);
+    box-sizing: border-box;
+}
+
+/* ==========================================
+ * LAYOUT PRESETS
+ * ========================================== */
+
+/* Single viewer (1x1) */
+.compare-layout[data-layout="single"],
+.compare-layout.layout-1x1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+
+/* Side by side (2x1) */
+.compare-layout[data-layout="side-by-side"],
+.compare-layout.layout-2x1 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr;
+}
+
+/* Stacked (1x2) */
+.compare-layout[data-layout="stacked"],
+.compare-layout.layout-1x2 {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, 1fr);
+}
+
+/* Grid 2x2 */
+.compare-layout[data-layout="grid-2x2"],
+.compare-layout.layout-2x2 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+}
+
+/* Grid 3x2 */
+.compare-layout[data-layout="grid-3x2"],
+.compare-layout.layout-3x2 {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+}
+
+/* Grid 3x3 */
+.compare-layout[data-layout="grid-3x3"],
+.compare-layout.layout-3x3 {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+}
+
+/* ==========================================
+ * VIEWER PANEL
+ * ========================================== */
+
+.viewer-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--viewer-panel-border);
+    border-radius: var(--viewer-panel-radius);
+    overflow: hidden;
+    transition: border-color var(--transition-fast);
+}
+
+/* Active panel highlight */
+.viewer-panel.is-active {
+    border-color: var(--viewer-active-border);
+    box-shadow: var(--shadow-glow);
+}
+
+/* Synced indicator */
+.viewer-panel.is-synced::after {
+    content: '';
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    width: var(--sync-indicator-size);
+    height: var(--sync-indicator-size);
+    background: var(--viewer-synced-indicator);
+    border-radius: var(--radius-full);
+    z-index: 10;
+}
+
+/* ==========================================
+ * VIEWER PANEL HEADER
+ * ========================================== */
+
+.viewer-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--viewer-header-height);
+    padding: 0 var(--spacing-md);
+    background: var(--viewer-header-bg);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.viewer-panel-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+}
+
+.viewer-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.viewer-panel-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.viewer-panel-action:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.viewer-panel-action:active {
+    background: var(--color-bg-active);
+}
+
+/* ==========================================
+ * VIEWER CONTAINER
+ * ========================================== */
+
+.viewer-container {
+    flex: 1;
+    position: relative;
+    background: var(--viewer-bg);
+    overflow: hidden;
+}
+
+/* Empty state */
+.viewer-container.is-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viewer-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.viewer-empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+}
+
+.viewer-empty-text {
+    font-size: var(--font-size-md);
+}
+
+.viewer-empty-action {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.viewer-empty-action:hover {
+    background: var(--color-primary-light);
+}
+
+/* Loading state */
+.viewer-container.is-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 3px solid var(--color-bg-overlay);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 100;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.viewer-container.is-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viewer-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xl);
+    color: var(--color-error);
+    text-align: center;
+}
+
+.viewer-error-icon {
+    font-size: 36px;
+}
+
+.viewer-error-text {
+    font-size: var(--font-size-sm);
+    max-width: 300px;
+}
+
+/* ==========================================
+ * SYNC CONTROLS
+ * ========================================== */
+
+.sync-controls {
+    position: fixed;
+    bottom: var(--spacing-xl);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-sticky);
+}
+
+.sync-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sync-button-size);
+    height: var(--sync-button-size);
+    padding: 0;
+    background: transparent;
+    border: 2px solid var(--sync-disabled-color);
+    border-radius: var(--radius-full);
+    color: var(--sync-disabled-color);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.sync-button:hover {
+    border-color: var(--color-text-secondary);
+    color: var(--color-text-secondary);
+}
+
+.sync-button.is-active {
+    border-color: var(--sync-enabled-color);
+    background: var(--color-success-alpha-10);
+    color: var(--sync-enabled-color);
+}
+
+.sync-button.is-active:hover {
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.sync-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.sync-status {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* ==========================================
+ * LAYOUT SELECTOR
+ * ========================================== */
+
+.layout-selector {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.layout-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.layout-option:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-alpha-10);
+}
+
+.layout-option.is-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-alpha-20);
+}
+
+.layout-option-icon {
+    display: grid;
+    gap: 2px;
+}
+
+.layout-option[data-layout="1x1"] .layout-option-icon {
+    grid-template-columns: 1fr;
+}
+
+.layout-option[data-layout="2x1"] .layout-option-icon {
+    grid-template-columns: repeat(2, 8px);
+}
+
+.layout-option[data-layout="2x2"] .layout-option-icon {
+    grid-template-columns: repeat(2, 8px);
+    grid-template-rows: repeat(2, 8px);
+}
+
+.layout-cell {
+    width: 8px;
+    height: 8px;
+    background: var(--color-text-muted);
+    border-radius: 1px;
+}
+
+.layout-option.is-active .layout-cell {
+    background: var(--color-primary);
+}
+
+/* ==========================================
+ * SLIDE SELECTOR DROPDOWN
+ * ========================================== */
+
+.slide-selector {
+    position: relative;
+}
+
+.slide-selector-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-bg-overlay);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.slide-selector-trigger:hover {
+    border-color: var(--color-primary);
+}
+
+.slide-selector-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--spacing-xs);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: var(--z-dropdown);
+}
+
+.slide-selector-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.slide-selector-option:hover {
+    background: var(--color-bg-hover);
+}
+
+.slide-selector-option.is-selected {
+    background: var(--color-primary-alpha-10);
+    color: var(--color-primary);
+}
+
+/* ==========================================
+ * RESPONSIVE ADJUSTMENTS
+ * ========================================== */
+
+@media (max-width: 768px) {
+    .compare-layout {
+        padding: var(--spacing-xs);
+        gap: var(--spacing-xs);
+    }
+
+    .viewer-panel-header {
+        height: 32px;
+        padding: 0 var(--spacing-sm);
+    }
+
+    .viewer-panel-title {
+        font-size: var(--font-size-xs);
+    }
+
+    .sync-controls {
+        bottom: var(--spacing-md);
+        padding: var(--spacing-xs) var(--spacing-md);
+    }
+
+    .sync-button {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* ==========================================
+ * ANIMATIONS
+ * ========================================== */
+
+.viewer-panel {
+    animation: fadeIn var(--transition-normal);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Slide selector dropdown animation */
+.slide-selector-dropdown {
+    animation: slideDown var(--transition-fast);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

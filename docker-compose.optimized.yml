@@ -1,0 +1,300 @@
+# VarunaPoC - Phase 2.5: Optimized Docker Compose
+# Production-ready configuration with caching, load balancing, and monitoring
+# Version: 1.0
+# Date: 2025-12-31
+
+version: "3.8"
+
+services:
+  # ============================================================================
+  # REVERSE PROXY + LOAD BALANCER
+  # ============================================================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: varuna-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+      backend-1:
+        condition: service_healthy
+      backend-2:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ============================================================================
+  # BACKEND REPLICAS (HIGH AVAILABILITY)
+  # ============================================================================
+  backend-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: varuna-backend-1
+    expose:
+      - "8000"
+    volumes:
+      - /mnt/chu-slides:/slides:ro
+      - ./backend/logs:/app/logs
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SLIDES_REPOSITORY_PATH=/slides
+      - INSTANCE_ID=backend-1
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  backend-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: varuna-backend-2
+    expose:
+      - "8000"
+    volumes:
+      - /mnt/chu-slides:/slides:ro
+      - ./backend/logs:/app/logs
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SLIDES_REPOSITORY_PATH=/slides
+      - INSTANCE_ID=backend-2
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # ============================================================================
+  # REDIS CACHE (TILE CACHING)
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: varuna-redis
+    command: >
+      redis-server
+      --maxmemory 4gb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+      --tcp-backlog 511
+      --tcp-keepalive 300
+      --timeout 0
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 4.5G
+        reservations:
+          cpus: '0.5'
+          memory: 4G
+
+  # ============================================================================
+  # MONITORING - PROMETHEUS
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: varuna-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # MONITORING - GRAFANA
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: varuna-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # REDIS EXPORTER (METRICS)
+  # ============================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0-alpine
+    container_name: varuna-redis-exporter
+    command:
+      - '--redis.addr=redis:6379'
+    expose:
+      - "9121"
+    depends_on:
+      - redis
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # NGINX EXPORTER (METRICS)
+  # ============================================================================
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.0.0
+    container_name: varuna-nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/nginx_status'
+    expose:
+      - "9113"
+    depends_on:
+      - nginx
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+# ==============================================================================
+# NETWORKS
+# ==============================================================================
+networks:
+  varuna-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ==============================================================================
+# VOLUMES
+# ==============================================================================
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  nginx-cache:
+    driver: local
+
+# ==============================================================================
+# DEPLOYMENT INSTRUCTIONS
+# ==============================================================================
+#
+# 1. Prerequisites:
+#    - Docker 24.0+ and docker-compose 2.20+
+#    - NAS mounted at /mnt/chu-slides
+#    - Ports 80, 443, 3000, 9090 available
+#
+# 2. Create .env.production:
+#    cp backend/.env.example backend/.env.production
+#    Edit: REDIS_URL, SLIDES_REPOSITORY_PATH, etc.
+#
+# 3. Build and start:
+#    docker-compose -f docker-compose.optimized.yml build
+#    docker-compose -f docker-compose.optimized.yml up -d
+#
+# 4. Verify:
+#    docker-compose -f docker-compose.optimized.yml ps
+#    curl http://localhost/api/health
+#    Open browser: http://localhost:3000 (Grafana)
+#
+# 5. Monitoring:
+#    - Grafana: http://localhost:3000 (admin/admin)
+#    - Prometheus: http://localhost:9090
+#    - Backend Metrics: http://localhost:8000/metrics
+#
+# 6. Logs:
+#    docker-compose -f docker-compose.optimized.yml logs -f backend-1
+#
+# 7. Stop:
+#    docker-compose -f docker-compose.optimized.yml down
+#
+# 8. Clean (WARNING: deletes data):
+#    docker-compose -f docker-compose.optimized.yml down -v

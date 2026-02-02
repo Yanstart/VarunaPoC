@@ -1,0 +1,303 @@
+# ml_routes.yaml
+# Configuration du routage ML basé sur tags
+# Référence: docs/MLOPS_ARCHITECTURE.md Section 2
+
+# ============================================================================
+# MODÈLES SPÉCIALISÉS
+# ============================================================================
+
+routes:
+  # --------------------------------------------------------------------------
+  # PROSTATE - Gleason Grading
+  # --------------------------------------------------------------------------
+  - model_id: "gleason_grading_v2"
+    model_name: "Gleason Grading Model"
+    model_version: "2.1.0"
+    model_path: "models:/gleason_grading/production"  # MLflow registry path
+
+    # Priorité (100 = haute, 1 = fallback)
+    priority: 100
+
+    # Seuil confiance minimum pour prédiction
+    min_confidence: 0.85
+
+    # Type de tâche
+    task_type: "grading"
+
+    # Tags requis pour ce modèle
+    required_tags:
+      organ: "prostate"
+      stain: "H&E"
+      task: "grading"
+
+    # Métadonnées
+    description: "Gleason grading (3-5) pour cancer de la prostate sur H&E"
+    clinical_use: "Grading pathologique selon système Gleason modifié ISUP"
+
+    # Performance metrics (référence)
+    reference_metrics:
+      accuracy: 0.94
+      cohen_kappa: 0.89
+      inter_annotator_agreement: 0.91
+
+  # --------------------------------------------------------------------------
+  # SEIN - Ki-67 Proliferation Index
+  # --------------------------------------------------------------------------
+  - model_id: "ki67_counter_v3"
+    model_name: "Ki-67 Proliferation Index"
+    model_version: "3.0.1"
+    model_path: "models:/ki67_counting/production"
+
+    priority: 100
+    min_confidence: 0.90
+    task_type: "counting"
+
+    required_tags:
+      organ: "sein"
+      stain: "IHC"
+      marker: "Ki-67"
+      task: "counting"
+
+    description: "Comptage cellules Ki-67+ pour index de prolifération"
+    clinical_use: "Index de prolifération pour prognosis cancer du sein"
+
+    reference_metrics:
+      precision: 0.93
+      recall: 0.91
+      correlation_with_manual: 0.95
+
+  # --------------------------------------------------------------------------
+  # SEIN - HER2 Scoring
+  # --------------------------------------------------------------------------
+  - model_id: "her2_scoring_v1"
+    model_name: "HER2 Scoring Model"
+    model_version: "1.5.0"
+    model_path: "models:/her2_scoring/production"
+
+    priority: 100
+    min_confidence: 0.88
+    task_type: "classification"
+
+    required_tags:
+      organ: "sein"
+      stain: "IHC"
+      marker: "HER2"
+      task: "classification"
+
+    description: "Classification HER2 (0, 1+, 2+, 3+) selon guidelines ASCO/CAP"
+    clinical_use: "Décision thérapeutique Herceptin pour cancer du sein"
+
+    reference_metrics:
+      accuracy: 0.92
+      agreement_with_pathologist: 0.90
+
+  # --------------------------------------------------------------------------
+  # CÔLON - Tumor Classification
+  # --------------------------------------------------------------------------
+  - model_id: "colorectal_classifier_v1"
+    model_name: "Colorectal Tumor Classifier"
+    model_version: "1.2.0"
+    model_path: "models:/colorectal_classification/production"
+
+    priority: 90
+    min_confidence: 0.82
+    task_type: "classification"
+
+    required_tags:
+      organ: "côlon"
+      stain: "H&E"
+      task: "classification"
+
+    description: "Classification tumeur/normal/stroma pour côlon"
+    clinical_use: "Détection régions tumorales sur biopsies coliques"
+
+    reference_metrics:
+      auc_roc: 0.96
+      dice_coefficient: 0.87
+
+  # --------------------------------------------------------------------------
+  # POUMON - PD-L1 TPS Quantification
+  # --------------------------------------------------------------------------
+  - model_id: "pdl1_tps_v1"
+    model_name: "PD-L1 TPS Quantification"
+    model_version: "1.0.0"
+    model_path: "models:/pdl1_tps/production"
+
+    priority: 100
+    min_confidence: 0.87
+    task_type: "detection"
+
+    required_tags:
+      organ: "poumon"
+      stain: "IHC"
+      marker: "PD-L1"
+      task: "detection"
+
+    description: "Quantification Tumor Proportion Score (TPS) pour PD-L1"
+    clinical_use: "Décision immunothérapie (Keytruda) pour cancer du poumon"
+
+    reference_metrics:
+      tps_correlation: 0.93
+      inter_lab_concordance: 0.89
+
+  # --------------------------------------------------------------------------
+  # FALLBACK - Modèle Générique
+  # --------------------------------------------------------------------------
+  - model_id: "generic_tumor_detection"
+    model_name: "Generic Tumor Detection"
+    model_version: "1.0.0"
+    model_path: "models:/generic_detection/production"
+
+    priority: 1  # Lowest priority (fallback)
+    min_confidence: 0.75
+    task_type: "detection"
+
+    required_tags: {}  # Match tout (fallback)
+
+    description: "Modèle générique de détection tumorale multi-organes"
+    clinical_use: "Fallback quand pas de modèle spécialisé disponible"
+
+    reference_metrics:
+      sensitivity: 0.88
+      specificity: 0.82
+
+# ============================================================================
+# CONFIGURATION GLOBALE
+# ============================================================================
+
+routing_config:
+  # Stratégie si plusieurs modèles matchent
+  matching_strategy: "highest_priority"  # ou "ensemble", "confidence_weighted"
+
+  # Fallback si aucun modèle ne matche
+  fallback_enabled: true
+  fallback_model_id: "generic_tumor_detection"
+
+  # Cache des routes (éviter reload config à chaque requête)
+  cache_routes: true
+  cache_ttl_seconds: 3600  # 1 heure
+
+  # Logging
+  log_routing_decisions: true
+  log_level: "INFO"
+
+# ============================================================================
+# TAG EXTRACTION CONFIGURATION
+# ============================================================================
+
+tag_extraction:
+  # Sources de tags par ordre de priorité
+  sources_priority:
+    - "dicom_metadata"
+    - "openslide_properties"
+    - "filename_parsing"
+    - "ml_inference"
+
+  # Seuils de confiance minimum par source
+  confidence_thresholds:
+    dicom_metadata: 0.95
+    openslide_properties: 0.85
+    filename_parsing: 0.70
+    ml_inference: 0.75
+
+  # Assignation manuelle si toutes sources échouent
+  fallback_to_manual: true
+
+  # Keywords pour détection par filename/properties
+  organ_keywords:
+    prostate: ["prostate", "prostatic", "prost"]
+    sein: ["breast", "mammary", "sein", "mamm"]
+    côlon: ["colon", "colorectal", "rectal", "col"]
+    poumon: ["lung", "pulmonary", "poumon", "pulm"]
+    foie: ["liver", "hepatic", "foie", "hep"]
+    rein: ["kidney", "renal", "rein", "ren"]
+
+  stain_keywords:
+    "H&E": ["h&e", "he", "hematoxylin", "eosin", "hem", "eos"]
+    "IHC": ["ihc", "immunohistochemistry", "immunohistochimie", "immuno"]
+    "IF": ["if", "immunofluorescence", "immfluor"]
+
+  marker_keywords:
+    "Ki-67": ["ki-67", "ki67", "mib1", "mib-1"]
+    "HER2": ["her2", "her-2", "erbb2"]
+    "PD-L1": ["pdl1", "pd-l1", "pdl-1"]
+    "ER": ["er", "estrogen", "oestrogen"]
+    "PR": ["pr", "progesterone"]
+
+# ============================================================================
+# MODEL PERFORMANCE MONITORING
+# ============================================================================
+
+monitoring:
+  # Drift detection (Evidently AI)
+  drift_detection:
+    enabled: true
+    check_interval_hours: 24
+
+    # Seuils d'alerte
+    data_drift_threshold: 0.25  # PSI
+    prediction_drift_threshold: 0.20
+
+    # Actions automatiques
+    alert_on_drift: true
+    trigger_retraining_on_drift: false  # Manuel pour l'instant
+
+  # Performance tracking
+  performance_tracking:
+    enabled: true
+
+    # Métriques à monitorer
+    metrics:
+      - "approval_rate"
+      - "confidence_score"
+      - "uncertainty_score"
+      - "inference_time_ms"
+
+    # Alertes si dégradation
+    alert_thresholds:
+      approval_rate_min: 0.80  # < 80% → alerte
+      inference_time_max_ms: 5000  # > 5s → alerte
+
+# ============================================================================
+# RETRAINING CONFIGURATION
+# ============================================================================
+
+retraining:
+  # Déclenchement automatique
+  auto_trigger:
+    enabled: true
+
+    # Conditions (OU logique)
+    triggers:
+      - type: "feedback_count"
+        threshold: 100  # 100 nouvelles corrections
+
+      - type: "approval_rate"
+        threshold: 0.85  # < 85% approval rate
+
+      - type: "time_elapsed"
+        threshold_days: 30  # 30 jours depuis dernier retraining
+
+  # Validation avant déploiement
+  validation:
+    required: true
+
+    # Critères validation
+    criteria:
+      - metric: "accuracy"
+        operator: ">="
+        threshold: 0.90
+
+      - metric: "approval_rate"
+        operator: ">="
+        threshold: 0.85
+
+  # A/B testing
+  ab_testing:
+    enabled: true
+    initial_traffic_split:
+      production: 0.80
+      challenger: 0.20
+
+    duration_hours: 48
+    auto_promote_threshold: 0.95  # 95% approval rate

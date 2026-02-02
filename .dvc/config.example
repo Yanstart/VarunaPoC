@@ -1,0 +1,100 @@
+# DVC Configuration Example
+# Référence: docs/MLOPS_ARCHITECTURE.md Section 3.2
+
+[core]
+    remote = minio
+    autostage = true
+    analytics = false
+
+# ============================================================================
+# REMOTE STORAGE - MinIO (S3-compatible)
+# ============================================================================
+
+['remote "minio"']
+    url = s3://varuna-ml-data
+    endpointurl = http://minio.chu-ucl.local:9000
+
+    # Credentials (use environment variables in production)
+    access_key_id = varuna-ml-access-key
+    # secret_access_key = ${MINIO_SECRET_KEY}  # Set via env var
+
+    # S3 specific settings
+    ssl_verify = false  # Set to true in production with proper SSL
+
+# ============================================================================
+# REMOTE STORAGE - Backup (secondary)
+# ============================================================================
+
+['remote "backup"']
+    url = s3://varuna-ml-data-backup
+    endpointurl = http://backup.chu-ucl.local:9000
+    access_key_id = varuna-backup-key
+    # secret_access_key = ${BACKUP_SECRET_KEY}
+
+# ============================================================================
+# REMOTE STORAGE - Cloud (optional, for disaster recovery)
+# ============================================================================
+
+['remote "cloud"']
+    # AWS S3
+    # url = s3://varuna-ml-cloud-backup/data
+    # region = eu-west-1
+    # access_key_id = ${AWS_ACCESS_KEY_ID}
+    # secret_access_key = ${AWS_SECRET_ACCESS_KEY}
+
+    # Azure Blob Storage
+    # url = azure://varuna-ml-data
+    # account_name = ${AZURE_STORAGE_ACCOUNT}
+    # account_key = ${AZURE_STORAGE_KEY}
+
+    # Google Cloud Storage
+    # url = gs://varuna-ml-data
+    # projectname = ${GCP_PROJECT_ID}
+
+# ============================================================================
+# CACHE CONFIGURATION
+# ============================================================================
+
+[cache]
+    # Type de cache ('reflink', 'hardlink', 'symlink', 'copy')
+    type = reflink,hardlink,copy
+
+    # Limite taille cache local (optionnel)
+    # dir = .dvc/cache
+    # max_cache_size = 100GB
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+
+# Initialiser DVC
+# dvc init
+
+# Ajouter remote
+# dvc remote add -d minio s3://varuna-ml-data
+# dvc remote modify minio endpointurl http://minio.chu-ucl.local:9000
+
+# Configurer credentials (via environment)
+# export MINIO_SECRET_KEY="your-secret-key"
+# dvc remote modify minio secret_access_key env:MINIO_SECRET_KEY
+
+# Ajouter dataset
+# dvc add data/raw/prostate_slides_batch1
+# git add data/raw/prostate_slides_batch1.dvc .gitignore
+# git commit -m "data: Add prostate slides batch 1"
+
+# Push data
+# dvc push
+
+# Pull data
+# dvc pull
+
+# Checkout version spécifique
+# git checkout v2.0-with-feedback
+# dvc pull
+
+# Status
+# dvc status
+
+# Garbage collection (nettoyer cache)
+# dvc gc --workspace --cloud

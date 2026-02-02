@@ -1,6 +1,56 @@
-# VarunaPoC - Documentation des Erreurs et Limitations
+# VarunaPoC - Documentation Backend
 
-Ce dossier contient la documentation détaillée de toutes les erreurs, limitations et problèmes rencontrés durant le développement de VarunaPoC.
+Ce dossier contient la documentation complète du backend VarunaPoC:
+
+- **Documentation des erreurs et limitations** rencontrées
+- **Plans de refactoring** vers Clean Architecture
+- **Guides de migration** étape par étape
+- **Diagrammes d'architecture**
+
+---
+
+## Documents Principaux
+
+### Architecture et Refactoring
+
+| Document | Description | Temps de Lecture |
+|----------|-------------|------------------|
+| [BACKEND_REFACTORING.md](./BACKEND_REFACTORING.md) | Plan complet de refactoring vers Clean Architecture (37 pages) | 45 min |
+| [BACKEND_REFACTORING_SUMMARY.md](./BACKEND_REFACTORING_SUMMARY.md) | Résumé exécutif du plan de refactoring | 5 min |
+| [BACKEND_ARCHITECTURE_DIAGRAM.md](./BACKEND_ARCHITECTURE_DIAGRAM.md) | Diagrammes ASCII de l'architecture cible | 15 min |
+| [BACKEND_REFACTORING_STEP1_EXAMPLE.md](./BACKEND_REFACTORING_STEP1_EXAMPLE.md) | Guide pratique Étape 1: Configuration centralisée | 10 min |
+
+### Manuel Utilisateur
+
+| Document | Description |
+|----------|-------------|
+| [Manuel/README.md](./Manuel/README.md) | Index du manuel utilisateur |
+| [Manuel/01-INTRODUCTION.md](./Manuel/01-INTRODUCTION.md) | Présentation et premiers pas |
+| [Manuel/02-NAVIGATION_DOSSIERS.md](./Manuel/02-NAVIGATION_DOSSIERS.md) | Utilisation de l'explorateur de fichiers |
+
+### MLOps & Machine Learning (Phase 3)
+
+| Document | Description | Temps de Lecture |
+|----------|-------------|------------------|
+| [MLOPS_ARCHITECTURE.md](./MLOPS_ARCHITECTURE.md) | Architecture MLOps complète - Référence principale | 60 min |
+| [MLOPS_INTEGRATION_GUIDE.md](./MLOPS_INTEGRATION_GUIDE.md) | Guide d'intégration progressive par phases | 30 min |
+| [MLOPS_FILES_SUMMARY.md](./MLOPS_FILES_SUMMARY.md) | Index de tous les fichiers MLOps créés/à créer | 10 min |
+
+**Vue d'ensemble MLOps:**
+- **Système de tags** (organ, stain, marker) avec extraction automatique
+- **Routage intelligent** vers modèles spécialisés (Gleason, Ki-67, HER2, etc.)
+- **Pipeline feedback** pathologistes pour amélioration continue
+- **Continuous learning** avec MLflow, DVC, Airflow
+- **Explainability** (Grad-CAM, SHAP) et uncertainty quantification
+- **Monitoring drift** et performance avec Evidently AI
+
+**Voir:** `backend/services/ml/README.md` pour documentation technique détaillée
+
+---
+
+## Erreurs et Limitations
+
+Ce dossier contient également la documentation détaillée de toutes les erreurs, limitations et problèmes rencontrés durant le développement de VarunaPoC.
 
 ## Objectif
 

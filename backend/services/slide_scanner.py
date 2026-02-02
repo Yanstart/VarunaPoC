@@ -14,12 +14,14 @@ Version: 1.5.0
 
 from pathlib import Path
 from typing import List, Dict, Optional
-import hashlib
 import logging
 import os
 from services.format_detector import FormatDetector
 
 logger = logging.getLogger(__name__)
+
+# Importer depuis folder_browser pour cohérence des IDs
+from services.folder_browser import SLIDES_ROOT, generate_slide_id
 
 
 def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
@@ -52,15 +54,15 @@ def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
             "notes": str (infos additionnelles)
         }
 
-    Technical Notes:
+    Technical Notes: 
         - Utilise FormatDetector basé sur https://openslide.org/formats/
         - Seules les lames passant detect_format() sont retournées
         - Fichiers .jpg/.dat isolés (non liés à VMS/MIRAX) sont ignorés
         - Performance: O(n) avec n = nombre total de fichiers
     """
-    # Utiliser la variable d'environnement si slides_dir n'est pas fourni
+    # Utiliser SLIDES_ROOT importé depuis folder_browser pour cohérence
     if slides_dir is None:
-        slides_dir = os.getenv("SLIDES_REPOSITORY_PATH", "/slides")
+        slides_dir = str(SLIDES_ROOT)
 
     slides_path = Path(slides_dir).resolve()
 
@@ -77,8 +79,8 @@ def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
     # Convertir en format API
     slides = []
     for slide_format in detected_formats:
-        # Générer ID stable (hash du path point d'entrée)
-        slide_id = hashlib.md5(str(slide_format.entry_point).encode()).hexdigest()[:12]
+        # Utiliser generate_slide_id pour cohérence avec folder_browser
+        slide_id = generate_slide_id(slide_format.entry_point)
 
         slides.append({
             "id": slide_id,

@@ -23,8 +23,16 @@ import config_openslide
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from routes import slides
-from monitoring import prometheus_middleware, metrics_endpoint
+
+# Monitoring optionnel (requires prometheus_client)
+try:
+    from monitoring import prometheus_middleware, metrics_endpoint
+    MONITORING_ENABLED = True
+except ImportError:
+    MONITORING_ENABLED = False
+    print("[INFO] Monitoring disabled (prometheus_client not installed)")
 
 app = FastAPI(
     title="VarunaPoC Backend API",
@@ -95,8 +103,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prometheus monitoring middleware
-app.middleware("http")(prometheus_middleware)
+# Prometheus monitoring middleware (optionnel)
+if MONITORING_ENABLED:
+    app.middleware("http")(prometheus_middleware)
 
 # Routes
 app.include_router(slides.router)
@@ -152,4 +161,6 @@ async def metrics(request):
         - Metrics format: Prometheus text exposition format
         - See monitoring.py for metric definitions
     """
-    return await metrics_endpoint(request)
+    if MONITORING_ENABLED:
+        return await metrics_endpoint(request)
+    return PlainTextResponse("Monitoring disabled (install prometheus_client)", status_code=503)

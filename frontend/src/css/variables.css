@@ -1,0 +1,232 @@
+/**
+ * CSS Variables - Centralized theme configuration
+ *
+ * All colors, spacing, and design tokens are defined here.
+ * Components should reference these variables for consistency.
+ *
+ * @module css/variables
+ */
+
+:root {
+    /* ==========================================
+     * COLOR PALETTE
+     * ========================================== */
+
+    /* Primary colors (blue accent) */
+    --color-primary: #4a9eff;
+    --color-primary-light: #6bb0ff;
+    --color-primary-dark: #3a8eef;
+    --color-primary-alpha-10: rgba(74, 158, 255, 0.1);
+    --color-primary-alpha-20: rgba(74, 158, 255, 0.2);
+    --color-primary-alpha-30: rgba(74, 158, 255, 0.3);
+
+    /* Background colors (dark theme) */
+    --color-bg-base: #000000;
+    --color-bg-surface: #0d0d0d;
+    --color-bg-elevated: #1a1a1a;
+    --color-bg-overlay: #252525;
+    --color-bg-hover: #2a2a2a;
+    --color-bg-active: #333333;
+
+    /* Text colors */
+    --color-text-primary: #e0e0e0;
+    --color-text-secondary: #a0a0a0;
+    --color-text-muted: #888888;
+    --color-text-disabled: #666666;
+    --color-text-inverse: #000000;
+
+    /* Status colors */
+    --color-success: #4caf50;
+    --color-success-light: #81c784;
+    --color-success-alpha-10: rgba(76, 175, 80, 0.1);
+
+    --color-warning: #ff9800;
+    --color-warning-light: #ffb74d;
+    --color-warning-alpha-10: rgba(255, 152, 0, 0.1);
+
+    --color-error: #ff6b6b;
+    --color-error-light: #ff8a8a;
+    --color-error-alpha-10: rgba(255, 107, 107, 0.1);
+
+    --color-info: #29b6f6;
+    --color-info-light: #4fc3f7;
+    --color-info-alpha-10: rgba(41, 182, 246, 0.1);
+
+    /* Border colors */
+    --color-border: #333333;
+    --color-border-light: #444444;
+    --color-border-focus: var(--color-primary);
+
+    /* ==========================================
+     * SPACING
+     * ========================================== */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-2xl: 24px;
+    --spacing-3xl: 32px;
+    --spacing-4xl: 40px;
+
+    /* ==========================================
+     * TYPOGRAPHY
+     * ========================================== */
+    --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-mono: 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+
+    --font-size-xs: 11px;
+    --font-size-sm: 13px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+    --font-size-2xl: 20px;
+    --font-size-3xl: 24px;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.2;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+
+    /* ==========================================
+     * BORDERS & RADIUS
+     * ========================================== */
+    --border-width: 1px;
+    --border-width-thick: 2px;
+    --border-width-accent: 3px;
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    /* ==========================================
+     * SHADOWS
+     * ========================================== */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 10px var(--color-primary-alpha-30);
+
+    /* ==========================================
+     * TRANSITIONS
+     * ========================================== */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 350ms ease;
+
+    /* ==========================================
+     * Z-INDEX LAYERS
+     * ========================================== */
+    --z-base: 0;
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-overlay: 300;
+    --z-modal: 400;
+    --z-popover: 500;
+    --z-tooltip: 600;
+    --z-toast: 700;
+
+    /* ==========================================
+     * LAYOUT
+     * ========================================== */
+    --header-height: 60px;
+    --sidebar-width: 300px;
+    --sidebar-collapsed-width: 60px;
+    --panel-min-width: 200px;
+    --panel-max-width: 400px;
+
+    /* ==========================================
+     * VIEWER SPECIFIC
+     * ========================================== */
+    --viewer-bg: var(--color-bg-base);
+    --viewer-border: var(--color-border);
+    --viewer-header-height: 40px;
+    --viewer-header-bg: var(--color-bg-elevated);
+    --viewer-minimap-size: 150px;
+    --viewer-minimap-border: var(--color-primary);
+
+    /* ==========================================
+     * MULTI-VIEWER LAYOUT
+     * ========================================== */
+    --grid-gap: var(--spacing-sm);
+    --viewer-panel-border: var(--color-border);
+    --viewer-panel-radius: var(--radius-md);
+    --viewer-active-border: var(--color-primary);
+    --viewer-synced-indicator: var(--color-success);
+
+    /* ==========================================
+     * SYNC CONTROLS
+     * ========================================== */
+    --sync-button-size: 36px;
+    --sync-enabled-color: var(--color-success);
+    --sync-disabled-color: var(--color-text-muted);
+    --sync-indicator-size: 8px;
+
+    /* ==========================================
+     * SLIDE CARDS
+     * ========================================== */
+    --card-bg: var(--color-bg-elevated);
+    --card-border: var(--color-border);
+    --card-radius: var(--radius-md);
+    --card-hover-bg: var(--color-bg-hover);
+    --card-shadow: var(--shadow-md);
+    --card-thumbnail-height: 120px;
+
+    /* ==========================================
+     * SCROLLBAR
+     * ========================================== */
+    --scrollbar-width: 10px;
+    --scrollbar-track: var(--color-bg-elevated);
+    --scrollbar-thumb: var(--color-primary);
+    --scrollbar-thumb-hover: var(--color-primary-light);
+}
+
+/* ==========================================
+ * DARK THEME (default, explicit)
+ * ========================================== */
+[data-theme="dark"] {
+    /* Already default, but can be used for explicit override */
+}
+
+/* ==========================================
+ * LIGHT THEME (future-proofing)
+ * ========================================== */
+[data-theme="light"] {
+    --color-bg-base: #ffffff;
+    --color-bg-surface: #f5f5f5;
+    --color-bg-elevated: #eeeeee;
+    --color-bg-overlay: #e0e0e0;
+    --color-bg-hover: #d5d5d5;
+    --color-bg-active: #cccccc;
+
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #444444;
+    --color-text-muted: #666666;
+    --color-text-disabled: #999999;
+
+    --color-border: #cccccc;
+    --color-border-light: #dddddd;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.2);
+    --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================
+ * REDUCED MOTION (accessibility)
+ * ========================================== */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0ms;
+        --transition-normal: 0ms;
+        --transition-slow: 0ms;
+    }
+}

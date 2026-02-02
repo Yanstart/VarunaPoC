@@ -1,158 +1,403 @@
 /**
  * VarunaPoC Frontend - Entry Point
  *
- * Architecture Phase 1.8:
- *   - Page HOME: Navigation hiérarchique dans /Slides (explorateur de dossiers)
- *   - Page VIEWER: Streaming de tuiles + Navigation interactive
+ * Refactored Architecture (Phase 2.0):
+ *   - Modular design patterns (Factory, Singleton, Observer, Mediator)
+ *   - Multi-viewer support with optional synchronization
+ *   - Clean separation of concerns
  *
- * Flow:
- *   1. Afficher explorateur de dossiers (racine /Slides)
- *   2. Navigation dossier par dossier (fil d'Ariane)
- *   3. Détection lames dans dossier actuel
- *   4. Au clic sur lame → Navigation vers Viewer
- *   5. Viewer: Charger lame avec streaming de tuiles DZI
- *   6. Mini-carte (navigator) affiche overview pour orientation
+ * Pages:
+ *   - HOME: Navigation hierarchique dans /Slides (explorateur de dossiers)
+ *   - VIEWER: Single viewer avec streaming de tuiles
+ *   - COMPARE: Multi-viewer layout avec sync optionnelle
+ *
+ * @module main
  */
 
 import './style.css';
-import { getSlideInfo } from './utils/api.js';
+
+// Core
+import { eventBus } from './core/EventBus.js';
+import { Events, Pages } from './core/Constants.js';
+
+// Services
+import { apiService } from './services/ApiService.js';
+
+// Viewers
+import { viewerManager } from './viewers/ViewerManager.js';
+
+// Components
 import { createFolderBrowser } from './components/FolderBrowser.js';
+import { CompareLayout } from './components/CompareLayout.js';
+
+// Legacy support
 import { initViewer, loadSlideWithTiles } from './components/Viewer.js';
 
-// Global state
-let currentPage = 'home'; // 'home' | 'viewer'
-let selectedSlide = null;
-let viewer = null;
-let folderBrowser = null;
+// ==========================================
+// APPLICATION STATE
+// ==========================================
 
 /**
- * Initialise l'application.
+ * Application state
+ * @type {Object}
+ */
+const appState = {
+    /** Current page: 'home' | 'viewer' | 'compare' */
+    currentPage: Pages.HOME,
+
+    /** Selected slide for single viewer */
+    selectedSlide: null,
+
+    /** Legacy viewer reference (single viewer mode) */
+    viewer: null,
+
+    /** Folder browser component */
+    folderBrowser: null,
+
+    /** Compare layout component (multi-viewer mode) */
+    compareLayout: null,
+
+    /** Pending slide for compare mode (selected from slide picker) */
+    pendingSlideForPanel: null
+};
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
+
+/**
+ * Initialize the application
  */
 async function init() {
     try {
-        // Afficher page d'accueil (explorateur de dossiers)
+        console.log('[App] Initializing VarunaPoC...');
+
+        // Check backend availability
+        const isAvailable = await apiService.isAvailable();
+        if (!isAvailable) {
+            throw new Error('Backend is not available');
+        }
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Show home page
         showHomePage();
 
+        console.log('[App] Initialization complete');
+
     } catch (err) {
-        console.error('Init failed:', err);
-        document.querySelector('#app').innerHTML =
-            `<div class="error">
-                <h2>❌ Erreur de connexion</h2>
-                <p>${err.message}</p>
-                <p class="note">Le backend est-il démarré?</p>
-                <code>cd backend && python -m uvicorn main:app --reload</code>
-            </div>`;
+        console.error('[App] Init failed:', err);
+        showError(err);
     }
 }
 
 /**
- * Affiche la page d'accueil (explorateur de dossiers).
+ * Setup global event listeners
+ */
+function setupEventListeners() {
+    // Listen for slide selection in compare mode
+    eventBus.on(Events.SLIDE_SELECTED, ({ panelId, panelIndex }) => {
+        if (appState.currentPage === Pages.COMPARE && appState.compareLayout) {
+            // Store pending panel index
+            appState.pendingSlideForPanel = panelIndex;
+
+            // Show slide picker
+            showSlidePicker();
+        }
+    });
+
+    // Listen for page changes
+    eventBus.on(Events.PAGE_CHANGED, ({ page }) => {
+        appState.currentPage = page;
+    });
+}
+
+// ==========================================
+// PAGE RENDERING
+// ==========================================
+
+/**
+ * Show home page (folder browser)
  */
 function showHomePage() {
-    currentPage = 'home';
+    appState.currentPage = Pages.HOME;
+
+    // Cleanup previous components BEFORE creating new ones
+    cleanup();
+
     const app = document.querySelector('#app');
     app.innerHTML = '';
+    app.className = 'page-home';
 
-    // Créer le folder browser (charge la racine automatiquement)
-    folderBrowser = createFolderBrowser(handleSlideSelect);
-    app.appendChild(folderBrowser);
+    // Create folder browser
+    appState.folderBrowser = createFolderBrowser(handleSlideSelect);
+    app.appendChild(appState.folderBrowser);
+
+    // Add compare mode button
+    const compareBtn = document.createElement('button');
+    compareBtn.className = 'compare-mode-button';
+    compareBtn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="8" height="18" rx="1"/>
+            <rect x="13" y="3" width="8" height="18" rx="1"/>
+        </svg>
+        Compare Mode
+    `;
+    compareBtn.title = 'Open compare mode for side-by-side viewing';
+    compareBtn.addEventListener('click', () => showComparePage());
+    app.appendChild(compareBtn);
+
+    eventBus.emit(Events.PAGE_CHANGED, { page: Pages.HOME });
 }
 
 /**
- * Affiche la page viewer (visualisation lame).
- *
- * @param {Object} slide - Lame sélectionnée
+ * Show viewer page (single slide)
+ * @param {Object} slide - Selected slide
  */
 async function showViewerPage(slide) {
-    currentPage = 'viewer';
-    selectedSlide = slide;
+    appState.currentPage = Pages.VIEWER;
+    appState.selectedSlide = slide;
+
+    // Cleanup previous components BEFORE creating new ones
+    cleanup();
 
     const app = document.querySelector('#app');
+    app.className = 'page-viewer';
     app.innerHTML = `
         <div class="viewer-page">
             <header class="viewer-header">
                 <button id="back-btn" class="back-button">
-                    ← Retour à la liste
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back
                 </button>
                 <div class="viewer-title">
                     <h1>${slide.name}</h1>
                     <p class="slide-info">
-                        ${slide.format} • ${slide.structure_type}
-                        ${slide.is_supported === false ? ' • <span class="warning">⚠️ Non supporté</span>' : ''}
+                        ${slide.format} | ${slide.structure_type}
+                        ${slide.is_supported === false ? ' | <span class="warning">Not supported</span>' : ''}
                     </p>
                 </div>
+                <button id="compare-btn" class="header-button" title="Open in compare mode">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="8" height="18" rx="1"/>
+                        <rect x="13" y="3" width="8" height="18" rx="1"/>
+                    </svg>
+                </button>
             </header>
 
             <main class="viewer-main">
                 <div id="viewer" class="viewer"></div>
                 <div id="info" class="info">
-                    <div class="loading">Chargement de la lame...</div>
+                    <div class="loading">Loading slide...</div>
                 </div>
             </main>
         </div>
     `;
 
-    // Bouton retour
-    document.querySelector('#back-btn').addEventListener('click', () => {
-        showHomePage();
+    // Back button
+    document.querySelector('#back-btn').addEventListener('click', showHomePage);
+
+    // Compare button
+    document.querySelector('#compare-btn').addEventListener('click', () => {
+        showComparePage(slide);
     });
 
-    // Initialiser OpenSeadragon
-    viewer = initViewer('viewer');
+    // Initialize viewer (uses new architecture internally)
+    appState.viewer = initViewer('viewer');
 
-    // Charger la lame
+    // Load slide
     await loadSlide(slide);
+
+    eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
 }
 
 /**
- * Gère la sélection d'une lame (navigation Home → Viewer).
- *
- * @param {Object} slide - Lame sélectionnée
+ * Show compare page (multi-viewer)
+ * @param {Object} [initialSlide] - Optional slide to load in first panel
+ */
+async function showComparePage(initialSlide = null) {
+    appState.currentPage = Pages.COMPARE;
+
+    // Cleanup previous components BEFORE creating new ones
+    cleanup();
+
+    const app = document.querySelector('#app');
+    app.className = 'page-compare';
+    app.innerHTML = `
+        <div class="compare-page">
+            <header class="compare-header">
+                <button id="back-btn" class="back-button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back
+                </button>
+                <h1 class="compare-title">Compare Mode</h1>
+            </header>
+            <main id="compare-container" class="compare-container"></main>
+        </div>
+    `;
+
+    // Back button
+    document.querySelector('#back-btn').addEventListener('click', showHomePage);
+
+    // Create compare layout
+    const container = document.querySelector('#compare-container');
+    appState.compareLayout = new CompareLayout(container, {
+        initialLayout: 'SIDE_BY_SIDE',
+        showSyncControls: true,
+        onSlideSelect: (panel, index) => {
+            appState.pendingSlideForPanel = index;
+            showSlidePicker();
+        }
+    });
+
+    // Load initial slide if provided
+    if (initialSlide) {
+        await appState.compareLayout.loadSlideAt(0, initialSlide.id, initialSlide.name);
+    }
+
+    eventBus.emit(Events.PAGE_CHANGED, { page: Pages.COMPARE });
+}
+
+/**
+ * Show slide picker modal
+ */
+function showSlidePicker() {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'slide-picker-modal';
+    modal.innerHTML = `
+        <div class="slide-picker-content">
+            <header class="slide-picker-header">
+                <h2>Select Slide</h2>
+                <button class="slide-picker-close">&times;</button>
+            </header>
+            <div class="slide-picker-body">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close button
+    modal.querySelector('.slide-picker-close').addEventListener('click', () => {
+        modal.remove();
+        appState.pendingSlideForPanel = null;
+    });
+
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+            appState.pendingSlideForPanel = null;
+        }
+    });
+
+    // Load slides in picker
+    loadSlidesInPicker(modal.querySelector('.slide-picker-body'));
+}
+
+/**
+ * Load slides in picker modal
+ * @param {HTMLElement} container - Container element
+ */
+async function loadSlidesInPicker(container) {
+    try {
+        // Use fetchSlides() for recursive scan of ALL slides
+        const data = await apiService.fetchSlides();
+
+        if (!data.slides || data.slides.length === 0) {
+            container.innerHTML = '<p class="empty">No slides found</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        // Create slide list
+        const list = document.createElement('div');
+        list.className = 'slide-picker-list';
+
+        data.slides.forEach(slide => {
+            const item = document.createElement('button');
+            item.className = 'slide-picker-item';
+            item.innerHTML = `
+                <span class="slide-name">${slide.name}</span>
+                <span class="slide-format">${slide.format}</span>
+            `;
+
+            item.addEventListener('click', async () => {
+                if (appState.pendingSlideForPanel !== null && appState.compareLayout) {
+                    await appState.compareLayout.loadSlideAt(
+                        appState.pendingSlideForPanel,
+                        slide.id,
+                        slide.name
+                    );
+                }
+                appState.pendingSlideForPanel = null;
+                container.closest('.slide-picker-modal').remove();
+            });
+
+            list.appendChild(item);
+        });
+
+        container.appendChild(list);
+
+    } catch (err) {
+        container.innerHTML = `<p class="error">Error loading slides: ${err.message}</p>`;
+    }
+}
+
+// ==========================================
+// SLIDE LOADING
+// ==========================================
+
+/**
+ * Handle slide selection (Home -> Viewer)
+ * @param {Object} slide - Selected slide
  */
 function handleSlideSelect(slide) {
-    console.log('Navigating to viewer for:', slide.name);
+    console.log('[App] Navigating to viewer for:', slide.name);
     showViewerPage(slide);
 }
 
 /**
- * Charge une lame dans le viewer avec streaming de tuiles.
- *
- * Phase 1.8: Streaming DZI
- *   - Récupère métadonnées DZI depuis backend
- *   - Configure OpenSeadragon pour chargement tuiles à la demande
- *   - Mini-map affiche overview pour orientation
- *
- * @param {Object} slide - Lame à charger
+ * Load slide in single viewer mode
+ * @param {Object} slide - Slide to load
  */
 async function loadSlide(slide) {
     const infoPanel = document.querySelector('#info');
 
     try {
-        infoPanel.innerHTML = '<div class="loading">Chargement métadonnées...</div>';
+        infoPanel.innerHTML = '<div class="loading">Loading metadata...</div>';
 
-        // Récupérer métadonnées
-        const metadata = await getSlideInfo(slide.id);
+        // Get metadata
+        const metadata = await apiService.getSlideInfo(slide.id);
 
-        infoPanel.innerHTML = '<div class="loading">Chargement tuiles (streaming DZI)...</div>';
+        infoPanel.innerHTML = '<div class="loading">Loading tiles (DZI streaming)...</div>';
 
-        // Charger lame avec streaming de tuiles
-        await loadSlideWithTiles(viewer, slide.id);
+        // Load slide with tiles
+        await loadSlideWithTiles(appState.viewer, slide.id);
 
-        // Afficher métadonnées
+        // Display metadata
         const [w, h] = metadata.dimensions;
         infoPanel.innerHTML = `
-            <h3>Informations</h3>
+            <h3>Information</h3>
             <dl>
                 <dt>Format</dt>
                 <dd>${slide.format}</dd>
                 <dt>Dimensions</dt>
-                <dd>${w.toLocaleString()} × ${h.toLocaleString()} px</dd>
-                <dt>Niveaux</dt>
-                <dd>${metadata.level_count} niveaux pyramidaux</dd>
+                <dd>${w.toLocaleString()} x ${h.toLocaleString()} px</dd>
+                <dt>Levels</dt>
+                <dd>${metadata.level_count} pyramid levels</dd>
                 <dt>Structure</dt>
                 <dd>${slide.structure_type}</dd>
                 ${slide.has_joint_files ? `
-                    <dt>Fichiers joints</dt>
+                    <dt>Joint files</dt>
                     <dd>${slide.joint_files_count}</dd>
                 ` : ''}
                 ${slide.has_companion_dirs ? `
@@ -161,24 +406,23 @@ async function loadSlide(slide) {
                 ` : ''}
             </dl>
             <p class="note">
-                <strong>Phase 1.8 - Streaming actif:</strong><br>
-                • Tuiles 256x256 chargées à la demande<br>
-                • ${metadata.level_count} niveaux de zoom disponibles<br>
-                • Mini-carte (bas-droite) affiche position actuelle<br>
-                • Formats supportés: .bif, .tif, .mrxs
+                <strong>Tile Streaming Active:</strong><br>
+                256x256 tiles loaded on demand<br>
+                ${metadata.level_count} zoom levels available<br>
+                Mini-map shows current position
             </p>
         `;
 
     } catch (err) {
-        console.error('Load failed:', err);
+        console.error('[App] Load failed:', err);
         infoPanel.innerHTML = `
             <div class="error">
-                <h3>❌ Erreur d'ouverture</h3>
+                <h3>Error opening slide</h3>
                 <p>${err.message}</p>
                 ${slide.is_supported === false ? `
                     <p class="note">
-                        <strong>Lame non supportée</strong><br>
-                        ${slide.notes}
+                        <strong>Unsupported slide</strong><br>
+                        ${slide.notes || 'This format is not supported'}
                     </p>
                 ` : ''}
             </div>
@@ -186,5 +430,267 @@ async function loadSlide(slide) {
     }
 }
 
-// Start application
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+
+/**
+ * Cleanup previous page components
+ */
+function cleanup() {
+    // Destroy compare layout
+    if (appState.compareLayout) {
+        appState.compareLayout.destroy();
+        appState.compareLayout = null;
+    }
+
+    // Reset viewer manager
+    viewerManager.destroyAll();
+
+    // Clear references
+    appState.viewer = null;
+    appState.folderBrowser = null;
+    appState.selectedSlide = null;
+}
+
+/**
+ * Show error page
+ * @param {Error} err - Error object
+ */
+function showError(err) {
+    document.querySelector('#app').innerHTML = `
+        <div class="error-page">
+            <div class="error">
+                <h2>Connection Error</h2>
+                <p>${err.message}</p>
+                <p class="note">Is the backend running?</p>
+                <code>cd backend && python -m uvicorn main:app --reload</code>
+                <button onclick="location.reload()">Retry</button>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// ADDITIONAL CSS FOR NEW FEATURES
+// ==========================================
+
+// Inject additional styles
+const additionalStyles = document.createElement('style');
+additionalStyles.textContent = `
+    /* Compare mode button on home page */
+    .compare-mode-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: var(--color-primary, #4a9eff);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+        transition: all 0.2s ease;
+        z-index: 100;
+    }
+
+    .compare-mode-button:hover {
+        background: var(--color-primary-light, #6bb0ff);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(74, 158, 255, 0.4);
+    }
+
+    /* Compare page layout */
+    .compare-page {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background: var(--color-bg-base, #000);
+    }
+
+    .compare-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        background: var(--color-bg-elevated, #1a1a1a);
+        border-bottom: 1px solid var(--color-border, #333);
+    }
+
+    .compare-title {
+        font-size: 18px;
+        font-weight: 500;
+        color: var(--color-text-primary, #e0e0e0);
+        margin: 0;
+    }
+
+    .compare-container {
+        flex: 1;
+        overflow: hidden;
+    }
+
+    /* Header button */
+    .header-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        background: transparent;
+        border: 1px solid var(--color-border, #333);
+        border-radius: 6px;
+        color: var(--color-text-secondary, #888);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .header-button:hover {
+        background: var(--color-bg-hover, #2a2a2a);
+        color: var(--color-text-primary, #e0e0e0);
+        border-color: var(--color-primary, #4a9eff);
+    }
+
+    /* Slide picker modal */
+    .slide-picker-modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+    }
+
+    .slide-picker-content {
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        background: var(--color-bg-elevated, #1a1a1a);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .slide-picker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--color-border, #333);
+    }
+
+    .slide-picker-header h2 {
+        margin: 0;
+        font-size: 18px;
+        color: var(--color-text-primary, #e0e0e0);
+    }
+
+    .slide-picker-close {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        background: transparent;
+        border: none;
+        font-size: 24px;
+        color: var(--color-text-muted, #666);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .slide-picker-close:hover {
+        background: var(--color-bg-hover, #2a2a2a);
+        color: var(--color-text-primary, #e0e0e0);
+    }
+
+    .slide-picker-body {
+        padding: 16px;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .slide-picker-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .slide-picker-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--color-bg-surface, #0d0d0d);
+        border: 1px solid var(--color-border, #333);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .slide-picker-item:hover {
+        background: var(--color-bg-hover, #2a2a2a);
+        border-color: var(--color-primary, #4a9eff);
+    }
+
+    .slide-picker-item .slide-name {
+        font-size: 14px;
+        color: var(--color-text-primary, #e0e0e0);
+    }
+
+    .slide-picker-item .slide-format {
+        font-size: 12px;
+        color: var(--color-text-muted, #666);
+        padding: 2px 8px;
+        background: var(--color-bg-overlay, #252525);
+        border-radius: 4px;
+    }
+
+    /* Error page */
+    .error-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        padding: 20px;
+    }
+
+    .error-page .error {
+        max-width: 500px;
+        text-align: center;
+    }
+
+    .error-page button {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background: var(--color-primary, #4a9eff);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .error-page button:hover {
+        background: var(--color-primary-light, #6bb0ff);
+    }
+`;
+document.head.appendChild(additionalStyles);
+
+// ==========================================
+// START APPLICATION
+// ==========================================
+
 init();
+
+// Export for debugging
+window.__VarunaApp = {
+    state: appState,
+    eventBus,
+    viewerManager,
+    apiService
+};

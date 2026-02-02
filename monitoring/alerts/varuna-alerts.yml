@@ -1,0 +1,235 @@
+# VarunaPoC - Prometheus Alerting Rules
+# Performance and availability alerts for WSI platform
+# Version: 1.0
+# Date: 2025-12-31
+
+groups:
+  # ============================================================================
+  # PERFORMANCE ALERTS (TFE SECTION 5.2 REQUIREMENTS)
+  # ============================================================================
+  - name: varuna_performance
+    interval: 30s
+    rules:
+      # Alert: Slide load time P95 > 2s (SLA violation)
+      - alert: SlideLoadTimeTooHigh
+        expr: histogram_quantile(0.95, rate(varuna_tile_load_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+          sla: performance
+        annotations:
+          summary: "Slide load time P95 exceeds 2s SLA"
+          description: "P95 tile load time is {{ $value | humanizeDuration }} (SLA: <2s). Check backend performance and cache hit rate."
+          dashboard: "http://grafana:3000/d/varuna-wsi-perf"
+
+      # Alert: Navigation latency P95 > 100ms (SLA violation)
+      - alert: NavigationLatencyHigh
+        expr: histogram_quantile(0.95, rate(varuna_http_request_duration_seconds_bucket{endpoint=~"/api/slides.*"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+          sla: performance
+        annotations:
+          summary: "Navigation latency P95 > 100ms SLA"
+          description: "P95 API latency is {{ $value | humanizeDuration }} (SLA: <100ms). Investigate backend bottlenecks."
+
+      # Alert: HTTP error rate > 1%
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(varuna_http_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum(rate(varuna_http_requests_total[5m]))
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "HTTP error rate exceeds 1%"
+          description: "Error rate is {{ $value | humanizePercentage }}. Check backend logs and storage connectivity."
+
+      # Alert: Redis cache hit rate < 70%
+      - alert: RedisCacheHitRateLow
+        expr: |
+          (
+            rate(varuna_cache_hits[5m])
+            /
+            (rate(varuna_cache_hits[5m]) + rate(varuna_cache_misses[5m]))
+          ) < 0.7
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis cache hit rate below 70% target"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (target: >70%). Consider increasing cache size or TTL."
+
+      # Alert: Slow tile generation (OpenSlide performance)
+      - alert: SlowTileGeneration
+        expr: histogram_quantile(0.95, rate(varuna_tile_load_seconds_bucket{cache="miss"}[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: openslide
+        annotations:
+          summary: "Tile generation is slow (OpenSlide bottleneck)"
+          description: "P95 uncached tile generation time is {{ $value | humanizeDuration }} (target: <500ms). Check storage latency and OpenSlide performance."
+
+  # ============================================================================
+  # AVAILABILITY ALERTS (99.5% SLA)
+  # ============================================================================
+  - name: varuna_availability
+    interval: 30s
+    rules:
+      # Alert: Backend instance down
+      - alert: BackendDown
+        expr: up{job="varuna-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: backend
+          sla: availability
+        annotations:
+          summary: "Backend instance is down"
+          description: "Backend {{ $labels.instance }} has been down for 1 minute. Immediate action required."
+
+      # Alert: Redis cache down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been down for 1 minute. Performance will degrade significantly."
+
+      # Alert: Service availability < 99.5% (SLA violation)
+      - alert: AvailabilityBelowSLA
+        expr: |
+          (
+            avg_over_time(up{job="varuna-backend"}[1h])
+          ) < 0.995
+        for: 5m
+        labels:
+          severity: critical
+          component: sla
+        annotations:
+          summary: "Service availability below 99.5% SLA"
+          description: "Availability is {{ $value | humanizePercentage }} over last hour (SLA: 99.5%). Review incident logs."
+
+      # Alert: All backend instances down (complete outage)
+      - alert: CompleteOutage
+        expr: count(up{job="varuna-backend"} == 1) == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: platform
+        annotations:
+          summary: "CRITICAL: Complete platform outage"
+          description: "All backend instances are down. VarunaPoC is unavailable. IMMEDIATE ACTION REQUIRED."
+
+  # ============================================================================
+  # RESOURCE ALERTS
+  # ============================================================================
+  - name: varuna_resources
+    interval: 30s
+    rules:
+      # Alert: Redis memory usage > 90%
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis memory usage > 90%"
+          description: "Redis is using {{ $value | humanizePercentage }} of allocated memory. Cache evictions may increase."
+
+      # Alert: High backend CPU usage
+      - alert: BackendCPUHigh
+        expr: rate(process_cpu_seconds_total{job="varuna-backend"}[5m]) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "Backend CPU usage is high"
+          description: "Backend {{ $labels.instance }} CPU usage is {{ $value | humanize }}. Consider scaling horizontally."
+
+      # Alert: Storage latency high (NAS issue)
+      - alert: StorageLatencyHigh
+        expr: histogram_quantile(0.95, rate(varuna_storage_operation_seconds_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "Storage latency is high"
+          description: "P95 storage latency is {{ $value | humanizeDuration }} (normal: <200ms). Check NAS connectivity and performance."
+
+  # ============================================================================
+  # CAPACITY ALERTS
+  # ============================================================================
+  - name: varuna_capacity
+    interval: 60s
+    rules:
+      # Alert: Concurrent users approaching capacity
+      - alert: ConcurrentUsersHigh
+        expr: varuna_active_sessions > 8
+        for: 5m
+        labels:
+          severity: warning
+          component: capacity
+        annotations:
+          summary: "Concurrent users approaching capacity"
+          description: "Currently {{ $value }} active sessions (capacity: 10). Plan for horizontal scaling if sustained."
+
+      # Alert: Request rate unusually high
+      - alert: RequestRateHigh
+        expr: rate(varuna_http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+          component: capacity
+        annotations:
+          summary: "Request rate is unusually high"
+          description: "Request rate is {{ $value | humanize }} req/s. Monitor for potential DDoS or legitimate traffic spike."
+
+# ==============================================================================
+# ALERT NOTIFICATION CONFIGURATION
+# ==============================================================================
+# Configure in Alertmanager (alertmanager.yml):
+#
+# route:
+#   receiver: 'default-receiver'
+#   group_by: ['alertname', 'severity']
+#   group_wait: 10s
+#   group_interval: 5m
+#   repeat_interval: 12h
+#
+#   routes:
+#     - match:
+#         severity: critical
+#       receiver: 'pagerduty-critical'
+#       continue: true
+#
+#     - match:
+#         severity: warning
+#       receiver: 'email-team'
+#
+# receivers:
+#   - name: 'default-receiver'
+#     email_configs:
+#       - to: 'varuna-alerts@chu-ucl.be'
+#
+#   - name: 'pagerduty-critical'
+#     pagerduty_configs:
+#       - service_key: '<PAGERDUTY_SERVICE_KEY>'
+#
+#   - name: 'email-team'
+#     email_configs:
+#       - to: 'anapath-it@chu-ucl.be'

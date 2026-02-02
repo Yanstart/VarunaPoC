@@ -20,8 +20,36 @@ from services.format_detector import FormatDetector
 
 # Répertoire racine des slides (configurable via env var)
 # En production Docker: SLIDES_REPOSITORY_PATH=/slides
-# En développement local: peut pointer vers ./Slides ou autre chemin
-SLIDES_ROOT = Path(os.getenv("SLIDES_REPOSITORY_PATH", "/slides"))
+# En développement local: fallback automatique vers ./Slides
+import sys
+
+def _get_slides_root() -> Path:
+    """Détermine le chemin des slides avec fallback local."""
+    # 1. Variable d'environnement (priorité absolue)
+    env_path = os.getenv("SLIDES_REPOSITORY_PATH")
+    if env_path:
+        print(f"[SLIDES] Using env SLIDES_REPOSITORY_PATH: {env_path}")
+        return Path(env_path)
+
+    # 2. Fallback local (dev Windows/Linux) - chemin relatif au backend
+    local_path = Path(__file__).resolve().parent.parent.parent / "Slides"
+    if local_path.exists():
+        print(f"[SLIDES] Using local Slides directory: {local_path}")
+        return local_path
+
+    # 3. Chemin Docker (seulement si on n'est PAS sur Windows)
+    if sys.platform != "win32":
+        docker_path = Path("/slides")
+        if docker_path.exists():
+            print(f"[SLIDES] Using Docker path: {docker_path}")
+            return docker_path
+
+    # 4. Par défaut Docker (erreur gérée plus tard)
+    print(f"[SLIDES] WARNING: No valid path found, defaulting to /slides")
+    return Path("/slides")
+
+SLIDES_ROOT = _get_slides_root()
+print(f"[SLIDES] Final SLIDES_ROOT: {SLIDES_ROOT}")
 
 
 def is_safe_path(requested_path: str) -> bool:
