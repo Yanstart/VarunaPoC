@@ -47,12 +47,34 @@ venv/
 # *.md  # DISABLED: We need to track markdown docs
 *.ipynb
 *.pdf
-# *.Claude  # DISABLED: Was blocking .claude/ directory
-# *.claude  # DISABLED: We need to track .claude/ orchestration directory
+# =========================
+# Claude Code configuration (excluded for security)
+# =========================
+.claude/
+CLAUDE.md
 
-# Explicitly track .claude/ orchestration directory
-!.claude/
-!.claude/**
+# =========================
+# Security - Never commit secrets
+# =========================
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets.yaml
+secrets.yml
+.secrets
+credentials.json
+service-account*.json
+
+# =========================
+# Large binary files
+# =========================
+*.bin
+*.exe
+*.dll
+*.so
+*.dylib
 
 # =========================
 # Node.js / Frontend
@@ -68,10 +90,6 @@ dist/
 # (évite d'ignorer .gitignore lui-même)
 !.gitignore
 
-# =========================
-# Claude Code - Track .claude/ orchestration but ignore CLAUDE.md (too large)
-# =========================
-# CLAUDE.md  # DISABLED: Important project config, should be tracked
 
 
 
@@ -259,9 +277,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 

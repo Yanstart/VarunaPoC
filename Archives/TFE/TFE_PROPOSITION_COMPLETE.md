@@ -140,7 +140,7 @@ Notre TFE cherche à répondre aux questions suivantes :
 **QR1 - Performance technique**
 > Quelles performances (temps de chargement, latence de navigation, fluidité) une solution basée sur OpenSlide et OpenSeadragon peut-elle atteindre avec des lames histologiques de plusieurs gigaoctets sur l'infrastructure réseau du CHU UCL Namur ?
 
-**QR2 - Intégration système** 
+**QR2 - Intégration système**
 > Quels sont les défis techniques et organisationnels pour intégrer un viewer web vendor-neutral au workflow existant impliquant le PACS Telemis et le LIS Diamic ?
 
 **QR3 - Acceptabilité utilisateur** ayan

@@ -141,7 +141,7 @@
           "refId": "C"
         }
       ],
-      "title": "Tile Load Time (MÉTRIQUE CRITIQUE)",
+      "title": "Tile Load Time (MÃ‰TRIQUE CRITIQUE)",
       "type": "timeseries"
     },
     {
@@ -543,7 +543,7 @@
           "refId": "A"
         }
       ],
-      "title": "Taux de Requêtes HTTP par Endpoint",
+      "title": "Taux de RequÃªtes HTTP par Endpoint",
       "type": "timeseries"
     },
     {

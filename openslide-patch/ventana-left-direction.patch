@@ -7,7 +7,7 @@ index 80f5b22..f176489 100644
  static const char DIRECTION_RIGHT[] = "RIGHT";
  static const char DIRECTION_UP[] = "UP";
 +static const char DIRECTION_LEFT[] = "LEFT";  // VarunaPoC patch
- 
+
  #define PARSE_INT_ATTRIBUTE_OR_RETURN(NODE, NAME, OUT, RET)	\
    do {								\
 @@ -569,6 +570,14 @@ static struct bif *parse_level0_xml(const char *xml,

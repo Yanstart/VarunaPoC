@@ -1417,4 +1417,3 @@ graph LR
 ---
 
 **Prochaine étape:** Utiliser cette cartographie pour planifier l'architecture modulaire des Phases futures (annotations, filtres, IA, etc.)
-

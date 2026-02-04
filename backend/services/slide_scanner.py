@@ -54,7 +54,7 @@ def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
             "notes": str (infos additionnelles)
         }
 
-    Technical Notes: 
+    Technical Notes:
         - Utilise FormatDetector basé sur https://openslide.org/formats/
         - Seules les lames passant detect_format() sont retournées
         - Fichiers .jpg/.dat isolés (non liés à VMS/MIRAX) sont ignorés

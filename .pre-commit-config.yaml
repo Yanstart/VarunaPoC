@@ -1,0 +1,61 @@
+# Pre-commit hooks for VarunaPoC
+# Run: pre-commit install
+# Test: pre-commit run --all-files
+
+repos:
+  # =========================
+  # Security - Detect secrets BEFORE commit
+  # =========================
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package-lock.json
+
+  # =========================
+  # Git hygiene
+  # =========================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        args: ['--maxkb=1000']  # 1MB max
+
+      # Prevent committing to main/master directly
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'master']
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+
+      # Check YAML syntax
+      - id: check-yaml
+        exclude: ^\.github/
+
+      # Check JSON syntax
+      - id: check-json
+
+      # Detect private keys
+      - id: detect-private-key
+
+  # =========================
+  # Python code quality (optional - uncomment if needed)
+  # =========================
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.8.6
+  #   hooks:
+  #     - id: ruff
+  #       args: [--fix]
+  #     - id: ruff-format
+
+# Configuration for detect-secrets
+# Run: detect-secrets scan > .secrets.baseline
+# to create the baseline file

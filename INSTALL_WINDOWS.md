@@ -14,7 +14,7 @@ Ce guide détaille l'installation complète sur Windows, incluant les solutions 
 
 ### Téléchargement
 
-1. Aller sur: 
+1. Aller sur:
 2. Télécharger **"OpenSlide Windows binaries"** (fichier .zip)
 3. Extraire dans `C:\OpenSlide` (ou autre dossier de votre choix)
 
