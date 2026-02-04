@@ -48,10 +48,13 @@ venv/
 *.ipynb
 *.pdf
 # =========================
-# Claude Code configuration (excluded for security)
+# Claude Code configuration
 # =========================
-.claude/
-CLAUDE.md
+# Track brain and memory (shared across instances)
+# But ignore local settings (may contain secrets)
+.claude/settings.local.json
+.claude/statsig/
+# Note: .claude/BRAIN.md and .claude/memory/ are now TRACKED
 
 # =========================
 # Security - Never commit secrets

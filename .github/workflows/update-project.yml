@@ -1,0 +1,161 @@
+name: Update GitHub Project on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, develop]
+
+env:
+  PROJECT_ID: "PVT_kwHOA_-NCs4BOVLg"
+  STATUS_FIELD_ID: "PVTSSF_lAHOA_-NCs4BOVLgzg9EI1k"
+  # Status options
+  STATUS_DONE: "98236657"
+  STATUS_IN_PROGRESS: "47fc9ee4"
+  STATUS_TODO: "f75ad846"
+
+jobs:
+  update-project:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      pull-requests: read
+      repository-projects: write
+
+    steps:
+      - name: Extract linked issues from PR
+        id: extract-issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            const prTitle = context.payload.pull_request.title || '';
+
+            // Patterns to match issue references
+            const patterns = [
+              /(?:closes?|fixes?|resolves?)\s*#(\d+)/gi,
+              /(?:closes?|fixes?|resolves?)\s+#(\d+)/gi,
+              /implements?\s*#(\d+)/gi,
+              /#(\d+)/g
+            ];
+
+            const issues = new Set();
+            const textToSearch = `${prTitle} ${prBody}`;
+
+            for (const pattern of patterns) {
+              let match;
+              while ((match = pattern.exec(textToSearch)) !== null) {
+                issues.add(match[1]);
+              }
+            }
+
+            const issueList = Array.from(issues);
+            console.log(`Found issues: ${issueList.join(', ')}`);
+            core.setOutput('issues', issueList.join(','));
+            return issueList;
+
+      - name: Update project items to Done
+        if: steps.extract-issues.outputs.issues != ''
+        uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const issues = '${{ steps.extract-issues.outputs.issues }}'.split(',').filter(Boolean);
+
+            if (issues.length === 0) {
+              console.log('No issues to update');
+              return;
+            }
+
+            const projectId = process.env.PROJECT_ID;
+            const statusFieldId = process.env.STATUS_FIELD_ID;
+            const statusDone = process.env.STATUS_DONE;
+
+            for (const issueNumber of issues) {
+              try {
+                // Get the issue node ID
+                const issue = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNumber)
+                });
+
+                const issueNodeId = issue.data.node_id;
+                console.log(`Issue #${issueNumber} node ID: ${issueNodeId}`);
+
+                // Find the project item for this issue
+                const query = `
+                  query($issueId: ID!) {
+                    node(id: $issueId) {
+                      ... on Issue {
+                        projectItems(first: 10) {
+                          nodes {
+                            id
+                            project {
+                              id
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `;
+
+                const result = await github.graphql(query, { issueId: issueNodeId });
+
+                const projectItems = result.node?.projectItems?.nodes || [];
+                const targetItem = projectItems.find(item => item.project.id === projectId);
+
+                if (!targetItem) {
+                  console.log(`Issue #${issueNumber} not found in project`);
+                  continue;
+                }
+
+                // Update the status field to Done
+                const mutation = `
+                  mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { singleSelectOptionId: $optionId }
+                    }) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                `;
+
+                await github.graphql(mutation, {
+                  projectId: projectId,
+                  itemId: targetItem.id,
+                  fieldId: statusFieldId,
+                  optionId: statusDone
+                });
+
+                console.log(`Updated issue #${issueNumber} status to Done`);
+
+              } catch (error) {
+                console.error(`Error updating issue #${issueNumber}:`, error.message);
+              }
+            }
+
+      - name: Add comment to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = '${{ steps.extract-issues.outputs.issues }}'.split(',').filter(Boolean);
+
+            if (issues.length === 0) return;
+
+            const issueLinks = issues.map(n => `#${n}`).join(', ');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Project board updated: ${issueLinks} moved to **Done**`
+            });
