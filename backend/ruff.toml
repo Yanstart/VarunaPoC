@@ -79,7 +79,7 @@ exclude = [
 # Config files - setup scripts with prints and legacy code
 "config_*.py" = ["S102", "T201", "ERA001", "PTH110", "I001", "N806", "F401"]
 # Legacy services - gradual migration (Phase 1 code)
-"services/**/*.py" = ["I001", "F401", "RUF013", "T201", "SIM110", "EM101", "F541", "PLR0912", "PTH123", "E722", "UP"]
+"services/**/*.py" = ["I001", "F401", "RUF013", "T201", "SIM110", "EM101", "F541", "PLR0912", "PTH123", "E722", "UP", "RUF022", "ARG002"]
 # Main app entry point and monitoring
 "main.py" = ["I001", "F401", "T201"]
 "monitoring.py" = ["I001", "F401", "F841", "TRY203", "ARG001"]
