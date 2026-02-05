@@ -12,11 +12,12 @@ Documentation officielle:
 - Properties: https://openslide.org/api/python/#openslide.OpenSlide.properties
 """
 
+from io import BytesIO
+from typing import Dict
+
 import openslide
 from openslide import OpenSlideError
 from PIL import Image
-from io import BytesIO
-from typing import Dict
 
 
 def get_slide_metadata(slide_path: str) -> Dict:
@@ -49,7 +50,7 @@ def get_slide_metadata(slide_path: str) -> Dict:
             "level_dimensions": [list(d) for d in slide.level_dimensions],
             "level_downsamples": list(slide.level_downsamples),
             "vendor": slide.properties.get(openslide.PROPERTY_NAME_VENDOR, "Unknown"),
-            "format": _detect_format(slide_path, slide)
+            "format": _detect_format(slide_path, slide),
         }
 
         slide.close()
@@ -99,7 +100,7 @@ def get_slide_overview_bytes(slide_path: str, max_size: int = 2000, quality: int
 
         # Convertir PIL.Image en JPEG bytes
         buffer = BytesIO()
-        overview.save(buffer, format='JPEG', quality=quality, optimize=True)
+        overview.save(buffer, format="JPEG", quality=quality, optimize=True)
         return buffer.getvalue()
 
     except OpenSlideError as e:
@@ -120,7 +121,7 @@ def _detect_format(slide_path: str, slide: openslide.OpenSlide) -> str:
         return "3DHistech MRXS"
     elif "Ventana" in vendor or "Roche" in vendor:
         return "Roche/Ventana BIF"
-    elif slide_path.endswith('.tif') or slide_path.endswith('.tiff'):
+    elif slide_path.endswith(".tif") or slide_path.endswith(".tiff"):
         return "Generic TIFF"
     else:
         return f"Unknown ({vendor})"

@@ -7,11 +7,12 @@ Références:
 - Tag-based ML routing pattern (Uber Michelangelo, Netflix)
 """
 
-import yaml
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
-from dataclasses import dataclass, field
-import logging
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class ModelRoute:
         description: Description clinique
         reference_metrics: Metrics de référence (performance)
     """
+
     model_id: str
     model_name: str
     model_version: str
@@ -95,24 +97,24 @@ class TagRouter:
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
             # Parse routes
-            routes_data = config.get('routes', [])
+            routes_data = config.get("routes", [])
             for route_data in routes_data:
                 route = ModelRoute(
-                    model_id=route_data['model_id'],
-                    model_name=route_data['model_name'],
-                    model_version=route_data['model_version'],
-                    model_path=route_data['model_path'],
-                    priority=route_data['priority'],
-                    min_confidence=route_data['min_confidence'],
-                    task_type=route_data['task_type'],
-                    required_tags=route_data.get('required_tags', {}),
-                    description=route_data.get('description', ''),
-                    clinical_use=route_data.get('clinical_use', ''),
-                    reference_metrics=route_data.get('reference_metrics', {})
+                    model_id=route_data["model_id"],
+                    model_name=route_data["model_name"],
+                    model_version=route_data["model_version"],
+                    model_path=route_data["model_path"],
+                    priority=route_data["priority"],
+                    min_confidence=route_data["min_confidence"],
+                    task_type=route_data["task_type"],
+                    required_tags=route_data.get("required_tags", {}),
+                    description=route_data.get("description", ""),
+                    clinical_use=route_data.get("clinical_use", ""),
+                    reference_metrics=route_data.get("reference_metrics", {}),
                 )
 
                 self.routes.append(route)
@@ -125,7 +127,7 @@ class TagRouter:
             self.routes.sort(key=lambda r: r.priority, reverse=True)
 
             # Routing config global
-            self.routing_config = config.get('routing_config', {})
+            self.routing_config = config.get("routing_config", {})
 
             logger.info(f"Loaded {len(self.routes)} model routes from {self.config_path}")
             if self.fallback_model:
@@ -172,19 +174,25 @@ class TagRouter:
         exact_matches = self._find_exact_matches(tags)
         if exact_matches:
             best_route = self._select_best_route(exact_matches)
-            logger.info(f"Exact match found: {best_route.model_name} (priority {best_route.priority})")
+            logger.info(
+                f"Exact match found: {best_route.model_name} (priority {best_route.priority})"
+            )
             return best_route
 
         # 2. Recherche partielle (organ + stain minimum)
         partial_matches = self._find_partial_matches(tags)
         if partial_matches:
             best_route = self._select_best_route(partial_matches)
-            logger.info(f"Partial match found: {best_route.model_name} (priority {best_route.priority})")
+            logger.info(
+                f"Partial match found: {best_route.model_name} (priority {best_route.priority})"
+            )
             return best_route
 
         # 3. Fallback vers modèle générique
         if self.fallback_model:
-            logger.warning(f"No specific model found, using fallback: {self.fallback_model.model_name}")
+            logger.warning(
+                f"No specific model found, using fallback: {self.fallback_model.model_name}"
+            )
             return self.fallback_model
 
         # 4. Aucun modèle disponible (ne devrait jamais arriver si config correcte)
@@ -225,12 +233,18 @@ class TagRouter:
                 continue
 
             # Vérifier si organ + stain matchent
-            if all(route.required_tags.get(k) == tags.get(k) for k in required_keys if k in route.required_tags):
+            if all(
+                route.required_tags.get(k) == tags.get(k)
+                for k in required_keys
+                if k in route.required_tags
+            ):
                 matches.append(route)
 
         return matches
 
-    def _tags_match(self, required_tags: Dict[str, str], provided_tags: Dict[str, str], exact: bool = False) -> bool:
+    def _tags_match(
+        self, required_tags: Dict[str, str], provided_tags: Dict[str, str], exact: bool = False
+    ) -> bool:
         """
         Vérifie si tags fournis matchent tags requis.
 
@@ -318,9 +332,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # Test routing
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TAG ROUTER - TESTS")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Initialize router
     try:
@@ -338,7 +352,7 @@ if __name__ == "__main__":
                 priority=100,
                 min_confidence=0.85,
                 task_type="grading",
-                required_tags={"organ": "prostate", "stain": "H&E", "task": "grading"}
+                required_tags={"organ": "prostate", "stain": "H&E", "task": "grading"},
             ),
             ModelRoute(
                 model_id="generic",
@@ -348,8 +362,8 @@ if __name__ == "__main__":
                 priority=1,
                 min_confidence=0.75,
                 task_type="detection",
-                required_tags={}
-            )
+                required_tags={},
+            ),
         ]
         router.fallback_model = router.routes[1]
 
@@ -357,16 +371,13 @@ if __name__ == "__main__":
     test_cases = [
         {
             "name": "Prostate H&E Grading",
-            "tags": {"organ": "prostate", "stain": "H&E", "task": "grading"}
+            "tags": {"organ": "prostate", "stain": "H&E", "task": "grading"},
         },
         {
             "name": "Sein Ki-67 (partial match)",
-            "tags": {"organ": "sein", "stain": "IHC", "marker": "Ki-67"}
+            "tags": {"organ": "sein", "stain": "IHC", "marker": "Ki-67"},
         },
-        {
-            "name": "Unknown organ (fallback)",
-            "tags": {"organ": "unknown", "stain": "H&E"}
-        }
+        {"name": "Unknown organ (fallback)", "tags": {"organ": "unknown", "stain": "H&E"}},
     ]
 
     for test in test_cases:
@@ -374,7 +385,7 @@ if __name__ == "__main__":
         print(f"Tags: {test['tags']}")
 
         try:
-            route = router.route(test['tags'])
+            route = router.route(test["tags"])
             print(f"  → Routed to: {route.model_name} (v{route.model_version})")
             print(f"    Model ID: {route.model_id}")
             print(f"    Priority: {route.priority}")
@@ -382,4 +393,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"  → ERROR: {e}")
 
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")

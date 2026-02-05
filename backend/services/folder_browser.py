@@ -12,16 +12,18 @@ Fonctionnalités:
 Voir: docs/USER_GUIDE_SLIDE_STRUCTURE.md pour règles complètes
 """
 
-import os
 import hashlib
-from pathlib import Path
-from typing import Dict, List, Optional
-from services.format_detector import FormatDetector
+import os
 
 # Répertoire racine des slides (configurable via env var)
 # En production Docker: SLIDES_REPOSITORY_PATH=/slides
 # En développement local: fallback automatique vers ./Slides
 import sys
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from services.format_detector import FormatDetector
+
 
 def _get_slides_root() -> Path:
     """Détermine le chemin des slides avec fallback local."""
@@ -47,6 +49,7 @@ def _get_slides_root() -> Path:
     # 4. Par défaut Docker (erreur gérée plus tard)
     print(f"[SLIDES] WARNING: No valid path found, defaulting to /slides")
     return Path("/slides")
+
 
 SLIDES_ROOT = _get_slides_root()
 print(f"[SLIDES] Final SLIDES_ROOT: {SLIDES_ROOT}")
@@ -75,7 +78,7 @@ def is_safe_path(requested_path: str) -> bool:
     """
     try:
         # Normaliser le chemin (convertir backslashes en forward slashes)
-        normalized_path = requested_path.replace('\\', '/')
+        normalized_path = requested_path.replace("\\", "/")
 
         # Construire le chemin absolu résolu
         full_path = (SLIDES_ROOT / normalized_path.lstrip("/")).resolve()
@@ -189,7 +192,7 @@ def browse_directory(relative_path: str = "/") -> Dict:
         }
     """
     # Normaliser le chemin (convertir backslashes en forward slashes)
-    normalized_path = relative_path.replace('\\', '/')
+    normalized_path = relative_path.replace("\\", "/")
 
     # Validation sécurité
     if not is_safe_path(normalized_path):
@@ -234,7 +237,7 @@ def browse_directory(relative_path: str = "/") -> Dict:
             continue
 
         # Chemin relatif de l'item (utiliser forward slashes)
-        item_relative_path = str(Path(normalized_path) / item_name).replace('\\', '/')
+        item_relative_path = str(Path(normalized_path) / item_name).replace("\\", "/")
 
         if item.is_dir():
             # Vérifier si c'est un dossier companion (ex: sample.mrxs/)
@@ -247,11 +250,13 @@ def browse_directory(relative_path: str = "/") -> Dict:
                 continue
 
             # Dossier normal
-            folders.append({
-                "name": item_name,
-                "path": item_relative_path,
-                "item_count": count_items_in_folder(item)
-            })
+            folders.append(
+                {
+                    "name": item_name,
+                    "path": item_relative_path,
+                    "item_count": count_items_in_folder(item),
+                }
+            )
             processed.add(item_name)
 
         elif item.is_file():
@@ -264,16 +269,18 @@ def browse_directory(relative_path: str = "/") -> Dict:
 
             if slide_format:
                 # C'est une lame valide (ou potentiellement valide)
-                slides.append({
-                    "name": item_name,
-                    "path": str(item.relative_to(SLIDES_ROOT)),
-                    "id": generate_slide_id(item),
-                    "format_string": slide_format.format_string or "Unknown",
-                    "structure_type": slide_format.structure_type,
-                    "is_supported": slide_format.is_supported,
-                    "notes": slide_format.notes,
-                    "dependencies": _get_dependency_paths(item, slide_format)
-                })
+                slides.append(
+                    {
+                        "name": item_name,
+                        "path": str(item.relative_to(SLIDES_ROOT)),
+                        "id": generate_slide_id(item),
+                        "format_string": slide_format.format_string or "Unknown",
+                        "structure_type": slide_format.structure_type,
+                        "is_supported": slide_format.is_supported,
+                        "notes": slide_format.notes,
+                        "dependencies": _get_dependency_paths(item, slide_format),
+                    }
+                )
 
                 # Marquer les fichiers associés comme traités
                 if slide_format.structure_type == "multi-file":
@@ -294,12 +301,18 @@ def browse_directory(relative_path: str = "/") -> Dict:
                 # Fichier non reconnu
                 extension = item.suffix if item.suffix else None
 
-                files.append({
-                    "name": item_name,
-                    "extension": extension,
-                    "is_supported": False,
-                    "notes": "Unknown format - no extension or unsupported" if not extension else f"Extension {extension} not recognized"
-                })
+                files.append(
+                    {
+                        "name": item_name,
+                        "extension": extension,
+                        "is_supported": False,
+                        "notes": (
+                            "Unknown format - no extension or unsupported"
+                            if not extension
+                            else f"Extension {extension} not recognized"
+                        ),
+                    }
+                )
                 processed.add(item_name)
 
     return {
@@ -308,7 +321,7 @@ def browse_directory(relative_path: str = "/") -> Dict:
         "breadcrumb": breadcrumb,
         "folders": folders,
         "slides": slides,
-        "files": files
+        "files": files,
     }
 
 

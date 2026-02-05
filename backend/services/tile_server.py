@@ -23,11 +23,12 @@ Voir: docs/CLAUDE.md section "Coordinate Mapping"
 """
 
 import io
+import logging
 from pathlib import Path
 from typing import Optional, Tuple
-from PIL import Image
+
 import openslide
-import logging
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -87,12 +88,7 @@ class TileServer:
         return slide
 
     def get_tile(
-        self,
-        slide_path: str,
-        level: int,
-        col: int,
-        row: int,
-        tile_size: int = 256
+        self, slide_path: str, level: int, col: int, row: int, tile_size: int = 256
     ) -> Optional[bytes]:
         """
         Extrait une tuile depuis un slide.
@@ -151,23 +147,21 @@ class TileServer:
             # Extraire la région depuis OpenSlide
             # read_region retourne RGBA PIL Image
             region = slide.read_region(
-                location=(x_level0, y_level0),
-                level=level,
-                size=(actual_width, actual_height)
+                location=(x_level0, y_level0), level=level, size=(actual_width, actual_height)
             )
 
             # Convertir RGBA → RGB (OpenSeadragon préfère RGB)
-            rgb_region = region.convert('RGB')
+            rgb_region = region.convert("RGB")
 
             # Si tuile incomplète (bord), créer image complète avec fond noir
             if actual_width < tile_size or actual_height < tile_size:
-                full_tile = Image.new('RGB', (tile_size, tile_size), (0, 0, 0))
+                full_tile = Image.new("RGB", (tile_size, tile_size), (0, 0, 0))
                 full_tile.paste(rgb_region, (0, 0))
                 rgb_region = full_tile
 
             # Encoder en JPEG
             buffer = io.BytesIO()
-            rgb_region.save(buffer, format='JPEG', quality=85, optimize=True)
+            rgb_region.save(buffer, format="JPEG", quality=85, optimize=True)
             buffer.seek(0)
 
             return buffer.getvalue()
@@ -215,7 +209,7 @@ class TileServer:
             "format": "jpeg",
             "levels": slide.level_count,
             "level_dimensions": list(slide.level_dimensions),
-            "level_downsamples": list(slide.level_downsamples)
+            "level_downsamples": list(slide.level_downsamples),
         }
 
     def close_all(self):
