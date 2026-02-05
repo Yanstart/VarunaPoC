@@ -26,7 +26,7 @@
     "brace-style": ["warn", "1tbs", { "allowSingleLine": true }],
     "comma-dangle": ["warn", "always-multiline"],
     "arrow-spacing": ["error", { "before": true, "after": true }],
-    "space-before-function-paren": ["error", {
+    "space-before-function-paren": ["warn", {
       "anonymous": "always",
       "named": "never",
       "asyncArrow": "always"
