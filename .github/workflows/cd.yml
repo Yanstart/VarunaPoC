@@ -1,0 +1,265 @@
+name: CD - Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  # ============================================
+  # Build and Push Docker Images to GHCR
+  # ============================================
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        component: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}
+          tags: |
+            # Semantic versioning tags (for git tags like v1.2.3)
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # Branch name (main -> latest)
+            type=ref,event=branch
+            # Git SHA (for exact version tracking)
+            type=sha,prefix={{branch}}-
+          labels: |
+            org.opencontainers.image.title=VarunaPoC ${{ matrix.component }}
+            org.opencontainers.image.description=Digital Pathology Slide Viewer - ${{ matrix.component }}
+            org.opencontainers.image.vendor=CHU UCL Namur
+            org.opencontainers.image.licenses=Proprietary
+
+      - name: Build and push ${{ matrix.component }} image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.component }}
+          file: ./${{ matrix.component }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Build args (if needed)
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}
+          subject-digest: ${{ steps.meta.outputs.digest }}
+          push-to-registry: true
+
+  # ============================================
+  # Create GitHub Release (for version tags)
+  # ============================================
+  create-release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: |
+            {
+              "categories": [
+                {
+                  "title": "## Features",
+                  "labels": ["feature", "enhancement"]
+                },
+                {
+                  "title": "## Bug Fixes",
+                  "labels": ["bug", "fix"]
+                },
+                {
+                  "title": "## Documentation",
+                  "labels": ["documentation", "docs"]
+                },
+                {
+                  "title": "## Infrastructure",
+                  "labels": ["infrastructure", "ci", "cd"]
+                }
+              ],
+              "template": "#{{CHANGELOG}}",
+              "pr_template": "- #{{TITLE}} (#{{NUMBER}})"
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            # VarunaPoC Release ${{ steps.version.outputs.version }}
+
+            ## Docker Images
+
+            Pull the latest images:
+
+            ```bash
+            # Backend
+            docker pull ${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ steps.version.outputs.version }}
+
+            # Frontend
+            docker pull ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ steps.version.outputs.version }}
+            ```
+
+            ## Deployment
+
+            See [DOCKER_DEPLOYMENT_CHECKLIST.md](https://github.com/${{ github.repository }}/blob/main/DOCKER_DEPLOYMENT_CHECKLIST.md) for deployment instructions.
+
+            ## Changes
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Verification
+
+            Verify image signatures:
+            ```bash
+            gh attestation verify oci://${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ steps.version.outputs.version }} --owner ${{ github.repository_owner }}
+            gh attestation verify oci://${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ steps.version.outputs.version }} --owner ${{ github.repository_owner }}
+            ```
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # Update Deployment Manifest (GitOps ready)
+  # ============================================
+  update-manifest:
+    name: Update Deployment Manifest
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/v}
+          else
+            TAG="main-${GITHUB_SHA::7}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Update docker-compose.yml with new image tags
+        run: |
+          # Update backend image tag
+          sed -i "s|image: ghcr.io/.*/backend:.*|image: ${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ steps.tag.outputs.tag }}|g" Scripts/Deployment/docker-compose.yml
+
+          # Update frontend image tag
+          sed -i "s|image: ghcr.io/.*/frontend:.*|image: ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ steps.tag.outputs.tag }}|g" Scripts/Deployment/docker-compose.yml
+
+      - name: Commit and push manifest changes
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add Scripts/Deployment/docker-compose.yml
+          git diff --staged --quiet || git commit -m "chore: Update deployment manifest to ${{ steps.tag.outputs.tag }}"
+          git push
+
+  # ============================================
+  # Deployment Notification
+  # ============================================
+  notify:
+    name: Deployment Notification
+    needs: [build-and-push, update-manifest]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Extract image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/v}
+          else
+            TAG="main-${GITHUB_SHA::7}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Post deployment summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          # Deployment Summary
+
+          ## Images Published
+
+          - **Backend**: \`${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ steps.tag.outputs.tag }}\`
+          - **Frontend**: \`${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ steps.tag.outputs.tag }}\`
+
+          ## Pull Commands
+
+          \`\`\`bash
+          docker pull ${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ steps.tag.outputs.tag }}
+          docker pull ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ steps.tag.outputs.tag }}
+          \`\`\`
+
+          ## Deployment
+
+          See [DOCKER_DEPLOYMENT_CHECKLIST.md](https://github.com/${{ github.repository }}/blob/main/DOCKER_DEPLOYMENT_CHECKLIST.md)
+
+          ## Status
+
+          - Build: ${{ needs.build-and-push.result }}
+          - Manifest Update: ${{ needs.update-manifest.result }}
+          EOF

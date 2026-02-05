@@ -1,0 +1,45 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "rules": {
+    "indent": ["error", 4, { "SwitchCase": 1 }],
+    "linebreak-style": "off",
+    "quotes": ["warn", "single", { "avoidEscape": true }],
+    "semi": ["error", "always"],
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "prefer-const": "error",
+    "no-var": "error",
+    "eqeqeq": ["error", "always"],
+    "curly": ["warn", "all"],
+    "brace-style": ["warn", "1tbs", { "allowSingleLine": true }],
+    "comma-dangle": ["warn", "always-multiline"],
+    "arrow-spacing": ["error", { "before": true, "after": true }],
+    "space-before-function-paren": ["warn", {
+      "anonymous": "always",
+      "named": "never",
+      "asyncArrow": "always"
+    }],
+    "no-trailing-spaces": "error",
+    "eol-last": ["error", "always"],
+    "object-curly-spacing": ["error", "always"],
+    "array-bracket-spacing": ["error", "never"]
+  },
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "*.config.js",
+    "*.config.cjs"
+  ]
+}

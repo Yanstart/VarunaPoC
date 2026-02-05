@@ -42,7 +42,7 @@ def configure_openslide_path():
         return False
 
     # Python 3.8+ recommande os.add_dll_directory()
-    if sys.version_info >= (3, 8) and hasattr(os, 'add_dll_directory'):
+    if sys.version_info >= (3, 8) and hasattr(os, "add_dll_directory"):
         try:
             os.add_dll_directory(OPENSLIDE_PATH)
             print(f"[OK] OpenSlide DLL directory added: {OPENSLIDE_PATH}")
@@ -52,7 +52,7 @@ def configure_openslide_path():
             return False
     else:
         # Fallback pour Python < 3.8
-        os.environ['PATH'] = OPENSLIDE_PATH + os.pathsep + os.environ.get('PATH', '')
+        os.environ["PATH"] = OPENSLIDE_PATH + os.pathsep + os.environ.get("PATH", "")
         print(f"[OK] OpenSlide added to PATH: {OPENSLIDE_PATH}")
         return True
 

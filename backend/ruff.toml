@@ -1,0 +1,100 @@
+# Ruff configuration for VarunaPoC backend
+# Ruff is an extremely fast Python linter, written in Rust
+# Docs: https://docs.astral.sh/ruff/
+
+# Same linting strictness as Flake8, but 100x faster
+target-version = "py311"
+line-length = 100
+
+[lint]
+# Enable all recommended rules
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (import sorting)
+    "N",      # pep8-naming
+    "UP",     # pyupgrade (modern Python idioms)
+    "B",      # flake8-bugbear (common bugs)
+    "A",      # flake8-builtins (shadowing builtins)
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez (timezone-aware datetimes)
+    "T10",    # flake8-debugger (no pdb/breakpoint in prod)
+    "EM",     # flake8-errmsg
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "PIE",    # flake8-pie
+    "T20",    # flake8-print (avoid print statements)
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate (commented-out code)
+    "PGH",    # pygrep-hooks
+    "PL",     # pylint
+    "TRY",    # tryceratops (exception handling)
+    "RUF",    # ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",    # Line too long (handled by formatter)
+    "TRY003",  # Avoid specifying long messages in exceptions (too strict for medical domain)
+    "PLR0913", # Too many arguments (FastAPI routes often need many params)
+    "PLR2004", # Magic value used in comparison (medical thresholds are OK)
+    "Q000",    # Single/double quotes (handled by formatter)
+    "UP035",   # Deprecated typing imports (gradual migration)
+    "UP006",   # Use dict instead of Dict (gradual migration)
+    "UP007",   # Use X | Y instead of Union (gradual migration)
+    "TRY300",  # Consider moving to else block (too strict)
+    "TRY400",  # Use logging.exception (preference)
+    "EM102",   # Exception f-string (too strict for error messages)
+    "B904",    # Raise from err (gradual adoption)
+    "PLC0415", # Import at top level (dynamic imports needed)
+    "PLW0603", # Global statement (needed for caching)
+    "RET505",  # Unnecessary elif (stylistic)
+    "PIE810",  # Call endswith once (minor optimization)
+    "E402",    # Module level import not at top (conditional imports)
+]
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+    ".pytest_cache",
+    ".ruff_cache",
+]
+
+[lint.per-file-ignores]
+# Tests can use assertions and magic values
+"tests/**/*.py" = ["S101", "PLR2004"]
+# Config files - setup scripts with prints and legacy code
+"config_*.py" = ["S102", "T201", "ERA001", "PTH110", "I001", "N806", "F401"]
+# Legacy services - gradual migration (Phase 1 code)
+"services/**/*.py" = ["I001", "F401", "RUF013", "T201", "SIM110", "EM101", "F541", "PLR0912", "PTH123", "E722", "UP", "RUF022", "ARG002"]
+# Main app entry point and monitoring
+"main.py" = ["I001", "F401", "T201"]
+"monitoring.py" = ["I001", "F401", "F841", "TRY203", "ARG001"]
+# Routes - legacy FastAPI routes
+"routes/**/*.py" = ["I001", "F401", "RET504", "TRY301"]
+
+[lint.isort]
+known-first-party = ["routes", "services", "utils"]
+combine-as-imports = true
+
+[lint.flake8-type-checking]
+strict = true
+
+[format]
+# Black-compatible formatting
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

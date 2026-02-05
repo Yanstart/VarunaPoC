@@ -7,11 +7,12 @@ Références:
 - OpenSlide properties: https://openslide.org/api/python/#openslide.OpenSlide.properties
 """
 
-import openslide
-from pathlib import Path
-from typing import Dict, Optional
 import logging
 import re
+from pathlib import Path
+from typing import Dict, Optional
+
+import openslide
 
 logger = logging.getLogger(__name__)
 
@@ -105,14 +106,16 @@ class TagExtractor:
                 return tags
 
         # 5. Fallback: demander assignation manuelle
-        logger.warning(f"Could not auto-extract tags for {Path(slide_path).name} - manual assignment required")
+        logger.warning(
+            f"Could not auto-extract tags for {Path(slide_path).name} - manual assignment required"
+        )
         return {
             "organ": None,
             "stain": None,
             "marker": None,
             "task": None,
             "confidence": 0.0,
-            "source": "manual_required"
+            "source": "manual_required",
         }
 
     # ========================================================================
@@ -141,9 +144,9 @@ class TagExtractor:
             organ = None
             stain = None
 
-            if hasattr(dcm, 'SpecimenDescriptionSequence'):
+            if hasattr(dcm, "SpecimenDescriptionSequence"):
                 for item in dcm.SpecimenDescriptionSequence:
-                    desc_text = str(item.get('SpecimenDescription', '')).lower()
+                    desc_text = str(item.get("SpecimenDescription", "")).lower()
                     organ = self._find_organ_in_text(desc_text)
                     stain = self._find_stain_in_text(desc_text)
 
@@ -154,7 +157,7 @@ class TagExtractor:
                     "marker": None,  # Difficile à extraire de DICOM
                     "task": None,
                     "confidence": 0.95,
-                    "source": "dicom_metadata"
+                    "source": "dicom_metadata",
                 }
 
         except ImportError:
@@ -189,14 +192,16 @@ class TagExtractor:
             marker = self._find_marker_in_text(all_text)
 
             if organ or stain or marker:
-                logger.debug(f"Found in OpenSlide properties: organ={organ}, stain={stain}, marker={marker}")
+                logger.debug(
+                    f"Found in OpenSlide properties: organ={organ}, stain={stain}, marker={marker}"
+                )
                 return {
                     "organ": organ,
                     "stain": stain,
                     "marker": marker,
                     "task": None,
                     "confidence": 0.8,
-                    "source": "openslide_properties"
+                    "source": "openslide_properties",
                 }
 
         except openslide.OpenSlideError as e:
@@ -234,7 +239,7 @@ class TagExtractor:
                 "marker": marker,
                 "task": None,
                 "confidence": 0.7,  # Filename parsing moins fiable
-                "source": "filename_parsing"
+                "source": "filename_parsing",
             }
 
         return None
@@ -272,7 +277,7 @@ class TagExtractor:
                     "marker": None,  # Pas prédit par ce modèle
                     "task": None,
                     "confidence": predictions["confidence"],
-                    "source": "ml_inference"
+                    "source": "ml_inference",
                 }
 
         except Exception as e:
@@ -355,7 +360,7 @@ class TagExtractor:
             "peau": ["skin", "cutaneous", "peau", "derm"],
             "cerveau": ["brain", "cerebral", "cerveau", "neuro"],
             "estomac": ["stomach", "gastric", "estomac", "gastr"],
-            "pancréas": ["pancreas", "pancreatic", "pancréas", "pancr"]
+            "pancréas": ["pancreas", "pancreatic", "pancréas", "pancr"],
         }
 
     def _load_stain_keywords(self) -> Dict[str, list]:
@@ -370,7 +375,7 @@ class TagExtractor:
             "IHC": ["ihc", "immunohistochemistry", "immunohistochimie", "immuno"],
             "IF": ["if", "immunofluorescence", "immfluor"],
             "PAS": ["pas", "periodic acid schiff"],
-            "Masson": ["masson", "trichrome"]
+            "Masson": ["masson", "trichrome"],
         }
 
     def _load_marker_keywords(self) -> Dict[str, list]:
@@ -389,7 +394,7 @@ class TagExtractor:
             "p53": ["p53", "tp53", "tumor protein 53"],
             "CD3": ["cd3"],
             "CD20": ["cd20"],
-            "CD45": ["cd45"]
+            "CD45": ["cd45"],
         }
 
 
@@ -406,14 +411,14 @@ if __name__ == "__main__":
         ("data/prostate_HE_sample1.mrxs", "MRXS"),
         ("data/breast_Ki67_case45.svs", "SVS"),
         ("data/lung_PDL1_patient789.bif", "BIF"),
-        ("data/unknown_sample.ndpi", "NDPI")
+        ("data/unknown_sample.ndpi", "NDPI"),
     ]
 
     extractor = TagExtractor()
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TAG EXTRACTOR - TESTS")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     for slide_path, slide_format in test_slides:
         print(f"Testing: {slide_path}")

@@ -16,19 +16,21 @@ API Docs:
     http://localhost:8000/redoc (ReDoc)
 """
 
-# IMPORTANT: Configure OpenSlide DLL path AVANT tout import
-# (Nécessaire sur Windows pour trouver libopenslide-0.dll)
-import config_openslide
-
 import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+
+# IMPORTANT: Configure OpenSlide DLL path AVANT tout import
+# (Nécessaire sur Windows pour trouver libopenslide-0.dll)
+import config_openslide
 from routes import slides
 
 # Monitoring optionnel (requires prometheus_client)
 try:
-    from monitoring import prometheus_middleware, metrics_endpoint
+    from monitoring import metrics_endpoint, prometheus_middleware
+
     MONITORING_ENABLED = True
 except ImportError:
     MONITORING_ENABLED = False
@@ -66,19 +68,10 @@ Voir `/docs/Manuel/` pour le guide utilisateur complet.
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
-        {
-            "name": "health",
-            "description": "Points de contrôle de santé du service"
-        },
-        {
-            "name": "navigation",
-            "description": "Navigation hiérarchique et détection de lames"
-        },
-        {
-            "name": "visualization",
-            "description": "Chargement et affichage des lames"
-        }
-    ]
+        {"name": "health", "description": "Points de contrôle de santé du service"},
+        {"name": "navigation", "description": "Navigation hiérarchique et détection de lames"},
+        {"name": "visualization", "description": "Chargement et affichage des lames"},
+    ],
 )
 
 # CORS configuration
@@ -92,7 +85,7 @@ else:
     allow_origins = [
         "http://localhost:5173",  # Vite dev server
         "http://localhost:8080",  # Docker frontend
-        "http://localhost",       # Frontend on port 80
+        "http://localhost",  # Frontend on port 80
     ]
 
 app.add_middleware(
@@ -128,8 +121,8 @@ async def root():
             "navigation": "/api/slides/browse",
             "list_all": "/api/slides/",
             "slide_info": "/api/slides/{id}/info",
-            "slide_overview": "/api/slides/{id}/overview"
-        }
+            "slide_overview": "/api/slides/{id}/overview",
+        },
     }
 
 

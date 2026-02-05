@@ -12,10 +12,11 @@ Author: VarunaPoC Team
 Version: 1.5.0
 """
 
-from pathlib import Path
-from typing import List, Dict, Optional
 import logging
 import os
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from services.format_detector import FormatDetector
 
 logger = logging.getLogger(__name__)
@@ -82,21 +83,25 @@ def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
         # Utiliser generate_slide_id pour cohérence avec folder_browser
         slide_id = generate_slide_id(slide_format.entry_point)
 
-        slides.append({
-            "id": slide_id,
-            "name": slide_format.entry_point.name,
-            "path": str(slide_format.entry_point),
-            "format": slide_format.name,
-            "format_string": slide_format.format_string if slide_format.format_string else "unknown",
-            "structure_type": slide_format.structure_type,
-            "has_joint_files": len(slide_format.joint_files) > 0,
-            "joint_files_count": len(slide_format.joint_files),
-            "has_companion_dirs": len(slide_format.companion_dirs) > 0,
-            "companion_dirs_count": len(slide_format.companion_dirs),
-            "detection_method": slide_format.detection_method,
-            "is_supported": slide_format.is_supported,  # Phase 1.5.1: inclure supporté/non supporté
-            "notes": slide_format.notes
-        })
+        slides.append(
+            {
+                "id": slide_id,
+                "name": slide_format.entry_point.name,
+                "path": str(slide_format.entry_point),
+                "format": slide_format.name,
+                "format_string": (
+                    slide_format.format_string if slide_format.format_string else "unknown"
+                ),
+                "structure_type": slide_format.structure_type,
+                "has_joint_files": len(slide_format.joint_files) > 0,
+                "joint_files_count": len(slide_format.joint_files),
+                "has_companion_dirs": len(slide_format.companion_dirs) > 0,
+                "companion_dirs_count": len(slide_format.companion_dirs),
+                "detection_method": slide_format.detection_method,
+                "is_supported": slide_format.is_supported,  # Phase 1.5.1: inclure supporté/non supporté
+                "notes": slide_format.notes,
+            }
+        )
 
     logger.info(f"Scan complete: {len(slides)} validated slides ready for API")
     return slides
@@ -126,6 +131,6 @@ def get_slide_path_by_id(slide_id: str) -> Optional[str]:
     if not _slide_cache:
         # Premier appel: remplir cache
         slides = scan_slides_directory()
-        _slide_cache = {s['id']: s['path'] for s in slides}
+        _slide_cache = {s["id"]: s["path"] for s in slides}
 
     return _slide_cache.get(slide_id)

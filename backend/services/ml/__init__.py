@@ -15,10 +15,6 @@ Référence: docs/MLOPS_ARCHITECTURE.md
 """
 
 from .tag_extractor import TagExtractor
-from .tag_router import TagRouter, ModelRoute
+from .tag_router import ModelRoute, TagRouter
 
-__all__ = [
-    'TagExtractor',
-    'TagRouter',
-    'ModelRoute'
-]
+__all__ = ["TagExtractor", "TagRouter", "ModelRoute"]

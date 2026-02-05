@@ -13,8 +13,8 @@ Environnements supportés:
 """
 
 import os
-import sys
 import platform
+import sys
 
 
 def configure_openslide():
@@ -27,12 +27,12 @@ def configure_openslide():
     3. Check if running on Linux with system packages
     """
     # Check if running in Docker
-    if os.environ.get('DOCKER_CONTAINER') == 'true':
+    if os.environ.get("DOCKER_CONTAINER") == "true":
         print("[INFO] Running in Docker container")
         return _configure_docker()
 
     # Check if running on Windows
-    if platform.system() == 'Windows':
+    if platform.system() == "Windows":
         print("[INFO] Running on Windows")
         return _configure_windows()
 
@@ -53,7 +53,7 @@ def _configure_windows():
         return False
 
     # Python 3.8+ recommande os.add_dll_directory()
-    if sys.version_info >= (3, 8) and hasattr(os, 'add_dll_directory'):
+    if sys.version_info >= (3, 8) and hasattr(os, "add_dll_directory"):
         try:
             os.add_dll_directory(OPENSLIDE_PATH)
             print(f"[OK] OpenSlide DLL directory added: {OPENSLIDE_PATH}")
@@ -63,7 +63,7 @@ def _configure_windows():
             return False
     else:
         # Fallback pour Python < 3.8
-        os.environ['PATH'] = OPENSLIDE_PATH + os.pathsep + os.environ.get('PATH', '')
+        os.environ["PATH"] = OPENSLIDE_PATH + os.pathsep + os.environ.get("PATH", "")
         print(f"[OK] OpenSlide added to PATH: {OPENSLIDE_PATH}")
         return True
 
@@ -75,7 +75,7 @@ def _configure_docker():
     common_paths = [
         "/usr/lib/x86_64-linux-gnu/libopenslide.so.0",
         "/usr/lib/libopenslide.so.0",
-        "/usr/local/lib/libopenslide.so.0"
+        "/usr/local/lib/libopenslide.so.0",
     ]
 
     for lib_path in common_paths:

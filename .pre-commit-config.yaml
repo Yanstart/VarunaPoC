@@ -47,14 +47,35 @@ repos:
       - id: detect-private-key
 
   # =========================
-  # Python code quality (optional - uncomment if needed)
+  # Python code quality
   # =========================
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.8.6
-  #   hooks:
-  #     - id: ruff
-  #       args: [--fix]
-  #     - id: ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        name: Ruff linting (Python)
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/
+      - id: ruff-format
+        name: Ruff formatting (Python)
+        files: ^backend/
+
+  # Black formatter (alternative to ruff-format, can be used together)
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        name: Black formatting (Python)
+        files: ^backend/
+
+  # isort - Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (Python imports)
+        args: ["--profile", "black"]
+        files: ^backend/
 
 # Configuration for detect-secrets
 # Run: detect-secrets scan > .secrets.baseline

@@ -11,10 +11,11 @@ API Design:
 """
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response, JSONResponse
-from services.slide_scanner import scan_slides_directory, get_slide_path_by_id
-from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
+from fastapi.responses import JSONResponse, Response
+
 from services.folder_browser import browse_directory
+from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
+from services.slide_scanner import get_slide_path_by_id, scan_slides_directory
 from services.tile_server import tile_server
 
 router = APIRouter(prefix="/api/slides")
@@ -50,7 +51,9 @@ async def list_slides():
 
 
 @router.get("/browse", tags=["navigation"])
-async def browse_slides_directory(path: str = Query("/", description="Chemin relatif depuis /Slides")):
+async def browse_slides_directory(
+    path: str = Query("/", description="Chemin relatif depuis /Slides"),
+):
     """
     Navigation hiérarchique dans le répertoire /Slides.
 

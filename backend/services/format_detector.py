@@ -15,11 +15,12 @@ Author: VarunaPoC Team
 Version: 1.5.0
 """
 
-import openslide
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
-from dataclasses import dataclass, field
-import logging
+
+import openslide
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class SlideFormat:
         detection_method: Méthode de détection (pour debug)
         notes: Informations additionnelles
     """
+
     name: str
     entry_point: Path
     is_supported: bool
@@ -67,12 +69,7 @@ class FormatDetector:
 
     def __init__(self):
         self.detected_entries: Set[str] = set()  # Éviter duplicata
-        self.scan_stats = {
-            'scanned': 0,
-            'detected': 0,
-            'ignored': 0,
-            'errors': 0
-        }
+        self.scan_stats = {"scanned": 0, "detected": 0, "ignored": 0, "errors": 0}
 
     def detect_format(self, file_path: Path) -> Optional[SlideFormat]:
         """
@@ -94,7 +91,7 @@ class FormatDetector:
             - Incrémente scan_stats automatiquement
             - Évite détection multiple du même entry_point
         """
-        self.scan_stats['scanned'] += 1
+        self.scan_stats["scanned"] += 1
 
         if not file_path.exists() or not file_path.is_file():
             return None
@@ -107,38 +104,40 @@ class FormatDetector:
 
         # Dispatch par extension
         detector_map = {
-            '.vms': self._detect_hamamatsu_vms,
-            '.vmu': self._detect_hamamatsu_vmu,
-            '.ndpi': self._detect_hamamatsu_ndpi,
-            '.mrxs': self._detect_mirax,
-            '.svs': self._detect_aperio,
-            '.scn': self._detect_leica,
-            '.bif': self._detect_ventana_bif,
-            '.svslide': self._detect_sakura,
-            '.czi': self._detect_zeiss_czi,
-            '.zvi': self._detect_zeiss_zvi,
-            '.dcm': self._detect_dicom,
-            '.tif': self._detect_tiff_variant,
-            '.tiff': self._detect_tiff_variant,
+            ".vms": self._detect_hamamatsu_vms,
+            ".vmu": self._detect_hamamatsu_vmu,
+            ".ndpi": self._detect_hamamatsu_ndpi,
+            ".mrxs": self._detect_mirax,
+            ".svs": self._detect_aperio,
+            ".scn": self._detect_leica,
+            ".bif": self._detect_ventana_bif,
+            ".svslide": self._detect_sakura,
+            ".czi": self._detect_zeiss_czi,
+            ".zvi": self._detect_zeiss_zvi,
+            ".dcm": self._detect_dicom,
+            ".tif": self._detect_tiff_variant,
+            ".tiff": self._detect_tiff_variant,
         }
 
         detector_func = detector_map.get(ext)
         if detector_func:
             result = detector_func(file_path)
             if result:
-                self.scan_stats['detected'] += 1
+                self.scan_stats["detected"] += 1
                 self.detected_entries.add(str(file_path.resolve()))
                 if result.is_supported:
                     logger.info(f"[OK] Detected: {result.name} - {file_path.name}")
                 else:
-                    logger.warning(f"[UNSUPPORTED] Detected but cannot open: {result.name} - {file_path.name}")
+                    logger.warning(
+                        f"[UNSUPPORTED] Detected but cannot open: {result.name} - {file_path.name}"
+                    )
             else:
-                self.scan_stats['ignored'] += 1
+                self.scan_stats["ignored"] += 1
                 logger.debug(f"[X] Ignored: {file_path.name} (not a slide format)")
             return result
 
         # Extension inconnue - essayer détection par contenu
-        self.scan_stats['ignored'] += 1
+        self.scan_stats["ignored"] += 1
         logger.debug(f"✗ Unknown extension: {file_path.name}")
         return None
 
@@ -172,14 +171,14 @@ class FormatDetector:
         jpg_files = list(vms_file.parent.glob(jpg_pattern))
 
         # Exclure les fichiers macro/map (pas des tuiles)
-        jpg_files = [f for f in jpg_files if '_macro' not in f.stem and '_map' not in f.stem]
+        jpg_files = [f for f in jpg_files if "_macro" not in f.stem and "_map" not in f.stem]
 
         if len(jpg_files) == 0:
             logger.warning(f"VMS without JPEG joints: {vms_file.name}")
             return None
 
         # Chercher fichier .opt (optionnel)
-        opt_file = vms_file.with_suffix('.opt')
+        opt_file = vms_file.with_suffix(".opt")
         joint_files = jpg_files.copy()
         if opt_file.exists():
             joint_files.append(opt_file)
@@ -200,7 +199,8 @@ class FormatDetector:
             format_string=format_str,
             structure_type="multi-file",
             detection_method="VMS INI validation + JPEG joints detection",
-            notes=f"VMS index with {len(jpg_files)} JPEG tiles" + (", .opt file present" if opt_file.exists() else "")
+            notes=f"VMS index with {len(jpg_files)} JPEG tiles"
+            + (", .opt file present" if opt_file.exists() else ""),
         )
 
     def _detect_hamamatsu_vmu(self, vmu_file: Path) -> Optional[SlideFormat]:
@@ -220,7 +220,7 @@ class FormatDetector:
         ngr_files = list(vmu_file.parent.glob(ngr_pattern))
 
         # Exclure macro/map
-        ngr_files = [f for f in ngr_files if '_macro' not in f.stem and '_map' not in f.stem]
+        ngr_files = [f for f in ngr_files if "_macro" not in f.stem and "_map" not in f.stem]
 
         if len(ngr_files) == 0:
             logger.warning(f"VMU without NGR joints: {vmu_file.name}")
@@ -240,7 +240,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="multi-file",
             detection_method="VMU INI validation + NGR joints detection",
-            notes=f"VMU index with {len(ngr_files)} NGR tiles (uncompressed)"
+            notes=f"VMU index with {len(ngr_files)} NGR tiles (uncompressed)",
         )
 
     def _detect_hamamatsu_ndpi(self, ndpi_file: Path) -> Optional[SlideFormat]:
@@ -264,7 +264,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation",
-            notes="Single TIFF-like file, no joints required"
+            notes="Single TIFF-like file, no joints required",
         )
 
     # =========================================================================
@@ -294,7 +294,9 @@ class FormatDetector:
         # Vérifier dossier compagnon (même nom sans extension)
         companion_dir = mrxs_file.parent / mrxs_file.stem
         if not companion_dir.exists() or not companion_dir.is_dir():
-            logger.warning(f"MIRAX missing companion dir: {mrxs_file.name} (expected: {companion_dir.name}/)")
+            logger.warning(
+                f"MIRAX missing companion dir: {mrxs_file.name} (expected: {companion_dir.name}/)"
+            )
             return None
 
         # Vérifier Slidedat.ini REQUIS
@@ -328,7 +330,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="with-companion-dir",
             detection_method="MRXS index + companion dir validation + Slidedat.ini check",
-            notes=f"MRXS index with companion dir '{companion_dir.name}/' containing {len(dat_files)} Data files"
+            notes=f"MRXS index with companion dir '{companion_dir.name}/' containing {len(dat_files)} Data files",
         )
 
     # =========================================================================
@@ -354,7 +356,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation",
-            notes="Single-file TIFF format"
+            notes="Single-file TIFF format",
         )
 
     def _detect_leica(self, scn_file: Path) -> Optional[SlideFormat]:
@@ -376,7 +378,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation",
-            notes="Single BigTIFF file"
+            notes="Single BigTIFF file",
         )
 
     def _detect_ventana_bif(self, bif_file: Path) -> Optional[SlideFormat]:
@@ -432,7 +434,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format + open test",
-            notes=error_note
+            notes=error_note,
         )
 
     def _detect_sakura(self, svslide_file: Path) -> Optional[SlideFormat]:
@@ -454,7 +456,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation",
-            notes="SQLite database format"
+            notes="SQLite database format",
         )
 
     # =========================================================================
@@ -484,11 +486,13 @@ class FormatDetector:
         if format_str is None:
             # Vérifier signature CZI: commence par "ZISRAWFILE"
             try:
-                with open(czi_file, 'rb') as f:
+                with open(czi_file, "rb") as f:
                     signature = f.read(32)
-                    if signature.startswith(b'ZISRAWFILE'):
+                    if signature.startswith(b"ZISRAWFILE"):
                         is_czi_by_signature = True
-                        logger.warning(f"CZI detected by signature but OpenSlide cannot open: {czi_file.name}")
+                        logger.warning(
+                            f"CZI detected by signature but OpenSlide cannot open: {czi_file.name}"
+                        )
             except:
                 pass
 
@@ -507,7 +511,7 @@ class FormatDetector:
                 format_string=None,
                 structure_type="single-file",
                 detection_method="CZI signature detection (ZISRAWFILE header)",
-                notes="CZI detected but OpenSlide cannot open (missing JPEG XR/Zstandard codec or incompatible CZI variant)"
+                notes="CZI detected but OpenSlide cannot open (missing JPEG XR/Zstandard codec or incompatible CZI variant)",
             )
 
         # Si OpenSlide le reconnait = supporté
@@ -521,7 +525,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation",
-            notes="Single-file CZI with embedded image pyramid"
+            notes="Single-file CZI with embedded image pyramid",
         )
 
     def _detect_zeiss_zvi(self, zvi_file: Path) -> Optional[SlideFormat]:
@@ -553,7 +557,7 @@ class FormatDetector:
             format_string=None,
             structure_type="single-file",
             detection_method="File extension (.zvi)",
-            notes="ZVI format NOT SUPPORTED by OpenSlide (only CZI is supported). Please convert to CZI or other supported format."
+            notes="ZVI format NOT SUPPORTED by OpenSlide (only CZI is supported). Please convert to CZI or other supported format.",
         )
 
     # =========================================================================
@@ -620,7 +624,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format validation + open test",
-            notes=error_note
+            notes=error_note,
         )
 
     # =========================================================================
@@ -648,19 +652,19 @@ class FormatDetector:
 
         # Vérifier fichiers adjacents Trestle (optionnels, OpenSlide ne les lit pas)
         adjacent_files = []
-        if format_str == 'trestle':
+        if format_str == "trestle":
             adjacent_pattern = f"{tif_file.stem}.tif-*b"
             adjacent_files = list(tif_file.parent.glob(adjacent_pattern))
 
         format_names = {
-            'aperio': 'Aperio TIFF',
-            'ventana': 'Ventana TIFF',
-            'trestle': 'Trestle TIFF',
-            'generic-tiff': 'Generic Pyramidal TIFF',
-            'philips': 'Philips TIFF'
+            "aperio": "Aperio TIFF",
+            "ventana": "Ventana TIFF",
+            "trestle": "Trestle TIFF",
+            "generic-tiff": "Generic Pyramidal TIFF",
+            "philips": "Philips TIFF",
         }
 
-        name = format_names.get(format_str, f'TIFF ({format_str})')
+        name = format_names.get(format_str, f"TIFF ({format_str})")
         notes = f"Detected as {format_str}"
         if adjacent_files:
             notes += f", {len(adjacent_files)} adjacent overlap files (not read by OpenSlide)"
@@ -675,7 +679,7 @@ class FormatDetector:
             format_string=format_str,
             structure_type="single-file",
             detection_method="OpenSlide detect_format on TIFF",
-            notes=notes
+            notes=notes,
         )
 
     # =========================================================================
@@ -701,7 +705,7 @@ class FormatDetector:
             return format_str
         except Exception as e:
             logger.debug(f"OpenSlide validation failed for {file_path.name}: {e}")
-            self.scan_stats['errors'] += 1
+            self.scan_stats["errors"] += 1
             return None
 
     def _is_vms_ini_file(self, file_path: Path) -> bool:
@@ -710,9 +714,9 @@ class FormatDetector:
         Section attendue: [Virtual Microscope Specimen]
         """
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read(500)
-                return '[Virtual Microscope Specimen]' in content
+                return "[Virtual Microscope Specimen]" in content
         except:
             return False
 
@@ -722,9 +726,9 @@ class FormatDetector:
         Section attendue: [Uncompressed Virtual Microscope Specimen]
         """
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read(500)
-                return '[Uncompressed Virtual Microscope Specimen]' in content
+                return "[Uncompressed Virtual Microscope Specimen]" in content
         except:
             return False
 
@@ -757,10 +761,10 @@ class FormatDetector:
         logger.info(f"{'='*60}")
 
         # Reset stats
-        self.scan_stats = {'scanned': 0, 'detected': 0, 'ignored': 0, 'errors': 0}
+        self.scan_stats = {"scanned": 0, "detected": 0, "ignored": 0, "errors": 0}
 
         # Parcourir fichiers
-        pattern = '**/*' if recursive else '*'
+        pattern = "**/*" if recursive else "*"
         for file_path in root_dir.glob(pattern):
             if file_path.is_file():
                 slide_format = self.detect_format(file_path)

@@ -1,0 +1,307 @@
+name: CI - Continuous Integration
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+# Cancel in-progress runs for same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  # ============================================
+  # Backend CI
+  # ============================================
+  backend-lint:
+    name: Backend - Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install linting dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ruff black isort
+
+      - name: Run Ruff (fast linter)
+        run: |
+          cd backend
+          ruff check . --output-format=github
+
+      - name: Check Black formatting
+        run: |
+          cd backend
+          black --check --diff .
+
+      - name: Check import sorting (isort)
+        run: |
+          cd backend
+          isort --check-only --diff .
+
+  backend-test:
+    name: Backend - Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install OpenSlide system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            openslide-tools \
+            libopenslide0
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio "httpx>=0.25.0,<0.28.0"
+
+      - name: Run pytest
+        run: |
+          cd backend
+          pytest --cov=. --cov-report=xml --cov-report=term-missing --verbose
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  backend-docker:
+    name: Backend - Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          load: true
+          tags: varuna-backend:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test backend container
+        run: |
+          docker run -d --name test-backend \
+            -p 8000:8000 \
+            varuna-backend:ci-test
+
+          # Wait for container to be ready
+          sleep 10
+
+          # Health check
+          curl -f http://localhost:8000/api/health || exit 1
+
+          # Stop container
+          docker stop test-backend
+
+  # ============================================
+  # Frontend CI
+  # ============================================
+  frontend-lint:
+    name: Frontend - Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run ESLint
+        run: |
+          cd frontend
+          npm run lint
+
+  frontend-build:
+    name: Frontend - Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  frontend-docker:
+    name: Frontend - Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          load: true
+          tags: varuna-frontend:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test frontend container
+        run: |
+          docker run -d --name test-frontend \
+            -p 80:80 \
+            varuna-frontend:ci-test
+
+          # Wait for container to be ready
+          sleep 10
+
+          # Health check
+          curl -f http://localhost:80/ || exit 1
+
+          # Stop container
+          docker stop test-frontend
+
+  # ============================================
+  # Integration Check
+  # ============================================
+  integration:
+    name: Integration Check
+    needs: [backend-test, backend-docker, frontend-build, frontend-docker]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start backend container
+        run: |
+          cd backend
+          docker build -t varuna-backend:test .
+          docker run -d --name backend \
+            -p 8000:8000 \
+            -e CORS_ORIGINS="http://localhost:80" \
+            varuna-backend:test
+
+      - name: Start frontend container
+        run: |
+          cd frontend
+          docker build -t varuna-frontend:test \
+            --build-arg VITE_API_URL=http://localhost:8000 \
+            .
+          docker run -d --name frontend \
+            -p 80:80 \
+            varuna-frontend:test
+
+      - name: Wait for services
+        run: sleep 15
+
+      - name: Test backend health
+        run: |
+          curl -f http://localhost:8000/api/health
+          echo "Backend is healthy"
+
+      - name: Test frontend access
+        run: |
+          curl -f http://localhost:80/
+          echo "Frontend is accessible"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop backend frontend || true
+          docker rm backend frontend || true
+
+  # ============================================
+  # CI Status Check (required for PR merge)
+  # ============================================
+  ci-status:
+    name: CI Status
+    needs:
+      - backend-lint
+      - backend-test
+      - backend-docker
+      - frontend-lint
+      - frontend-build
+      - frontend-docker
+      - integration
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check CI results
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI checks passed"

@@ -1,0 +1,363 @@
+name: Security Scanning
+
+on:
+  # Run on every PR
+  pull_request:
+    branches: [main, develop]
+
+  # Run on push to main/develop
+  push:
+    branches: [main, develop]
+
+  # Run daily at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+# Cancel in-progress runs for same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # Dependency Vulnerability Scanning
+  # ============================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
+
+    strategy:
+      matrix:
+        component: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner (dependencies)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './${{ matrix.component }}'
+          format: 'sarif'
+          output: 'trivy-${{ matrix.component }}-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0' # Don't fail on vulnerabilities (just report)
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.component }}-results.sarif'
+          category: 'trivy-${{ matrix.component }}'
+
+      - name: Generate vulnerability report
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './${{ matrix.component }}'
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+  # ============================================
+  # Python Security (Backend)
+  # ============================================
+  python-security:
+    name: Python Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install bandit safety pip-audit
+
+      - name: Run Bandit (Python security linter)
+        run: |
+          cd backend
+          bandit -r . -f json -o bandit-report.json || true
+          bandit -r . -f screen
+
+      - name: Run Safety (dependency vulnerability check)
+        run: |
+          cd backend
+          safety check --json --file=requirements.txt || true
+          safety check --file=requirements.txt
+
+      - name: Run pip-audit (dependency audit)
+        run: |
+          cd backend
+          pip-audit --requirement requirements.txt --format json --output pip-audit-report.json || true
+          pip-audit --requirement requirements.txt
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-security-reports
+          path: |
+            backend/bandit-report.json
+            backend/pip-audit-report.json
+          retention-days: 30
+
+  # ============================================
+  # JavaScript Security (Frontend)
+  # ============================================
+  javascript-security:
+    name: JavaScript Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run npm audit
+        run: |
+          cd frontend
+          npm audit --json > npm-audit-report.json || true
+          npm audit
+
+      - name: Upload npm audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: frontend/npm-audit-report.json
+          retention-days: 30
+
+  # ============================================
+  # Docker Image Scanning
+  # ============================================
+  docker-scan:
+    name: Docker Image Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
+
+    strategy:
+      matrix:
+        component: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.component }}
+          file: ./${{ matrix.component }}/Dockerfile
+          push: false
+          load: true
+          tags: varuna-${{ matrix.component }}:security-scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner (Docker image)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'varuna-${{ matrix.component }}:security-scan'
+          format: 'sarif'
+          output: 'trivy-docker-${{ matrix.component }}.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Upload Docker scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-docker-${{ matrix.component }}.sarif'
+          category: 'trivy-docker-${{ matrix.component }}'
+
+      - name: Generate Docker image vulnerability report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'varuna-${{ matrix.component }}:security-scan'
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+  # ============================================
+  # Code Quality & SAST
+  # ============================================
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python', 'javascript']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ============================================
+  # Secret Scanning
+  # ============================================
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for comprehensive scan
+
+      - name: Run Gitleaks (secret scanner)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Optional: for Gitleaks Pro
+
+  # ============================================
+  # HIPAA/GDPR Compliance Checks
+  # ============================================
+  compliance-check:
+    name: HIPAA/GDPR Compliance Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for sensitive data patterns
+        run: |
+          echo "Scanning for sensitive data patterns (PHI, PII)..."
+
+          # Check for potential patient identifiers
+          echo "Checking for patient identifiers..."
+          ! grep -r -E "(SSN|social.?security|patient.?id|medical.?record)" \
+            --include="*.py" --include="*.js" . || \
+            (echo "WARNING: Potential PHI detected" && exit 1)
+
+          # Check for hardcoded secrets
+          echo "Checking for hardcoded secrets..."
+          ! grep -r -E "(password|api.?key|secret|token).*=.*['\"][^'\"]{8,}" \
+            --include="*.py" --include="*.js" . || \
+            (echo "WARNING: Potential hardcoded secrets" && exit 1)
+
+          # Check for insecure HTTP usage (require HTTPS)
+          echo "Checking for insecure HTTP usage..."
+          ! grep -r -E "http://(?!localhost|127\.0\.0\.1)" \
+            --include="*.py" --include="*.js" --include="*.yml" . || \
+            (echo "WARNING: Insecure HTTP usage detected" && exit 1)
+
+          echo "Compliance checks passed"
+
+      - name: Verify CORS configuration
+        run: |
+          echo "Verifying CORS is properly configured..."
+          grep -q "CORSMiddleware" backend/main.py || \
+            (echo "ERROR: CORS middleware not found" && exit 1)
+          echo "CORS configuration verified"
+
+      - name: Check for medical data logging
+        run: |
+          echo "Checking for potential medical data logging..."
+          ! grep -r -E "(logger|print|console\.log).*slide.*patient" \
+            --include="*.py" --include="*.js" . || \
+            (echo "WARNING: Potential PHI logging detected" && exit 1)
+          echo "No PHI logging detected"
+
+  # ============================================
+  # Security Summary
+  # ============================================
+  security-summary:
+    name: Security Summary
+    needs:
+      - dependency-scan
+      - python-security
+      - javascript-security
+      - docker-scan
+      - codeql-analysis
+      - secret-scan
+      - compliance-check
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational summary
+    if: always()
+
+    steps:
+      - name: Generate security summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          # Security Scan Summary
+
+          ## Scan Results
+
+          | Component | Status |
+          |-----------|--------|
+          | Dependency Scan | ${{ needs.dependency-scan.result }} |
+          | Python Security | ${{ needs.python-security.result }} |
+          | JavaScript Security | ${{ needs.javascript-security.result }} |
+          | Docker Scan | ${{ needs.docker-scan.result }} |
+          | CodeQL Analysis | ${{ needs.codeql-analysis.result }} |
+          | Secret Scan | ${{ needs.secret-scan.result }} |
+          | HIPAA/GDPR Compliance | ${{ needs.compliance-check.result }} |
+
+          ## Security Resources
+
+          - [Security Advisories](https://github.com/${{ github.repository }}/security/advisories)
+          - [Dependabot Alerts](https://github.com/${{ github.repository }}/security/dependabot)
+          - [Code Scanning Alerts](https://github.com/${{ github.repository }}/security/code-scanning)
+
+          ## Medical Data Compliance
+
+          This project handles sensitive medical imaging data (WSI files). All security findings should be reviewed with HIPAA/GDPR compliance in mind.
+          EOF
+
+      - name: Check for critical failures
+        if: |
+          needs.secret-scan.result == 'failure' ||
+          needs.compliance-check.result == 'failure'
+        run: |
+          echo "Critical security checks failed - review required"
+          exit 1

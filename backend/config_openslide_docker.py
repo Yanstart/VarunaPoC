@@ -34,7 +34,7 @@ def configure_openslide_path():
     common_paths = [
         "/usr/lib/x86_64-linux-gnu/libopenslide.so.0",
         "/usr/lib/libopenslide.so.0",
-        "/usr/local/lib/libopenslide.so.0"
+        "/usr/local/lib/libopenslide.so.0",
     ]
 
     for lib_path in common_paths:
