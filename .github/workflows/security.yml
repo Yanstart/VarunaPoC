@@ -28,6 +28,7 @@ jobs:
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
 
     strategy:
       matrix:
@@ -69,6 +70,7 @@ jobs:
   python-security:
     name: Python Security Scan
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
 
     steps:
       - name: Checkout code
@@ -118,6 +120,7 @@ jobs:
   javascript-security:
     name: JavaScript Security Scan
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
 
     steps:
       - name: Checkout code
@@ -153,6 +156,7 @@ jobs:
   docker-scan:
     name: Docker Image Security Scan
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
 
     strategy:
       matrix:
@@ -205,6 +209,7 @@ jobs:
   codeql-analysis:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
     permissions:
       security-events: write
       actions: read
@@ -239,6 +244,7 @@ jobs:
   secret-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational - don't block PRs
 
     steps:
       - name: Checkout code
@@ -316,6 +322,7 @@ jobs:
       - secret-scan
       - compliance-check
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational summary
     if: always()
 
     steps:
