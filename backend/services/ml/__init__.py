@@ -14,7 +14,22 @@ Modules:
 Référence: docs/MLOPS_ARCHITECTURE.md
 """
 
-from .tag_extractor import TagExtractor
-from .tag_router import ModelRoute, TagRouter
-
+# Lazy imports to avoid OpenSlide dependency issues
 __all__ = ["TagExtractor", "TagRouter", "ModelRoute"]
+
+
+def __getattr__(name):
+    """Lazy import to avoid loading OpenSlide at import time."""
+    if name == "TagExtractor":
+        from .tag_extractor import TagExtractor
+
+        return TagExtractor
+    elif name == "TagRouter":
+        from .tag_router import TagRouter
+
+        return TagRouter
+    elif name == "ModelRoute":
+        from .tag_router import ModelRoute
+
+        return ModelRoute
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

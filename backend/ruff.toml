@@ -83,8 +83,14 @@ exclude = [
 # Main app entry point and monitoring
 "main.py" = ["I001", "F401", "T201"]
 "monitoring.py" = ["I001", "F401", "F841", "TRY203", "ARG001"]
-# Routes - legacy FastAPI routes
-"routes/**/*.py" = ["I001", "F401", "RET504", "TRY301"]
+# Routes - legacy FastAPI routes + ML routes with FastAPI Depends pattern
+"routes/**/*.py" = ["I001", "F401", "RET504", "TRY301", "B008", "UP", "ARG001", "DTZ003", "ERA001"]
+# Core interfaces - ML Provider protocol with Optional types
+"core/interfaces/**/*.py" = ["UP", "RUF013", "EM101", "RET504", "RUF002"]
+# Core exceptions - ML exceptions with Optional parameters
+"core/exceptions/**/*.py" = ["RUF013"]
+# ML Providers - Slideflow integration with complex ML patterns
+"services/ml/providers/**/*.py" = ["RET504", "B007", "ERA001", "TRY301", "PLC", "UP", "RUF013"]
 
 [lint.isort]
 known-first-party = ["routes", "services", "utils"]

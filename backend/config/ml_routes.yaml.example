@@ -1,0 +1,224 @@
+# ML Routes Configuration
+# Configuration du routage automatique vers modèles spécialisés basé sur tags
+#
+# Structure:
+# - routes: Liste de modèles disponibles
+# - routing_config: Configuration globale du routage
+#
+# Références:
+# - docs/ML_INTEGRATION.md
+# - services/ml/tag_router.py
+
+routing_config:
+  # Stratégie matching
+  matching_strategy: "priority"  # "priority", "confidence", "ensemble"
+
+  # Fallback si aucun modèle trouvé
+  fallback_enabled: true
+
+  # Cache model loading
+  cache_models: true
+  max_cached_models: 3
+
+# ============================================================================
+# MODELS REGISTRY
+# ============================================================================
+
+routes:
+  # ------------------------------------------------------------------------
+  # PROSTATE - GLEASON GRADING
+  # ------------------------------------------------------------------------
+  - model_id: "gleason_grading_v2"
+    model_name: "Gleason Grading Model (Prostate)"
+    model_version: "2.1.0"
+
+    # Model path (MLflow, local, Hugging Face, S3)
+    model_path: "models:/gleason_grading/production"
+    # model_path: "/app/models/gleason_v2.pt"  # Local
+    # model_path: "hf://slideflow/gleason-grading"  # Hugging Face
+    # model_path: "s3://varuna-ml-models/gleason_v2.pt"  # S3
+
+    # Routing
+    priority: 100  # Haute priorité (1-100, 100=highest)
+    min_confidence: 0.85  # Seuil confiance minimum
+
+    # Task
+    task_type: "classification"
+    classes:
+      - "gleason_3"
+      - "gleason_4"
+      - "gleason_5"
+
+    # Tags requis pour ce modèle
+    required_tags:
+      organ: "prostate"
+      stain: "H&E"
+      task: "grading"
+
+    # Clinical info
+    description: "Gleason grading for prostate cancer diagnosis"
+    clinical_use: |
+      Classification du grade de Gleason (3-5) pour diagnostic cancer prostate.
+      Entraîné sur PANDA Challenge 2020 dataset (10,000+ slides).
+      Validé par pathologistes CHU UCL Namur.
+
+    # Performance metrics (reference)
+    reference_metrics:
+      accuracy: 0.94
+      auc_roc: 0.97
+      dice_coefficient: 0.89
+      inference_time_ms: 2340
+      validation_dataset: "PANDA 2020 (n=2000)"
+
+    # Training info
+    trained_by: "CHU UCL ML Team"
+    training_date: "2024-11-15"
+    approved_by: "Dr. Jean Dupont (Pathologist)"
+    approval_date: "2024-12-01"
+
+  # ------------------------------------------------------------------------
+  # BREAST - TUMOR DETECTION
+  # ------------------------------------------------------------------------
+  - model_id: "breast_tumor_detection_v1"
+    model_name: "Breast Tumor Detection"
+    model_version: "1.0.0"
+    model_path: "models:/breast_tumor/production"
+
+    priority: 90
+    min_confidence: 0.80
+
+    task_type: "segmentation"
+    classes:
+      - "background"
+      - "invasive_carcinoma"
+      - "in_situ_carcinoma"
+      - "benign"
+
+    required_tags:
+      organ: "sein"
+      stain: "H&E"
+      task: "detection"
+
+    description: "Breast tumor detection and classification"
+    clinical_use: |
+      Détection et classification tumeurs mammaires (invasive, in situ, bénin).
+      Segmentation au niveau pixel pour guidage diagnostic.
+
+    reference_metrics:
+      accuracy: 0.91
+      auc_roc: 0.95
+      dice_coefficient: 0.87
+      inference_time_ms: 3200
+
+    trained_by: "CHU UCL ML Team"
+    training_date: "2024-10-20"
+
+  # ------------------------------------------------------------------------
+  # IHC - KI-67 QUANTIFICATION
+  # ------------------------------------------------------------------------
+  - model_id: "ki67_quantification_v1"
+    model_name: "Ki-67 Proliferation Index"
+    model_version: "1.0.0"
+    model_path: "models:/ki67_quantification/production"
+
+    priority: 95
+    min_confidence: 0.90
+
+    task_type: "quantification"
+    classes:
+      - "positive"
+      - "negative"
+
+    required_tags:
+      stain: "IHC"
+      marker: "Ki-67"
+
+    description: "Ki-67 proliferation index quantification"
+    clinical_use: |
+      Quantification automatique de l'index de prolifération Ki-67.
+      Compte cellules positives/négatives pour calcul ratio.
+      Utilisé pour pronostic cancer sein et autres tumeurs.
+
+    reference_metrics:
+      accuracy: 0.96
+      correlation_manual: 0.94  # Corrélation avec comptage manuel
+      inference_time_ms: 1500
+
+    trained_by: "CHU UCL ML Team"
+    training_date: "2024-09-10"
+
+  # ------------------------------------------------------------------------
+  # MULTI-ORGAN - GENERIC TUMOR DETECTION (FALLBACK)
+  # ------------------------------------------------------------------------
+  - model_id: "generic_tumor_detection"
+    model_name: "Generic Tumor Detection"
+    model_version: "1.0.0"
+    model_path: "models:/generic_tumor/production"
+
+    priority: 1  # Fallback (lowest priority)
+    min_confidence: 0.75
+
+    task_type: "classification"
+    classes:
+      - "normal"
+      - "tumor"
+
+    required_tags: {}  # No specific tags (matches all)
+
+    description: "Generic tumor detection (fallback model)"
+    clinical_use: |
+      Modèle générique pour détection tumeur vs tissu normal.
+      Utilisé comme fallback si pas de modèle spécialisé disponible.
+      Performance inférieure aux modèles spécialisés.
+
+    reference_metrics:
+      accuracy: 0.88
+      auc_roc: 0.92
+      inference_time_ms: 1800
+
+    trained_by: "CHU UCL ML Team"
+    training_date: "2024-08-01"
+
+# ============================================================================
+# FEATURE EXTRACTORS (Pour MIL)
+# ============================================================================
+
+# Feature extractors utilisés pour Multiple Instance Learning
+# Pas de routage automatique (utilisés directement via API)
+feature_extractors:
+  - extractor_id: "resnet50_imagenet"
+    model_path: "hf://microsoft/resnet-50"
+    embedding_dim: 2048
+    description: "ResNet50 pre-trained on ImageNet"
+
+  - extractor_id: "dino_vitb16"
+    model_path: "hf://facebook/dino-vitb16"
+    embedding_dim: 768
+    description: "DINO ViT-B/16 (Self-Supervised)"
+
+  - extractor_id: "uni_foundation"
+    model_path: "hf://mahmoodlab/uni"
+    embedding_dim: 1024
+    description: "UNI Foundation Model (100M images pathology)"
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+# Configuration tips:
+# 1. Priority: Plus haute = préféré si plusieurs matchs
+# 2. Required tags: Au moins organ + stain recommandé
+# 3. Fallback model: priority=1, required_tags={}
+# 4. Model paths:
+#    - MLflow: models:/model_name/stage (production, staging, etc.)
+#    - Local: /absolute/path/to/model.pt
+#    - Hugging Face: hf://namespace/model
+#    - S3: s3://bucket/path/to/model.pt
+# 5. Classes: Doivent matcher output du modèle
+# 6. Reference metrics: Pour monitoring drift (compare production vs training)
+
+# Validation:
+# python -m services.ml.tag_router  # Valide ce fichier
+
+# Reload sans redémarrage:
+# POST /api/ml/models/reload
