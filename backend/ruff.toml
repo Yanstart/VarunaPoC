@@ -50,7 +50,7 @@ ignore = [
     "Q000",    # Single/double quotes (handled by formatter)
     "UP035",   # Deprecated typing imports (gradual migration)
     "UP006",   # Use dict instead of Dict (gradual migration)
-    "UP045",   # Use X | None instead of Optional (gradual migration)
+    "UP007",   # Use X | Y instead of Union (gradual migration)
     "TRY300",  # Consider moving to else block (too strict)
     "TRY400",  # Use logging.exception (preference)
     "EM102",   # Exception f-string (too strict for error messages)
@@ -79,7 +79,7 @@ exclude = [
 # Config files can use exec
 "config_*.py" = ["S102"]
 # Legacy services - gradual migration (Phase 1 code)
-"services/*.py" = ["I001", "F401", "RUF013"]
+"services/**/*.py" = ["I001", "F401", "RUF013", "T201", "SIM110", "EM101"]
 # Main app entry point
 "main.py" = ["I001"]
 
