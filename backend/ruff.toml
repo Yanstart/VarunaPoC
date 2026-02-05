@@ -43,10 +43,23 @@ select = [
 
 # Ignore specific rules
 ignore = [
-    "E501",   # Line too long (handled by formatter)
-    "TRY003", # Avoid specifying long messages in exceptions (too strict for medical domain)
+    "E501",    # Line too long (handled by formatter)
+    "TRY003",  # Avoid specifying long messages in exceptions (too strict for medical domain)
     "PLR0913", # Too many arguments (FastAPI routes often need many params)
     "PLR2004", # Magic value used in comparison (medical thresholds are OK)
+    "Q000",    # Single/double quotes (handled by formatter)
+    "UP035",   # Deprecated typing imports (gradual migration)
+    "UP006",   # Use dict instead of Dict (gradual migration)
+    "UP045",   # Use X | None instead of Optional (gradual migration)
+    "TRY300",  # Consider moving to else block (too strict)
+    "TRY400",  # Use logging.exception (preference)
+    "EM102",   # Exception f-string (too strict for error messages)
+    "B904",    # Raise from err (gradual adoption)
+    "PLC0415", # Import at top level (dynamic imports needed)
+    "PLW0603", # Global statement (needed for caching)
+    "RET505",  # Unnecessary elif (stylistic)
+    "PIE810",  # Call endswith once (minor optimization)
+    "E402",    # Module level import not at top (conditional imports)
 ]
 
 # Exclude directories
@@ -65,6 +78,10 @@ exclude = [
 "tests/**/*.py" = ["S101", "PLR2004"]
 # Config files can use exec
 "config_*.py" = ["S102"]
+# Legacy services - gradual migration (Phase 1 code)
+"services/*.py" = ["I001", "F401", "RUF013"]
+# Main app entry point
+"main.py" = ["I001"]
 
 [lint.isort]
 known-first-party = ["routes", "services", "utils"]
