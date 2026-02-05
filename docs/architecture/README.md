@@ -1,7 +1,7 @@
 # Documentation Architecture V3 - VarunaPoC
 
-**Date:** 2025-12-31
-**Version:** 3.0.0
+**Date:** 2025-02-05 (Mise à jour architecture modulaire)
+**Version:** 3.1.0
 
 ---
 
@@ -11,13 +11,75 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 **Objectif TFE 2025-2026:** Développer un système d'intelligence artificielle pour l'analyse de lames histologiques, avec apprentissage continu et conformité réglementaire.
 
+**⭐ NOUVEAU:** Architecture modulaire avec interfaces Python (Protocols) - voir `MODULAR_ARCHITECTURE.md`
+
 ---
 
 ## Documents Disponibles
 
-### 1. [ARCHITECTURE_V3.md](./ARCHITECTURE_V3.md)
+### ⭐ 1. [MODULAR_ARCHITECTURE.md](./MODULAR_ARCHITECTURE.md) **[NOUVEAU]**
 
-**Document principal** décrivant l'architecture cible complète.
+**Guide complet architecture modulaire** avec interfaces Python (Protocols).
+
+**Contenu:**
+- Vision (problème → solution architecture modulaire)
+- Principes architecturaux (SOLID, Design Patterns détaillés)
+- Structure des interfaces (5 interfaces clés: Auth, Storage, Loader, Cache, Workflow)
+- Modules et implémentations (code exemples complets)
+- Guide d'implémentation pas-à-pas (ajouter provider custom)
+- Tests modulaires (pytest, markers, fixtures)
+- Migration progressive (Phase 1 → Phase 2)
+- FAQ complète
+
+**👥 Public:** Développeurs backend, nouveaux contributeurs, architectes
+**⏱️ Temps lecture:** 1-2 heures (documentation exhaustive)
+**🎯 Quand lire:** Comprendre interfaces, ajouter provider, écrire tests modulaires
+
+---
+
+### ⚡ 2. [QUICK_START_MODULAR.md](./QUICK_START_MODULAR.md) **[NOUVEAU]**
+
+**Guide rapide architecture modulaire** (pour développeurs pressés).
+
+**Contenu:**
+- Concept en 30 secondes
+- Structure dossiers (5 min)
+- Les 5 interfaces clés (résumé)
+- Exemple complet ajout RedisCache (10 min)
+- Tests Pytest (5 min)
+- Commandes utiles
+- Patterns de code courants
+- Erreurs courantes
+
+**👥 Public:** Développeurs pressés, quick reference
+**⏱️ Temps lecture:** 30 minutes (guide pratique)
+**🎯 Quand lire:** Démarrer rapidement, référence rapide
+
+---
+
+### 📊 3. [IMPLEMENTATION_REPORT.md](./IMPLEMENTATION_REPORT.md) **[NOUVEAU]**
+
+**Rapport d'implémentation architecture modulaire** (management/équipe).
+
+**Contenu:**
+- Résumé exécutif
+- Livrables (interfaces, tests, docs créés)
+- Architecture actuelle vs cible (diagrammes)
+- Compatibilité rétroactive (migration sans breaking changes)
+- Impact et bénéfices (pour développeurs, institutions, maintenance)
+- Métriques (code créé, coverage, temps estimés)
+- Prochaines étapes (court/moyen/long terme)
+- Risques et mitigations
+
+**👥 Public:** Management, project managers, leads techniques
+**⏱️ Temps lecture:** 30-40 minutes
+**🎯 Quand lire:** Vue d'ensemble implémentation, décisions, planification
+
+---
+
+### 4. [ARCHITECTURE_V3.md](./ARCHITECTURE_V3.md)
+
+**Architecture cible V3** - Plateforme MLOps modulaire complète.
 
 **Contenu:**
 - Vision et objectifs du TFE
