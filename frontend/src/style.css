@@ -19,5 +19,8 @@
 @import './css/viewer.css';
 @import './css/openseadragon.css';
 
+/* 3. Component styles - ML Panel */
+@import './css/ml-panel.css';
+
 /* 4. Layout styles - Multi-viewer layouts */
 @import './css/layouts/compare-layout.css';

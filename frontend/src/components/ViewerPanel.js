@@ -15,6 +15,8 @@ import { ViewerFactory } from '../viewers/ViewerFactory.js';
 import { viewerManager } from '../viewers/ViewerManager.js';
 import { eventBus } from '../core/EventBus.js';
 import { Events, CSSClasses, ViewerStates } from '../core/Constants.js';
+import { MLPanel } from './MLPanel.js';
+import { HeatmapOverlay } from './HeatmapOverlay.js';
 
 /**
  * ViewerPanel class - Panel wrapper for a single viewer
@@ -99,6 +101,18 @@ class ViewerPanel {
          */
         this.isSynced = false;
 
+        /**
+         * ML Panel component
+         * @type {MLPanel|null}
+         */
+        this.mlPanel = null;
+
+        /**
+         * Heatmap overlay component
+         * @type {HeatmapOverlay|null}
+         */
+        this.heatmapOverlay = null;
+
         // Build the panel
         this._build();
     }
@@ -165,8 +179,16 @@ class ViewerPanel {
         resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
         resetBtn.addEventListener('click', () => this.resetView());
 
+        // ML Analysis button
+        const mlBtn = document.createElement('button');
+        mlBtn.className = 'viewer-panel-action viewer-panel-action--ml';
+        mlBtn.title = 'ML Analysis';
+        mlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
+        mlBtn.addEventListener('click', () => this._toggleMLPanel());
+
         actions.appendChild(selectBtn);
         actions.appendChild(resetBtn);
+        actions.appendChild(mlBtn);
 
         // Close button
         if (this.options.showClose) {
@@ -309,6 +331,45 @@ class ViewerPanel {
     }
 
     /**
+     * Toggle ML Panel visibility
+     * @private
+     */
+    _toggleMLPanel() {
+        // Create ML panel if not exists
+        if (!this.mlPanel) {
+            this.mlPanel = new MLPanel(this.viewerContainer, {
+                viewerId: this.viewer ? this.viewer.id : this.id
+            });
+
+            // Set current slide if loaded
+            if (this.slideId) {
+                this.mlPanel.setSlide(this.slideId);
+            }
+        }
+
+        // Toggle visibility
+        this.mlPanel.element.classList.toggle('is-hidden');
+
+        // Update button state
+        const mlBtn = this.element.querySelector('.viewer-panel-action--ml');
+        if (mlBtn) {
+            mlBtn.classList.toggle('is-active', !this.mlPanel.element.classList.contains('is-hidden'));
+        }
+    }
+
+    /**
+     * Initialize heatmap overlay
+     * @private
+     */
+    _initHeatmapOverlay() {
+        if (this.viewer && !this.heatmapOverlay) {
+            this.heatmapOverlay = new HeatmapOverlay(this.viewer, {
+                opacity: 0.5
+            });
+        }
+    }
+
+    /**
      * Load a slide into this panel
      * @param {string} slideId - Slide ID
      * @param {string} [slideName] - Slide name for display
@@ -330,6 +391,21 @@ class ViewerPanel {
 
         // Load slide in viewer
         await this.viewer.loadSlide(slideId);
+
+        // Initialize heatmap overlay after slide is loaded
+        this._initHeatmapOverlay();
+
+        // Notify ML panel if it exists
+        if (this.mlPanel) {
+            this.mlPanel.setSlide(slideId);
+        }
+
+        // Emit slide loaded event for ML components
+        eventBus.emit(Events.SLIDE_LOADED, {
+            viewerId: this.viewer.id,
+            slideId: slideId,
+            slideName: this.slideName
+        });
 
         console.log(`[ViewerPanel] Loaded slide "${slideId}" in panel "${this.id}"`);
     }
@@ -413,6 +489,18 @@ class ViewerPanel {
      */
     destroy() {
         console.log(`[ViewerPanel] Destroying panel "${this.id}"`);
+
+        // Destroy ML panel
+        if (this.mlPanel) {
+            this.mlPanel.destroy();
+            this.mlPanel = null;
+        }
+
+        // Destroy heatmap overlay
+        if (this.heatmapOverlay) {
+            this.heatmapOverlay.destroy();
+            this.heatmapOverlay = null;
+        }
 
         // Destroy viewer
         if (this.viewer) {

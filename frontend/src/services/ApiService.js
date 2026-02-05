@@ -128,7 +128,18 @@ class ApiService {
     }
 
     /**
-     * Internal fetch with error handling
+     * Make a POST request
+     * @param {string} endpoint - API endpoint
+     * @param {Object} body - Request body
+     * @returns {Promise<any>} Response data
+     */
+    async post(endpoint, body = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        return this._fetchWithBody(url, 'POST', body);
+    }
+
+    /**
+     * Internal fetch with error handling (GET)
      * @param {string} url - Full URL
      * @returns {Promise<any>} Response data
      * @private
@@ -156,6 +167,46 @@ class ApiService {
             }
 
             // Network error
+            throw new ApiError(
+                `Network error: ${error.message}`,
+                0,
+                { originalError: error }
+            );
+        }
+    }
+
+    /**
+     * Internal fetch with body (POST/PUT/PATCH)
+     * @param {string} url - Full URL
+     * @param {string} method - HTTP method
+     * @param {Object} body - Request body
+     * @returns {Promise<any>} Response data
+     * @private
+     */
+    async _fetchWithBody(url, method, body) {
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const message = errorData.detail || `HTTP ${response.status}: ${response.statusText}`;
+                throw new ApiError(message, response.status, errorData);
+            }
+
+            return response.json();
+
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+
             throw new ApiError(
                 `Network error: ${error.message}`,
                 0,
@@ -286,6 +337,96 @@ class ApiService {
     async browse(path = '/') {
         return this.get('/api/slides/browse', {
             params: { path }
+        });
+    }
+
+    // ==========================================
+    // ML API
+    // ==========================================
+
+    /**
+     * Get ML service health
+     * @returns {Promise<Object>} ML service status
+     */
+    async getMLHealth() {
+        return this.get('/api/ml/health', { useCache: false });
+    }
+
+    /**
+     * List available ML models
+     * @returns {Promise<Array>} List of models
+     */
+    async listModels() {
+        return this.get('/api/ml/models');
+    }
+
+    /**
+     * Load a model into memory
+     * @param {string} modelId - Model identifier
+     * @param {Object} [config={}] - Model configuration
+     * @returns {Promise<Object>} Load result
+     */
+    async loadModel(modelId, config = {}) {
+        return this.post('/api/ml/models/load', {
+            model_id: modelId,
+            ...config
+        });
+    }
+
+    /**
+     * Run prediction on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [options={}] - Prediction options
+     * @param {Object} [options.region] - Region {x, y, width, height}
+     * @param {string} [options.modelId] - Specific model to use
+     * @param {number} [options.numMcSamples=10] - Monte Carlo samples for uncertainty
+     * @returns {Promise<Object>} Prediction result
+     */
+    async predict(slideId, options = {}) {
+        const body = {
+            slide_id: slideId
+        };
+
+        if (options.region) {
+            body.region = options.region;
+        }
+        if (options.modelId) {
+            body.model_id = options.modelId;
+        }
+        if (options.numMcSamples) {
+            body.num_mc_samples = options.numMcSamples;
+        }
+
+        return this.post('/api/ml/predict', body);
+    }
+
+    /**
+     * Generate heatmap for a slide
+     * @param {string} slideId - Slide ID
+     * @param {string} predictionClass - Target class for heatmap
+     * @param {Object} [options={}] - Heatmap options
+     * @returns {Promise<Object>} Heatmap result with base64 image
+     */
+    async generateHeatmap(slideId, predictionClass, options = {}) {
+        return this.post('/api/ml/heatmap', {
+            slide_id: slideId,
+            prediction_class: predictionClass,
+            resolution_level: options.resolutionLevel || 2,
+            colormap: options.colormap || 'jet'
+        });
+    }
+
+    /**
+     * Extract features from a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [options={}] - Extraction options
+     * @returns {Promise<Object>} Feature extraction result
+     */
+    async extractFeatures(slideId, options = {}) {
+        return this.post('/api/ml/features/extract', {
+            slide_id: slideId,
+            tile_size: options.tileSize || 224,
+            overlap: options.overlap || 0
         });
     }
 

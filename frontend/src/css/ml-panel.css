@@ -1,0 +1,433 @@
+/**
+ * ML Panel Styles
+ *
+ * Styles for the Machine Learning analysis panel.
+ */
+
+/* ============================================
+   PANEL CONTAINER
+   ============================================ */
+
+.ml-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 280px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-popover);
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.ml-panel.is-collapsed .ml-panel__content {
+    display: none;
+}
+
+.ml-panel.is-collapsed .ml-panel__collapse svg {
+    transform: rotate(180deg);
+}
+
+.ml-panel.is-hidden {
+    display: none;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.ml-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-surface-elevated);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ml-panel__title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+}
+
+.ml-panel__title svg {
+    color: var(--color-primary);
+}
+
+.ml-panel__collapse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ml-panel__collapse:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+
+.ml-panel__collapse svg {
+    transition: transform 0.2s ease;
+}
+
+/* ============================================
+   CONTENT
+   ============================================ */
+
+.ml-panel__content {
+    padding: var(--spacing-md);
+}
+
+/* ============================================
+   ACTIONS
+   ============================================ */
+
+.ml-panel__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+}
+
+.ml-panel__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ml-panel__btn:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    border-color: var(--color-primary);
+}
+
+.ml-panel__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ml-panel__btn--predict {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.ml-panel__btn--predict:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.ml-panel__btn--heatmap.is-active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+/* ============================================
+   OPACITY SLIDER
+   ============================================ */
+
+.ml-panel__opacity {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background: var(--color-surface-elevated);
+    border-radius: var(--radius-md);
+}
+
+.ml-panel__opacity label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.ml-panel__slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--color-border);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.ml-panel__slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.ml-panel__slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.ml-panel__opacity-value {
+    min-width: 36px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    text-align: right;
+}
+
+/* ============================================
+   RESULTS
+   ============================================ */
+
+.ml-panel__results {
+    min-height: 100px;
+}
+
+.ml-panel__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    padding: var(--spacing-md);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+/* Loading State */
+.ml-panel__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+    text-align: center;
+}
+
+.ml-panel__loading p {
+    margin: var(--spacing-sm) 0 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.ml-panel__loading-sub {
+    color: var(--color-text-muted) !important;
+    font-size: var(--font-size-xs) !important;
+}
+
+/* Spinner */
+.ml-panel__spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: ml-spin 0.8s linear infinite;
+}
+
+.ml-panel__spinner--large {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+}
+
+@keyframes ml-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.ml-panel__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-md);
+    text-align: center;
+}
+
+.ml-panel__error svg {
+    color: var(--color-error);
+    margin-bottom: var(--spacing-sm);
+}
+
+.ml-panel__error p {
+    margin: 0;
+    color: var(--color-error);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.ml-panel__error-detail {
+    color: var(--color-text-muted) !important;
+    font-size: var(--font-size-xs) !important;
+    font-weight: 400 !important;
+    margin-top: var(--spacing-xs) !important;
+}
+
+/* ============================================
+   PREDICTION RESULT
+   ============================================ */
+
+.ml-panel__result {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.ml-panel__prediction {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--color-surface-elevated);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.ml-panel__prediction-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ml-panel__prediction-class {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--color-primary);
+    text-transform: capitalize;
+    margin-top: var(--spacing-xs);
+}
+
+/* Metrics */
+.ml-panel__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-xs);
+}
+
+.ml-panel__metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background: var(--color-surface-elevated);
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.ml-panel__metric-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.ml-panel__metric-value {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-top: 2px;
+}
+
+.ml-panel__metric-value--uncertainty {
+    color: var(--color-warning);
+}
+
+/* Probabilities */
+.ml-panel__probabilities {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.ml-panel__prob-title {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: var(--spacing-xs);
+}
+
+.ml-panel__prob-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.ml-panel__prob-row.is-main .ml-panel__prob-label {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.ml-panel__prob-row.is-main .ml-panel__prob-fill {
+    background: var(--color-primary);
+}
+
+.ml-panel__prob-label {
+    width: 70px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    text-transform: capitalize;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ml-panel__prob-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.ml-panel__prob-fill {
+    height: 100%;
+    background: var(--color-text-muted);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.ml-panel__prob-value {
+    min-width: 40px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    text-align: right;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .ml-panel {
+        width: 240px;
+    }
+
+    .ml-panel__metrics {
+        grid-template-columns: 1fr 1fr;
+    }
+}

@@ -156,6 +156,21 @@
     background: var(--color-bg-active);
 }
 
+/* ML Action button */
+.viewer-panel-action--ml {
+    color: var(--color-accent, #9c27b0);
+}
+
+.viewer-panel-action--ml:hover {
+    background: rgba(156, 39, 176, 0.1);
+    color: var(--color-accent-light, #ba68c8);
+}
+
+.viewer-panel-action--ml.is-active {
+    background: rgba(156, 39, 176, 0.2);
+    color: var(--color-accent, #9c27b0);
+}
+
 /* ==========================================
  * VIEWER CONTAINER
  * ========================================== */

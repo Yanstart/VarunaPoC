@@ -63,7 +63,19 @@ export const Events = Object.freeze({
     // UI events
     SLIDE_SELECTED: 'ui:slideSelected',
     FOLDER_CHANGED: 'ui:folderChanged',
-    PAGE_CHANGED: 'ui:pageChanged'
+    PAGE_CHANGED: 'ui:pageChanged',
+
+    // ML events
+    ML_PREDICTION_START: 'ml:predictionStart',
+    ML_PREDICTION_COMPLETE: 'ml:predictionComplete',
+    ML_PREDICTION_ERROR: 'ml:predictionError',
+    ML_HEATMAP_LOADING: 'ml:heatmapLoading',
+    ML_HEATMAP_READY: 'ml:heatmapReady',
+    ML_HEATMAP_ERROR: 'ml:heatmapError',
+    ML_HEATMAP_TOGGLE: 'ml:heatmapToggle',
+    ML_HEATMAP_OPACITY_CHANGE: 'ml:heatmapOpacityChange',
+    ML_MODEL_LOADED: 'ml:modelLoaded',
+    ML_MODEL_UNLOADED: 'ml:modelUnloaded'
 });
 
 /**

@@ -16,9 +16,15 @@
     --color-primary: #4a9eff;
     --color-primary-light: #6bb0ff;
     --color-primary-dark: #3a8eef;
+    --color-primary-hover: #5aa8ff;
     --color-primary-alpha-10: rgba(74, 158, 255, 0.1);
     --color-primary-alpha-20: rgba(74, 158, 255, 0.2);
     --color-primary-alpha-30: rgba(74, 158, 255, 0.3);
+
+    /* Accent color (purple for ML features) */
+    --color-accent: #9c27b0;
+    --color-accent-light: #ba68c8;
+    --color-accent-dark: #7b1fa2;
 
     /* Background colors (dark theme) */
     --color-bg-base: #000000;
@@ -27,6 +33,11 @@
     --color-bg-overlay: #252525;
     --color-bg-hover: #2a2a2a;
     --color-bg-active: #333333;
+
+    /* Surface aliases (for components) */
+    --color-surface: var(--color-bg-surface);
+    --color-surface-elevated: var(--color-bg-elevated);
+    --color-surface-hover: var(--color-bg-hover);
 
     /* Text colors */
     --color-text-primary: #e0e0e0;

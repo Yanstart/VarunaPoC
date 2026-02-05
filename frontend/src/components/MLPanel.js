@@ -1,0 +1,424 @@
+/**
+ * MLPanel - Machine Learning Controls and Results Display
+ *
+ * Provides UI for:
+ * - Running ML predictions on slides
+ * - Displaying prediction results with confidence/uncertainty
+ * - Toggling heatmap overlay
+ * - Adjusting heatmap opacity
+ *
+ * @module components/MLPanel
+ */
+
+import { apiService } from '../services/ApiService.js';
+import { eventBus } from '../core/EventBus.js';
+import { Events } from '../core/Constants.js';
+
+/**
+ * MLPanel component
+ */
+class MLPanel {
+    /**
+     * Create MLPanel
+     * @param {HTMLElement} container - Container element
+     * @param {Object} options - Configuration options
+     * @param {string} options.viewerId - Associated viewer ID
+     */
+    constructor(container, options = {}) {
+        this.container = container;
+        this.viewerId = options.viewerId || null;
+        this.slideId = null;
+
+        // State
+        this.prediction = null;
+        this.heatmapVisible = false;
+        this.heatmapOpacity = 0.5;
+        this.isLoading = false;
+
+        // Elements
+        this.element = null;
+        this.predictBtn = null;
+        this.heatmapBtn = null;
+        this.opacitySlider = null;
+        this.resultsContainer = null;
+
+        this._build();
+        this._setupEventListeners();
+    }
+
+    /**
+     * Build the panel DOM
+     * @private
+     */
+    _build() {
+        this.element = document.createElement('div');
+        this.element.className = 'ml-panel';
+        this.element.innerHTML = `
+            <div class="ml-panel__header">
+                <span class="ml-panel__title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    ML Analysis
+                </span>
+                <button class="ml-panel__collapse" title="Collapse">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="ml-panel__content">
+                <div class="ml-panel__actions">
+                    <button class="ml-panel__btn ml-panel__btn--predict" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4"/>
+                            <path d="M12 8h.01"/>
+                        </svg>
+                        Analyze Slide
+                    </button>
+                    <button class="ml-panel__btn ml-panel__btn--heatmap" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <path d="M3 9h18"/>
+                            <path d="M3 15h18"/>
+                            <path d="M9 3v18"/>
+                            <path d="M15 3v18"/>
+                        </svg>
+                        Show Heatmap
+                    </button>
+                </div>
+                <div class="ml-panel__opacity" style="display: none;">
+                    <label>Heatmap Opacity</label>
+                    <input type="range" min="0" max="100" value="50" class="ml-panel__slider">
+                    <span class="ml-panel__opacity-value">50%</span>
+                </div>
+                <div class="ml-panel__results">
+                    <div class="ml-panel__placeholder">
+                        Load a slide and click "Analyze" to run ML prediction
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Get references
+        this.predictBtn = this.element.querySelector('.ml-panel__btn--predict');
+        this.heatmapBtn = this.element.querySelector('.ml-panel__btn--heatmap');
+        this.opacitySlider = this.element.querySelector('.ml-panel__slider');
+        this.opacityContainer = this.element.querySelector('.ml-panel__opacity');
+        this.opacityValue = this.element.querySelector('.ml-panel__opacity-value');
+        this.resultsContainer = this.element.querySelector('.ml-panel__results');
+        this.collapseBtn = this.element.querySelector('.ml-panel__collapse');
+        this.content = this.element.querySelector('.ml-panel__content');
+
+        this.container.appendChild(this.element);
+    }
+
+    /**
+     * Setup event listeners
+     * @private
+     */
+    _setupEventListeners() {
+        // Predict button
+        this.predictBtn.addEventListener('click', () => this._runPrediction());
+
+        // Heatmap toggle
+        this.heatmapBtn.addEventListener('click', () => this._toggleHeatmap());
+
+        // Opacity slider
+        this.opacitySlider.addEventListener('input', (e) => {
+            this.heatmapOpacity = e.target.value / 100;
+            this.opacityValue.textContent = `${e.target.value}%`;
+            eventBus.emit(Events.ML_HEATMAP_OPACITY_CHANGE, {
+                viewerId: this.viewerId,
+                opacity: this.heatmapOpacity
+            });
+        });
+
+        // Collapse button
+        this.collapseBtn.addEventListener('click', () => {
+            this.element.classList.toggle('is-collapsed');
+        });
+
+        // Listen for slide loaded events
+        eventBus.on(Events.SLIDE_LOADED, (data) => {
+            if (data.viewerId === this.viewerId) {
+                this.setSlide(data.slideId);
+            }
+        });
+
+        // Listen for slide unloaded
+        eventBus.on(Events.SLIDE_UNLOADED, (data) => {
+            if (data.viewerId === this.viewerId) {
+                this.reset();
+            }
+        });
+    }
+
+    /**
+     * Set the current slide
+     * @param {string} slideId - Slide ID
+     */
+    setSlide(slideId) {
+        this.slideId = slideId;
+        this.prediction = null;
+        this.heatmapVisible = false;
+
+        // Enable predict button
+        this.predictBtn.disabled = false;
+        this.heatmapBtn.disabled = true;
+        this.heatmapBtn.classList.remove('is-active');
+        this.opacityContainer.style.display = 'none';
+
+        // Reset results
+        this.resultsContainer.innerHTML = `
+            <div class="ml-panel__placeholder">
+                Click "Analyze Slide" to run ML prediction
+            </div>
+        `;
+    }
+
+    /**
+     * Reset panel state
+     */
+    reset() {
+        this.slideId = null;
+        this.prediction = null;
+        this.heatmapVisible = false;
+
+        this.predictBtn.disabled = true;
+        this.heatmapBtn.disabled = true;
+        this.heatmapBtn.classList.remove('is-active');
+        this.opacityContainer.style.display = 'none';
+
+        this.resultsContainer.innerHTML = `
+            <div class="ml-panel__placeholder">
+                Load a slide and click "Analyze" to run ML prediction
+            </div>
+        `;
+    }
+
+    /**
+     * Run ML prediction
+     * @private
+     */
+    async _runPrediction() {
+        if (!this.slideId || this.isLoading) return;
+
+        this.isLoading = true;
+        this.predictBtn.disabled = true;
+        this.predictBtn.innerHTML = `
+            <span class="ml-panel__spinner"></span>
+            Analyzing...
+        `;
+
+        // Show loading in results
+        this.resultsContainer.innerHTML = `
+            <div class="ml-panel__loading">
+                <span class="ml-panel__spinner ml-panel__spinner--large"></span>
+                <p>Running ML analysis...</p>
+                <p class="ml-panel__loading-sub">This may take a few seconds</p>
+            </div>
+        `;
+
+        eventBus.emit(Events.ML_PREDICTION_START, {
+            viewerId: this.viewerId,
+            slideId: this.slideId
+        });
+
+        try {
+            const result = await apiService.predict(this.slideId, {
+                numMcSamples: 10
+            });
+
+            this.prediction = result;
+            this._displayResults(result);
+
+            // Enable heatmap button
+            this.heatmapBtn.disabled = false;
+
+            eventBus.emit(Events.ML_PREDICTION_COMPLETE, {
+                viewerId: this.viewerId,
+                slideId: this.slideId,
+                prediction: result
+            });
+
+        } catch (error) {
+            console.error('ML Prediction error:', error);
+            this._displayError(error.message || 'Prediction failed');
+
+            eventBus.emit(Events.ML_PREDICTION_ERROR, {
+                viewerId: this.viewerId,
+                slideId: this.slideId,
+                error: error.message
+            });
+        } finally {
+            this.isLoading = false;
+            this.predictBtn.disabled = false;
+            this.predictBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                </svg>
+                Analyze Slide
+            `;
+        }
+    }
+
+    /**
+     * Display prediction results
+     * @param {Object} result - Prediction result
+     * @private
+     */
+    _displayResults(result) {
+        const confidence = (result.confidence * 100).toFixed(1);
+        const uncertainty = result.uncertainty ? (result.uncertainty * 100).toFixed(1) : null;
+
+        // Get confidence color
+        const confColor = this._getConfidenceColor(result.confidence);
+
+        // Build probabilities bars
+        const probBars = Object.entries(result.probabilities || {})
+            .sort((a, b) => b[1] - a[1])
+            .map(([cls, prob]) => {
+                const pct = (prob * 100).toFixed(1);
+                const isMain = cls === result.prediction_class;
+                return `
+                    <div class="ml-panel__prob-row ${isMain ? 'is-main' : ''}">
+                        <span class="ml-panel__prob-label">${cls}</span>
+                        <div class="ml-panel__prob-bar">
+                            <div class="ml-panel__prob-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="ml-panel__prob-value">${pct}%</span>
+                    </div>
+                `;
+            })
+            .join('');
+
+        this.resultsContainer.innerHTML = `
+            <div class="ml-panel__result">
+                <div class="ml-panel__prediction">
+                    <span class="ml-panel__prediction-label">Prediction</span>
+                    <span class="ml-panel__prediction-class">${result.prediction_class}</span>
+                </div>
+                <div class="ml-panel__metrics">
+                    <div class="ml-panel__metric">
+                        <span class="ml-panel__metric-label">Confidence</span>
+                        <span class="ml-panel__metric-value" style="color: ${confColor}">
+                            ${confidence}%
+                        </span>
+                    </div>
+                    ${uncertainty !== null ? `
+                        <div class="ml-panel__metric">
+                            <span class="ml-panel__metric-label">Uncertainty</span>
+                            <span class="ml-panel__metric-value ml-panel__metric-value--uncertainty">
+                                ±${uncertainty}%
+                            </span>
+                        </div>
+                    ` : ''}
+                    <div class="ml-panel__metric">
+                        <span class="ml-panel__metric-label">Time</span>
+                        <span class="ml-panel__metric-value">
+                            ${result.execution_time_ms?.toFixed(0) || '?'}ms
+                        </span>
+                    </div>
+                </div>
+                <div class="ml-panel__probabilities">
+                    <span class="ml-panel__prob-title">Class Probabilities</span>
+                    ${probBars}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Display error message
+     * @param {string} message - Error message
+     * @private
+     */
+    _displayError(message) {
+        this.resultsContainer.innerHTML = `
+            <div class="ml-panel__error">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                <p>Analysis failed</p>
+                <p class="ml-panel__error-detail">${message}</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Get color based on confidence level
+     * @param {number} confidence - Confidence value (0-1)
+     * @returns {string} CSS color
+     * @private
+     */
+    _getConfidenceColor(confidence) {
+        if (confidence >= 0.9) return 'var(--color-success)';
+        if (confidence >= 0.7) return 'var(--color-warning)';
+        return 'var(--color-error)';
+    }
+
+    /**
+     * Toggle heatmap visibility
+     * @private
+     */
+    async _toggleHeatmap() {
+        if (!this.prediction) return;
+
+        this.heatmapVisible = !this.heatmapVisible;
+        this.heatmapBtn.classList.toggle('is-active', this.heatmapVisible);
+
+        if (this.heatmapVisible) {
+            this.opacityContainer.style.display = 'flex';
+            this.heatmapBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18"/>
+                    <path d="M3 15h18"/>
+                    <path d="M9 3v18"/>
+                    <path d="M15 3v18"/>
+                </svg>
+                Hide Heatmap
+            `;
+        } else {
+            this.opacityContainer.style.display = 'none';
+            this.heatmapBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18"/>
+                    <path d="M3 15h18"/>
+                    <path d="M9 3v18"/>
+                    <path d="M15 3v18"/>
+                </svg>
+                Show Heatmap
+            `;
+        }
+
+        eventBus.emit(Events.ML_HEATMAP_TOGGLE, {
+            viewerId: this.viewerId,
+            slideId: this.slideId,
+            visible: this.heatmapVisible,
+            predictionClass: this.prediction.prediction_class,
+            opacity: this.heatmapOpacity
+        });
+    }
+
+    /**
+     * Destroy the panel
+     */
+    destroy() {
+        eventBus.off(Events.SLIDE_LOADED);
+        eventBus.off(Events.SLIDE_UNLOADED);
+        this.element.remove();
+    }
+}
+
+export { MLPanel };
+export default MLPanel;
