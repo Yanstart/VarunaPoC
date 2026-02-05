@@ -1,7 +1,7 @@
 # Documentation Architecture V3 - VarunaPoC
 
-**Date:** 2025-12-31
-**Version:** 3.0.0
+**Date:** 2025-02-05 (Mise à jour architecture modulaire)
+**Version:** 3.1.0
 
 ---
 
@@ -11,29 +11,91 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 **Objectif TFE 2025-2026:** Développer un système d'intelligence artificielle pour l'analyse de lames histologiques, avec apprentissage continu et conformité réglementaire.
 
+**⭐ NOUVEAU:** Architecture modulaire avec interfaces Python (Protocols) - voir `MODULAR_ARCHITECTURE.md`
+
 ---
 
 ## Documents Disponibles
 
-### 0. [SYSTEM_PATTERNS.md](./SYSTEM_PATTERNS.md) (NEW - 2026-02-10)
+### 0. [SYSTEM_PATTERNS.md](./SYSTEM_PATTERNS.md) — Current implementation reference
 
-**Reference architecturale concrete** basee sur le code implementee (Phases 1-3.1).
+**Reference architecturale concrete** basee sur le code implemente (Phases 1-3.1).
 
 **Contenu:**
 - Patterns backend (module optionnel, Depends(), RBAC, audit, DB)
 - Patterns frontend (EventBus, Singleton, Component lifecycle, role-based UI)
 - Modele de donnees actuel (annotations, users, audit, sessions)
 - Auth OIDC PKCE + Break-Glass + Session Roaming
-- **Guide d'extension** pour features futures: versioning, expertise croisee, commentaires
+- Guide d'extension pour features futures: versioning, expertise croisee, commentaires
 - Checklist d'ajout de feature
 
 **Lire en premier** pour implementer une nouvelle feature sur le code actuel.
 
 ---
 
-### 1. [ARCHITECTURE_V3.md](./ARCHITECTURE_V3.md)
+### 1. [MODULAR_ARCHITECTURE.md](./MODULAR_ARCHITECTURE.md) — Target design (Protocol interfaces)
 
-**Document principal** décrivant l'architecture cible complète.
+**Guide complet architecture modulaire** avec interfaces Python (Protocols).
+Ces interfaces definissent la cible architecturale; les implementations concretes
+existantes (auth OIDC, PostgreSQL quality, OpenSlide tile server) n'en heritent
+pas encore — la migration est progressive (voir REFACTORING_PLAN.md).
+
+**Contenu:**
+- Vision (probleme → solution architecture modulaire)
+- Principes architecturaux (SOLID, Design Patterns detailles)
+- Structure des interfaces (5 interfaces cles: Auth, Storage, Loader, Cache, Workflow)
+- Modules et implementations (code exemples complets)
+- Guide d'implementation pas-a-pas (ajouter provider custom)
+- Tests modulaires (pytest, markers, fixtures)
+- Migration progressive (Phase 1 → Phase 2)
+- FAQ complete
+
+**Public:** Developpeurs backend, nouveaux contributeurs, architectes
+**Quand lire:** Comprendre interfaces, ajouter provider, ecrire tests modulaires
+
+---
+
+### 2. [QUICK_START_MODULAR.md](./QUICK_START_MODULAR.md)
+
+**Guide rapide architecture modulaire** (pour developpeurs presses).
+
+**Contenu:**
+- Concept en 30 secondes
+- Structure dossiers (5 min)
+- Les 5 interfaces cles (resume)
+- Exemple complet ajout RedisCache (10 min)
+- Tests Pytest (5 min)
+- Commandes utiles
+- Patterns de code courants
+- Erreurs courantes
+
+**Public:** Developpeurs presses, quick reference
+**Quand lire:** Demarrer rapidement, reference rapide
+
+---
+
+### 3. [IMPLEMENTATION_REPORT.md](./IMPLEMENTATION_REPORT.md)
+
+**Rapport d'implementation architecture modulaire** (management/equipe).
+
+**Contenu:**
+- Resume executif
+- Livrables (interfaces, tests, docs crees)
+- Architecture actuelle vs cible (diagrammes)
+- Compatibilite retroactive (migration sans breaking changes)
+- Impact et benefices (pour developpeurs, institutions, maintenance)
+- Metriques (code cree, coverage, temps estimes)
+- Prochaines etapes (court/moyen/long terme)
+- Risques et mitigations
+
+**Public:** Management, project managers, leads techniques
+**Quand lire:** Vue d'ensemble implementation, decisions, planification
+
+---
+
+### 4. [ARCHITECTURE_V3.md](./ARCHITECTURE_V3.md)
+
+**Architecture cible V3** - Plateforme MLOps modulaire complète.
 
 **Contenu:**
 - Vision et objectifs du TFE
@@ -47,7 +109,7 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 ---
 
-### 2. [MODULE_CONTRACTS.md](./MODULE_CONTRACTS.md)
+### 5. [MODULE_CONTRACTS.md](./MODULE_CONTRACTS.md)
 
 **Contrats d'interface** entre modules pour garantir isolation et testabilité.
 
@@ -64,7 +126,7 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 ---
 
-### 3. [REFACTORING_PLAN.md](./REFACTORING_PLAN.md)
+### 6. [REFACTORING_PLAN.md](./REFACTORING_PLAN.md)
 
 **Plan détaillé de refactoring** pour migrer du code actuel vers V3.
 
