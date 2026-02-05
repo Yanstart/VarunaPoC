@@ -8,6 +8,15 @@ Documentation:
     - FastAPI Testing: https://fastapi.tiangolo.com/tutorial/testing/
 """
 
+# IMPORTANT: Configure OpenSlide DLL path BEFORE any openslide import
+import os
+import sys
+
+# Configure OpenSlide for Windows (MSYS2 UCRT64 installation)
+OPENSLIDE_PATH = r"C:\msys64\ucrt64\bin"
+if os.path.exists(OPENSLIDE_PATH) and sys.version_info >= (3, 8):
+    os.add_dll_directory(OPENSLIDE_PATH)
+
 import pytest
 from fastapi.testclient import TestClient
 

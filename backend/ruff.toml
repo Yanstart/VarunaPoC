@@ -74,8 +74,10 @@ exclude = [
 ]
 
 [lint.per-file-ignores]
-# Tests can use assertions and magic values
-"tests/**/*.py" = ["S101", "PLR2004"]
+# Tests - allow assertions, magic values, prints for reports, os.path usage, compound assertions
+"tests/**/*.py" = ["S101", "PLR2004", "T201", "PTH110", "PT018"]
+# Test conftest - needs os.path before Path import for DLL loading
+"tests/conftest.py" = ["PTH110"]
 # Config files - setup scripts with prints and legacy code
 "config_*.py" = ["S102", "T201", "ERA001", "PTH110", "I001", "N806", "F401"]
 # Legacy services - gradual migration (Phase 1 code)
@@ -89,8 +91,8 @@ exclude = [
 "core/interfaces/**/*.py" = ["UP", "RUF013", "EM101", "RET504", "RUF002"]
 # Core exceptions - ML exceptions with Optional parameters
 "core/exceptions/**/*.py" = ["RUF013"]
-# ML Providers - Slideflow integration with complex ML patterns
-"services/ml/providers/**/*.py" = ["RET504", "B007", "ERA001", "TRY301", "PLC", "UP", "RUF013"]
+# ML Providers - Slideflow/OpenSlide integration with complex ML patterns
+"services/ml/providers/**/*.py" = ["RET504", "B007", "ERA001", "TRY301", "PLC", "UP", "RUF013", "RUF012", "SIM105", "F841"]
 
 [lint.isort]
 known-first-party = ["routes", "services", "utils"]
