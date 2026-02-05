@@ -81,7 +81,7 @@ jobs:
           cd backend
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio httpx
+          pip install pytest pytest-cov pytest-asyncio "httpx>=0.25.0,<0.28.0"
 
       - name: Run pytest
         run: |
@@ -114,6 +114,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: false
+          load: true
           tags: varuna-backend:ci-test
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -210,6 +211,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: false
+          load: true
           tags: varuna-frontend:ci-test
           cache-from: type=gha
           cache-to: type=gha,mode=max

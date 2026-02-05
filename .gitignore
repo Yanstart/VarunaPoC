@@ -83,7 +83,7 @@ service-account*.json
 # Node.js / Frontend
 # =========================
 node_modules/
-package-lock.json
+# package-lock.json should be committed for reproducible builds
 .vite/
 dist/
 
