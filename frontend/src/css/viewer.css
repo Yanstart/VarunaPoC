@@ -6,6 +6,7 @@
 @import './drawing-tools.css';
 @import './layer-manager.css';
 @import './detection-panel.css';
+@import './counting-panel.css';
 
 .viewer-page {
     width: 100%;

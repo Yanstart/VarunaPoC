@@ -46,6 +46,9 @@ class HeatmapOverlay {
         /** @type {Array<Function>} Unsubscribe functions for event listeners */
         this._unsubscribers = [];
 
+        /** @type {boolean} Deduplication flag for requestAnimationFrame */
+        this._renderPending = false;
+
         this._boundRender = this._onViewportChange.bind(this);
         this._boundResize = this._onResize.bind(this);
 
@@ -188,7 +191,7 @@ class HeatmapOverlay {
             height: 100%;
             pointer-events: none;
             opacity: ${this.opacity};
-            z-index: 100;
+            z-index: 150;
             display: none;
             overflow: hidden;
         `;
@@ -239,19 +242,12 @@ class HeatmapOverlay {
     _renderHeatmap() {
         if (!this._cachedImage || !this.ctx || !this.viewer || !this.heatmapData) return;
 
-        const { canvas, ctx } = this;
-
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Get the tiledImage for coordinate conversion
+        // Validate coords BEFORE clearing canvas to avoid blank frame
         const tiledImage = this.viewer.world.getItemAt(0);
         if (!tiledImage) return;
 
-        // Get the full image bounds in viewport coordinates
         const imageBounds = tiledImage.getBounds(true);
 
-        // Convert viewport coordinates to viewer element (pixel) coordinates
         const topLeft = this.viewer.viewport.viewportToViewerElementCoordinates(
             new OpenSeadragon.Point(imageBounds.x, imageBounds.y)
         );
@@ -267,12 +263,12 @@ class HeatmapOverlay {
         const destWidth = bottomRight.x - topLeft.x;
         const destHeight = bottomRight.y - topLeft.y;
 
-        // Draw heatmap scaled to match the slide image position
-        ctx.drawImage(
-            this._cachedImage,
-            destX, destY,
-            destWidth, destHeight
-        );
+        if (destWidth <= 0 || destHeight <= 0) return;
+
+        // Only now: clear + draw
+        const { canvas, ctx } = this;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(this._cachedImage, destX, destY, destWidth, destHeight);
     }
 
     /**
@@ -387,7 +383,10 @@ class HeatmapOverlay {
      */
     _onViewportChange() {
         if (!this.isVisible) return;
+        if (this._renderPending) return;
+        this._renderPending = true;
         requestAnimationFrame(() => {
+            this._renderPending = false;
             this._renderHeatmap();
         });
     }

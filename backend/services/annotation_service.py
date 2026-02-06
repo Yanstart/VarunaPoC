@@ -10,7 +10,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from geoalchemy2.functions import ST_AsGeoJSON, ST_GeomFromGeoJSON, ST_Intersects, ST_MakeEnvelope
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.annotation import Annotation
@@ -232,6 +232,96 @@ async def export_annotations_geojson(db: AsyncSession, slide_id: str) -> GeoJSON
         features=features,
         metadata={"slide_id": slide_id, "count": len(features)},
     )
+
+
+# ============================================
+# Statistics / Counting
+# ============================================
+
+
+async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any]:
+    """
+    Get annotation statistics for a slide: total count, counts by label, counts by type,
+    and confidence distribution.
+    """
+    # Total count
+    total_result = await db.execute(
+        select(func.count(Annotation.id)).where(Annotation.slide_id == slide_id)
+    )
+    total = total_result.scalar_one()
+
+    # Count by annotation_type
+    type_result = await db.execute(
+        select(Annotation.annotation_type, func.count(Annotation.id))
+        .where(Annotation.slide_id == slide_id)
+        .group_by(Annotation.annotation_type)
+    )
+    by_type = [{"type": row[0], "count": row[1]} for row in type_result.all()]
+
+    # Count by label (with label info)
+    label_result = await db.execute(
+        select(
+            AnnotationLabel.id,
+            AnnotationLabel.name,
+            AnnotationLabel.color,
+            func.count(Annotation.id),
+        )
+        .join(AnnotationLabel, Annotation.label_id == AnnotationLabel.id)
+        .where(Annotation.slide_id == slide_id)
+        .group_by(AnnotationLabel.id, AnnotationLabel.name, AnnotationLabel.color)
+    )
+    by_label = [
+        {"label_id": str(row[0]), "name": row[1], "color": row[2], "count": row[3]}
+        for row in label_result.all()
+    ]
+
+    # Count unlabeled
+    unlabeled_result = await db.execute(
+        select(func.count(Annotation.id)).where(
+            Annotation.slide_id == slide_id, Annotation.label_id.is_(None)
+        )
+    )
+    unlabeled = unlabeled_result.scalar_one()
+
+    # Confidence distribution (buckets: high>=0.8, medium 0.5-0.8, low <0.5, unscored=null)
+    conf_high = await db.execute(
+        select(func.count(Annotation.id)).where(
+            Annotation.slide_id == slide_id, Annotation.confidence >= 0.8
+        )
+    )
+    conf_med = await db.execute(
+        select(func.count(Annotation.id)).where(
+            Annotation.slide_id == slide_id,
+            Annotation.confidence >= 0.5,
+            Annotation.confidence < 0.8,
+        )
+    )
+    conf_low = await db.execute(
+        select(func.count(Annotation.id)).where(
+            Annotation.slide_id == slide_id,
+            Annotation.confidence.isnot(None),
+            Annotation.confidence < 0.5,
+        )
+    )
+    conf_none = await db.execute(
+        select(func.count(Annotation.id)).where(
+            Annotation.slide_id == slide_id, Annotation.confidence.is_(None)
+        )
+    )
+
+    return {
+        "slide_id": slide_id,
+        "total": total,
+        "by_type": by_type,
+        "by_label": by_label,
+        "unlabeled": unlabeled,
+        "confidence_distribution": {
+            "high": conf_high.scalar_one(),
+            "medium": conf_med.scalar_one(),
+            "low": conf_low.scalar_one(),
+            "unscored": conf_none.scalar_one(),
+        },
+    }
 
 
 # ============================================

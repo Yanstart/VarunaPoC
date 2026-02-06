@@ -48,6 +48,9 @@ class AnnotationStore {
         /** @type {Array<Object>} Detection preview (not yet saved) */
         this.detectionPreview = [];
 
+        /** @type {Object|null} Cached annotation statistics */
+        this.stats = null;
+
         instance = this;
     }
 
@@ -101,6 +104,7 @@ class AnnotationStore {
                 slideId: this.slideId,
                 count: this.annotations.size,
             });
+            this.loadStats();
         } catch (err) {
             console.error('[AnnotationStore] Failed to load annotations:', err);
         }
@@ -116,6 +120,7 @@ class AnnotationStore {
             });
             this.annotations.set(annotation.id, annotation);
             eventBus.emit(Events.ANNOTATION_CREATED, { annotation });
+            this.loadStats();
             return annotation;
         } catch (err) {
             console.error('[AnnotationStore] Failed to create annotation:', err);
@@ -149,6 +154,7 @@ class AnnotationStore {
                 this.selectedId = null;
             }
             eventBus.emit(Events.ANNOTATION_DELETED, { annotationId });
+            this.loadStats();
             return true;
         } catch (err) {
             console.error('[AnnotationStore] Failed to delete annotation:', err);
@@ -243,7 +249,7 @@ class AnnotationStore {
         eventBus.emit(Events.DETECTION_PREVIEW, { features: [] });
     }
 
-    async confirmDetections(featureIndices = null) {
+    async confirmDetections(featureIndices = null, labelId = null) {
         if (!this.slideId || this.detectionPreview.length === 0) return;
 
         const features = featureIndices
@@ -254,6 +260,7 @@ class AnnotationStore {
             geometry: f.geometry,
             geometry_type: 'polygon',
             annotation_type: 'auto_confirmed',
+            label_id: labelId || null,
             confidence: f.properties?.confidence,
             properties: f.properties,
         }));
@@ -267,6 +274,7 @@ class AnnotationStore {
             }
             this.clearDetectionPreview();
             eventBus.emit(Events.DETECTION_CONFIRM, { count: created.length });
+            this.loadStats();
             eventBus.emit(Events.ANNOTATIONS_LOADED, {
                 slideId: this.slideId,
                 count: this.annotations.size,
@@ -276,6 +284,68 @@ class AnnotationStore {
             console.error('[AnnotationStore] Failed to confirm detections:', err);
             return null;
         }
+    }
+
+    // ==========================================
+    // STATISTICS / COUNTING
+    // ==========================================
+
+    /**
+     * Load annotation statistics from backend
+     * @returns {Promise<Object|null>}
+     */
+    async loadStats() {
+        if (!this.slideId) return null;
+        try {
+            this.stats = await apiService.getAnnotationStats(this.slideId);
+            eventBus.emit(Events.ANNOTATION_STATS_UPDATED, this.stats);
+            return this.stats;
+        } catch (err) {
+            // Stats endpoint may not be available (no DB)
+            this.stats = this.computeLocalStats();
+            eventBus.emit(Events.ANNOTATION_STATS_UPDATED, this.stats);
+            return this.stats;
+        }
+    }
+
+    /**
+     * Compute stats from local annotation cache (fallback when DB unavailable)
+     * @returns {Object}
+     */
+    computeLocalStats() {
+        const all = this.getAll();
+        const byType = {};
+        const byLabel = {};
+        let highConf = 0, medConf = 0, lowConf = 0, unscored = 0;
+
+        for (const a of all) {
+            // By type
+            byType[a.annotation_type] = (byType[a.annotation_type] || 0) + 1;
+
+            // By label
+            if (a.label) {
+                const key = a.label.id;
+                if (!byLabel[key]) {
+                    byLabel[key] = { label_id: a.label.id, name: a.label.name, color: a.label.color, count: 0 };
+                }
+                byLabel[key].count++;
+            }
+
+            // Confidence
+            if (a.confidence == null) unscored++;
+            else if (a.confidence >= 0.8) highConf++;
+            else if (a.confidence >= 0.5) medConf++;
+            else lowConf++;
+        }
+
+        return {
+            slide_id: this.slideId,
+            total: all.length,
+            by_type: Object.entries(byType).map(([type, count]) => ({ type, count })),
+            by_label: Object.values(byLabel),
+            unlabeled: all.filter(a => !a.label_id).length,
+            confidence_distribution: { high: highConf, medium: medConf, low: lowConf, unscored },
+        };
     }
 
     // ==========================================

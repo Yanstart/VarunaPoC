@@ -503,6 +503,17 @@ class ApiService {
         });
     }
 
+    /**
+     * Get annotation statistics for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} Stats with total, by_type, by_label, confidence_distribution
+     */
+    async getAnnotationStats(slideId) {
+        return this.get(`/api/annotations/${encodeURIComponent(slideId)}/stats`, {
+            useCache: false,
+        });
+    }
+
     // ==========================================
     // LABELS API
     // ==========================================

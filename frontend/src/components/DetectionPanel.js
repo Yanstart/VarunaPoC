@@ -1,15 +1,16 @@
 /**
- * DetectionPanel - Auto-detection workflow with accept/reject
+ * DetectionPanel - Auto-detection workflow with accept/reject and classification
  *
  * Workflow:
  * 1. User clicks "Auto-Detect"
  * 2. Adjusts threshold slider
  * 3. Loading state while backend runs detection pipeline
  * 4. Preview mode: detected regions shown as dashed outlines
- * 5. User accepts/rejects individual detections
- * 6. "Confirm All" → batch POST to annotations API (type=auto_confirmed)
+ * 5. User classifies detections via label selector
+ * 6. User accepts/rejects individual detections
+ * 7. "Confirm All" → batch POST to annotations API (type=auto_confirmed)
  *
- * This implements the Quality-First feedback loop from VISION_V3.
+ * Counting: Shows confidence distribution and region summary after detection.
  *
  * @module components/DetectionPanel
  */
@@ -36,6 +37,9 @@ class DetectionPanel {
         this.predictionClass = 'tissue';
         this.detectionResult = null;
 
+        /** @type {string|null} Selected label ID for classification */
+        this.selectedLabelId = null;
+
         /** @type {Set<number>} Indices of accepted detections */
         this.accepted = new Set();
         /** @type {Set<number>} Indices of rejected detections */
@@ -55,6 +59,42 @@ class DetectionPanel {
         this.element.className = 'detection-panel';
         this._renderIdle();
         this.container.appendChild(this.element);
+    }
+
+    /**
+     * Build label selector HTML from annotationStore.labels
+     * @returns {string}
+     * @private
+     */
+    _buildLabelSelector() {
+        const labels = annotationStore.labels || [];
+        const options = labels.map(l =>
+            `<option value="${l.id}" ${this.selectedLabelId === l.id ? 'selected' : ''}>`
+            + `${l.name}</option>`
+        ).join('');
+
+        return `
+            <div class="detection-panel__control detection-panel__label-select">
+                <label>Classification Label</label>
+                <select class="detection-panel__select">
+                    <option value="">-- No label --</option>
+                    ${options}
+                </select>
+            </div>
+        `;
+    }
+
+    /**
+     * Bind label selector change event
+     * @private
+     */
+    _bindLabelSelector() {
+        const select = this.element.querySelector('.detection-panel__select');
+        if (select) {
+            select.addEventListener('change', (e) => {
+                this.selectedLabelId = e.target.value || null;
+            });
+        }
     }
 
     // ==========================================
@@ -81,6 +121,8 @@ class DetectionPanel {
                         min="10" max="1000" step="10" value="${this.minArea}">
                 </div>
 
+                ${this._buildLabelSelector()}
+
                 <button class="detection-panel__btn detection-panel__btn--primary" ${!this.slideId ? 'disabled' : ''}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -102,6 +144,8 @@ class DetectionPanel {
             this.minArea = parseInt(e.target.value);
             e.target.previousElementSibling.querySelector('.detection-panel__value').textContent = `${this.minArea} px`;
         });
+
+        this._bindLabelSelector();
 
         // Detect button
         this.element.querySelector('.detection-panel__btn--primary').addEventListener('click', () => {
@@ -138,14 +182,45 @@ class DetectionPanel {
         const rejectedCount = this.rejected.size;
         const pendingCount = total - acceptedCount - rejectedCount;
 
+        // Confidence distribution
+        const confDist = this._computeConfidenceDistribution(features);
+
         this.element.innerHTML = `
             <div class="detection-panel__section">
                 <h4>Detection Results</h4>
+
+                <div class="detection-panel__count-summary">
+                    <div class="count-summary__total">
+                        <span class="count-summary__number">${total}</span>
+                        <span class="count-summary__label">regions detected</span>
+                    </div>
+                    <div class="count-summary__breakdown">
+                        <div class="count-summary__bar">
+                            <div class="count-summary__segment count-summary__segment--high"
+                                 style="width: ${total ? (confDist.high / total * 100) : 0}%"
+                                 title="High confidence (>=0.8): ${confDist.high}"></div>
+                            <div class="count-summary__segment count-summary__segment--medium"
+                                 style="width: ${total ? (confDist.medium / total * 100) : 0}%"
+                                 title="Medium confidence (0.5-0.8): ${confDist.medium}"></div>
+                            <div class="count-summary__segment count-summary__segment--low"
+                                 style="width: ${total ? (confDist.low / total * 100) : 0}%"
+                                 title="Low confidence (<0.5): ${confDist.low}"></div>
+                        </div>
+                        <div class="count-summary__legend">
+                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} high</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} med</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} low</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="detection-panel__stats">
-                    <span class="stat stat--total">${total} regions found</span>
+                    <span class="stat stat--total">${pendingCount} pending</span>
                     <span class="stat stat--accepted">${acceptedCount} accepted</span>
                     <span class="stat stat--rejected">${rejectedCount} rejected</span>
                 </div>
+
+                ${this._buildLabelSelector()}
 
                 <div class="detection-panel__results">
                     ${features.map((f, i) => this._renderDetectionItem(f, i)).join('')}
@@ -165,6 +240,8 @@ class DetectionPanel {
                 </div>
             </div>
         `;
+
+        this._bindLabelSelector();
 
         // Item accept/reject buttons
         this.element.querySelectorAll('.detection-item__accept').forEach((btn) => {
@@ -200,17 +277,39 @@ class DetectionPanel {
         });
     }
 
+    /**
+     * Compute confidence distribution from features
+     * @param {Array} features
+     * @returns {{high: number, medium: number, low: number}}
+     * @private
+     */
+    _computeConfidenceDistribution(features) {
+        let high = 0, medium = 0, low = 0;
+        for (const f of features) {
+            const conf = f.properties?.confidence || 0;
+            if (conf >= 0.8) high++;
+            else if (conf >= 0.5) medium++;
+            else low++;
+        }
+        return { high, medium, low };
+    }
+
     _renderDetectionItem(feature, index) {
         const confidence = (feature.properties?.confidence || 0).toFixed(2);
         const area = Math.round(feature.properties?.area_px || 0);
         const isAccepted = this.accepted.has(index);
         const isRejected = this.rejected.has(index);
+        const confLevel = feature.properties?.confidence >= 0.8 ? 'high'
+            : feature.properties?.confidence >= 0.5 ? 'medium' : 'low';
 
         return `
             <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''}">
                 <div class="detection-item__info">
                     <span class="detection-item__label">Region ${index + 1}</span>
-                    <span class="detection-item__meta">${confidence} conf | ${area} px</span>
+                    <span class="detection-item__meta">
+                        <span class="detection-item__conf detection-item__conf--${confLevel}">${confidence}</span>
+                         | ${area} px
+                    </span>
                 </div>
                 <div class="detection-item__actions">
                     <button class="detection-item__accept ${isAccepted ? 'is-active' : ''}" data-index="${index}" title="Accept">
@@ -306,12 +405,13 @@ class DetectionPanel {
 
         if (indices.length === 0) return;
 
-        // Store features for confirmation
+        // Store features for confirmation with selected label
         const toConfirm = indices.map(i => features[i]);
         annotationStore.setDetectionPreview(toConfirm);
 
         const result = await annotationStore.confirmDetections(
-            toConfirm.map((_, i) => i)
+            toConfirm.map((_, i) => i),
+            this.selectedLabelId
         );
 
         if (result) {

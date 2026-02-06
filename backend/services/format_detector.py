@@ -255,17 +255,23 @@ class FormatDetector:
         if format_str is None:
             return None
 
+        # Validate the file can actually be opened (detect_format can pass on corrupt NDPI)
+        is_openable, error_msg = self._try_open_slide(ndpi_file)
+        notes = "Single TIFF-like file, no joints required"
+        if not is_openable:
+            notes = f"NDPI detected but cannot open: {error_msg[:150]}"
+
         return SlideFormat(
             name="Hamamatsu NDPI",
             entry_point=ndpi_file,
-            is_supported=True,
+            is_supported=is_openable,
             joint_files=[],
             companion_dirs=[],
             metadata_files=[],
             format_string=format_str,
             structure_type="single-file",
-            detection_method="OpenSlide detect_format validation",
-            notes="Single TIFF-like file, no joints required",
+            detection_method="OpenSlide detect_format + open validation",
+            notes=notes,
         )
 
     # =========================================================================
@@ -347,39 +353,54 @@ class FormatDetector:
         if format_str is None:
             return None
 
+        # Validate the file can actually be opened
+        is_openable, error_msg = self._try_open_slide(svs_file)
+        notes = "Single-file TIFF format"
+        if not is_openable:
+            notes = f"Aperio SVS detected but cannot open: {error_msg[:150]}"
+
         return SlideFormat(
             name="Aperio SVS",
             entry_point=svs_file,
-            is_supported=True,
+            is_supported=is_openable,
             joint_files=[],
             companion_dirs=[],
             metadata_files=[],
             format_string=format_str,
             structure_type="single-file",
-            detection_method="OpenSlide detect_format validation",
-            notes="Single-file TIFF format",
+            detection_method="OpenSlide detect_format + open validation",
+            notes=notes,
         )
 
     def _detect_leica(self, scn_file: Path) -> Optional[SlideFormat]:
         """
         Leica SCN - Single BigTIFF.
         Doc: https://openslide.org/formats/leica/
+
+        Note: Some SCN files pass detect_format() but fail to open
+        (e.g. dissimilar main images, missing main image in fluorescence scans).
         """
         format_str = self._validate_with_openslide(scn_file)
         if format_str is None:
             return None
 
+        # Validate the file can actually be opened
+        is_openable, error_msg = self._try_open_slide(scn_file)
+        notes = "Single BigTIFF file"
+        if not is_openable:
+            notes = f"Leica SCN detected but cannot open: {error_msg[:150]}"
+
         return SlideFormat(
             name="Leica SCN",
             entry_point=scn_file,
-            is_supported=True,
+            is_supported=is_openable,
             joint_files=[],
             companion_dirs=[],
             metadata_files=[],
             format_string=format_str,
             structure_type="single-file",
-            detection_method="OpenSlide detect_format validation",
-            notes="Single BigTIFF file",
+            detection_method="OpenSlide detect_format + open validation",
+            notes=notes,
         )
 
     def _detect_ventana_bif(self, bif_file: Path) -> Optional[SlideFormat]:
@@ -447,17 +468,23 @@ class FormatDetector:
         if format_str is None:
             return None
 
+        # Validate the file can actually be opened
+        is_openable, error_msg = self._try_open_slide(svslide_file)
+        notes = "SQLite database format"
+        if not is_openable:
+            notes = f"Sakura detected but cannot open: {error_msg[:150]}"
+
         return SlideFormat(
             name="Sakura",
             entry_point=svslide_file,
-            is_supported=True,
+            is_supported=is_openable,
             joint_files=[],
             companion_dirs=[],
             metadata_files=[],
             format_string=format_str,
             structure_type="single-file",
-            detection_method="OpenSlide detect_format validation",
-            notes="SQLite database format",
+            detection_method="OpenSlide detect_format + open validation",
+            notes=notes,
         )
 
     # =========================================================================
@@ -738,16 +765,21 @@ class FormatDetector:
         if adjacent_files:
             notes += f", {len(adjacent_files)} adjacent overlap files (not read by OpenSlide)"
 
+        # Validate the file can actually be opened
+        is_openable, error_msg = self._try_open_slide(tif_file)
+        if not is_openable:
+            notes = f"TIFF detected as {format_str} but cannot open: {error_msg[:150]}"
+
         return SlideFormat(
             name=name,
             entry_point=tif_file,
-            is_supported=True,
+            is_supported=is_openable,
             joint_files=adjacent_files,
             companion_dirs=[],
             metadata_files=[],
             format_string=format_str,
             structure_type="single-file",
-            detection_method="OpenSlide detect_format on TIFF",
+            detection_method="OpenSlide detect_format + open validation",
             notes=notes,
         )
 
@@ -776,6 +808,29 @@ class FormatDetector:
             logger.debug(f"OpenSlide validation failed for {file_path.name}: {e}")
             self.scan_stats["errors"] += 1
             return None
+
+    def _try_open_slide(self, file_path: Path) -> tuple:
+        """
+        Try to actually open a slide with OpenSlide() constructor.
+
+        detect_format() can succeed on slides that fail to open (corrupt data,
+        missing main image, unsupported compression). This method catches those.
+
+        Returns:
+            (True, "") if slide opens successfully
+            (False, error_message) if slide cannot be opened
+        """
+        try:
+            slide = openslide.OpenSlide(str(file_path))
+            slide.close()
+            return True, ""
+        except openslide.OpenSlideError as e:
+            error_msg = str(e)
+            logger.warning(f"Detected but cannot open: {file_path.name} - {error_msg}")
+            return False, error_msg
+        except Exception as e:
+            logger.warning(f"Unexpected error opening: {file_path.name} - {e}")
+            return False, str(e)
 
     def _is_vms_ini_file(self, file_path: Path) -> bool:
         """

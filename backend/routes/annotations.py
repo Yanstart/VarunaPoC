@@ -84,6 +84,20 @@ async def list_annotations(
     return [AnnotationResponse(**r) for r in results]
 
 
+@router.get("/{slide_id}/stats")
+async def get_annotation_stats(
+    slide_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get annotation statistics for a slide.
+
+    Returns total count, counts by label, counts by type,
+    and confidence distribution (high/medium/low/unscored).
+    """
+    return await annotation_service.get_annotation_stats(db, slide_id)
+
+
 @router.get("/{slide_id}/export", response_model=GeoJSONFeatureCollection)
 async def export_annotations(
     slide_id: str,

@@ -17,6 +17,12 @@ import { eventBus } from '../core/EventBus.js';
 import { Events, CSSClasses, ViewerStates } from '../core/Constants.js';
 import { MLPanel } from './MLPanel.js';
 import { HeatmapOverlay } from './HeatmapOverlay.js';
+import { AnnotationLayer } from './AnnotationLayer.js';
+import { DrawingTools } from './DrawingTools.js';
+import { DetectionPanel } from './DetectionPanel.js';
+import { LayerManager } from './LayerManager.js';
+import { CountingPanel } from './CountingPanel.js';
+import { annotationStore } from '../services/AnnotationStore.js';
 
 /**
  * ViewerPanel class - Panel wrapper for a single viewer
@@ -112,6 +118,36 @@ class ViewerPanel {
          * @type {HeatmapOverlay|null}
          */
         this.heatmapOverlay = null;
+
+        /**
+         * Annotation layer component
+         * @type {AnnotationLayer|null}
+         */
+        this.annotationLayer = null;
+
+        /**
+         * Drawing tools component
+         * @type {DrawingTools|null}
+         */
+        this.drawingTools = null;
+
+        /**
+         * Detection panel component
+         * @type {DetectionPanel|null}
+         */
+        this.detectionPanel = null;
+
+        /**
+         * Layer manager component
+         * @type {LayerManager|null}
+         */
+        this.layerManager = null;
+
+        /**
+         * Counting panel component
+         * @type {CountingPanel|null}
+         */
+        this.countingPanel = null;
 
         // Build the panel
         this._build();
@@ -347,8 +383,18 @@ class ViewerPanel {
             }
         }
 
-        // Toggle visibility
+        // Create detection panel if not exists
+        if (!this.detectionPanel) {
+            this.detectionPanel = new DetectionPanel(this.viewerContainer, {
+                slideId: this.slideId
+            });
+        }
+
+        // Toggle visibility (both panels share the same toggle)
         this.mlPanel.element.classList.toggle('is-hidden');
+        if (this.detectionPanel.element) {
+            this.detectionPanel.element.classList.toggle('is-hidden');
+        }
 
         // Update button state
         const mlBtn = this.element.querySelector('.viewer-panel-action--ml');
@@ -367,6 +413,28 @@ class ViewerPanel {
                 opacity: 0.5
             });
         }
+    }
+
+    /**
+     * Initialize annotation components (lazy, once per panel)
+     * @private
+     */
+    _initAnnotationComponents() {
+        if (this.annotationLayer) return;
+
+        this.annotationLayer = new AnnotationLayer(this.viewer);
+        this.drawingTools = new DrawingTools(this.viewer, this.annotationLayer);
+
+        const layerContainer = document.createElement('div');
+        layerContainer.className = 'viewer-panel__layers';
+        this.element.appendChild(layerContainer);
+        this.layerManager = new LayerManager(layerContainer);
+
+        // Counting panel for annotation statistics
+        const countingContainer = document.createElement('div');
+        countingContainer.className = 'viewer-panel__counting';
+        this.element.appendChild(countingContainer);
+        this.countingPanel = new CountingPanel(countingContainer);
     }
 
     /**
@@ -395,17 +463,22 @@ class ViewerPanel {
         // Initialize heatmap overlay after slide is loaded
         this._initHeatmapOverlay();
 
+        // Initialize annotation components (lazy, once per panel)
+        this._initAnnotationComponents();
+
         // Notify ML panel if it exists
         if (this.mlPanel) {
             this.mlPanel.setSlide(slideId);
         }
 
-        // Emit slide loaded event for ML components
-        eventBus.emit(Events.SLIDE_LOADED, {
-            viewerId: this.viewer.id,
-            slideId: slideId,
-            slideName: this.slideName
-        });
+        // Notify detection panel if it exists
+        if (this.detectionPanel) {
+            this.detectionPanel.setSlide(slideId);
+        }
+
+        // Note: SLIDE_LOADED event is already emitted by ViewerInstance's OSD 'open' handler.
+        // Do NOT emit it again here - double emission causes MLPanel.setSlide() to be called
+        // twice, resetting prediction state and making heatmap non-reactivable.
 
         console.log(`[ViewerPanel] Loaded slide "${slideId}" in panel "${this.id}"`);
     }
@@ -452,6 +525,11 @@ class ViewerPanel {
 
         if (active && this.viewer) {
             viewerManager.setActiveViewer(this.viewer.id);
+        }
+
+        // Switch annotation context to this panel's slide
+        if (active && this.slideId) {
+            annotationStore.setSlide(this.slideId);
         }
     }
 
@@ -500,6 +578,28 @@ class ViewerPanel {
         if (this.heatmapOverlay) {
             this.heatmapOverlay.destroy();
             this.heatmapOverlay = null;
+        }
+
+        // Destroy annotation components
+        if (this.annotationLayer) {
+            this.annotationLayer.destroy();
+            this.annotationLayer = null;
+        }
+        if (this.drawingTools) {
+            this.drawingTools.destroy();
+            this.drawingTools = null;
+        }
+        if (this.detectionPanel) {
+            this.detectionPanel.destroy();
+            this.detectionPanel = null;
+        }
+        if (this.layerManager) {
+            this.layerManager.destroy();
+            this.layerManager = null;
+        }
+        if (this.countingPanel) {
+            this.countingPanel.destroy();
+            this.countingPanel = null;
         }
 
         // Destroy viewer

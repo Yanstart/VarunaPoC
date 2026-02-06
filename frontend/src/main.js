@@ -38,6 +38,7 @@ import { AnnotationLayer } from './components/AnnotationLayer.js';
 import { DrawingTools } from './components/DrawingTools.js';
 import { LayerManager } from './components/LayerManager.js';
 import { DetectionPanel } from './components/DetectionPanel.js';
+import { CountingPanel } from './components/CountingPanel.js';
 
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
@@ -291,6 +292,13 @@ async function showViewerPage(slide) {
         layerContainer.style.marginTop = '16px';
         infoPanel.appendChild(layerContainer);
         appState.layerManager = new LayerManager(layerContainer);
+
+        // Counting Panel (annotation statistics)
+        const countingContainer = document.createElement('div');
+        countingContainer.id = 'counting-panel-container';
+        countingContainer.style.marginTop = '12px';
+        infoPanel.appendChild(countingContainer);
+        appState.countingPanel = new CountingPanel(countingContainer);
     }
 
     // Phase 2: Load annotations for this slide
@@ -544,6 +552,10 @@ function cleanup() {
     if (appState.detectionPanel) {
         appState.detectionPanel.destroy();
         appState.detectionPanel = null;
+    }
+    if (appState.countingPanel) {
+        appState.countingPanel.destroy();
+        appState.countingPanel = null;
     }
     if (appState.layerManager) {
         appState.layerManager.destroy();

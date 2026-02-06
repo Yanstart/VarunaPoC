@@ -10,6 +10,7 @@ API Design:
 - GET /api/slides/{id}/overview → Image overview (JPEG)
 """
 
+import openslide
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
@@ -152,6 +153,11 @@ def get_slide_info(slide_id: str):
     try:
         metadata = get_slide_metadata(slide_path)
         return metadata
+    except openslide.OpenSlideError as e:
+        raise HTTPException(
+            422,
+            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
@@ -183,6 +189,11 @@ def get_overview(slide_id: str):
     try:
         img_bytes = get_slide_overview_bytes(slide_path)
         return Response(content=img_bytes, media_type="image/jpeg")
+    except openslide.OpenSlideError as e:
+        raise HTTPException(
+            422,
+            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
@@ -226,6 +237,11 @@ def get_dzi_metadata(slide_id: str):
         return JSONResponse(content=metadata)
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
+    except openslide.OpenSlideError as e:
+        raise HTTPException(
+            422,
+            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
+        )
     except Exception as e:
         raise HTTPException(500, f"Error getting DZI metadata: {e}")
 
@@ -276,5 +292,10 @@ def get_tile(slide_id: str, level: int, col: int, row: int):
         raise
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
+    except openslide.OpenSlideError as e:
+        raise HTTPException(
+            422,
+            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
+        )
     except Exception as e:
         raise HTTPException(500, f"Error extracting tile: {e}")

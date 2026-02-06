@@ -1,0 +1,153 @@
+/**
+ * CountingPanel Styles
+ */
+
+.counting-panel {
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #333;
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+}
+
+.counting-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.counting-panel__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.counting-panel__total {
+    background: #4a9eff;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.counting-panel__body {
+    padding: 10px 14px;
+}
+
+.counting-panel__empty {
+    padding: 14px;
+    color: #666;
+    text-align: center;
+    font-size: 12px;
+}
+
+.counting-panel__section {
+    margin-bottom: 10px;
+}
+
+.counting-panel__section:last-child {
+    margin-bottom: 0;
+}
+
+.counting-panel__section-title {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.counting-panel__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+}
+
+.counting-panel__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.counting-panel__dot--none {
+    background: #555;
+    border: 1px dashed #888;
+}
+
+.counting-panel__name {
+    flex: 1;
+    color: #ccc;
+}
+
+.counting-panel__count {
+    color: #aaa;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Type badges */
+.counting-panel__type-badge {
+    flex: 1;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #aaa;
+}
+
+.counting-panel__type-badge--manual {
+    color: #4a9eff;
+    border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.counting-panel__type-badge--auto {
+    color: #ff9800;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.counting-panel__type-badge--auto_confirmed {
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+/* Confidence distribution bar */
+.counting-panel__conf-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #222;
+    margin-bottom: 4px;
+}
+
+.counting-panel__conf-seg {
+    transition: width 0.3s ease;
+}
+
+.counting-panel__conf-seg--high { background: #4CAF50; }
+.counting-panel__conf-seg--medium { background: #ff9800; }
+.counting-panel__conf-seg--low { background: #ff6b6b; }
+.counting-panel__conf-seg--none { background: #555; }
+
+.counting-panel__conf-legend {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.counting-panel__conf-label {
+    font-size: 10px;
+    color: #888;
+}
+
+.counting-panel__conf-label--high { color: #4CAF50; }
+.counting-panel__conf-label--medium { color: #ff9800; }
+.counting-panel__conf-label--low { color: #ff6b6b; }
+.counting-panel__conf-label--none { color: #666; }

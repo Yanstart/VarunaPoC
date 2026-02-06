@@ -83,6 +83,7 @@ export const Events = Object.freeze({
     ANNOTATION_DELETED: 'annotation:deleted',
     ANNOTATION_SELECTED: 'annotation:selected',
     ANNOTATIONS_LOADED: 'annotation:loaded',
+    ANNOTATION_STATS_UPDATED: 'annotation:statsUpdated',
 
     // Drawing tool events
     TOOL_CHANGED: 'tool:changed',
