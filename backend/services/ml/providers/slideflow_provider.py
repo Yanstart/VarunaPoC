@@ -569,7 +569,7 @@ class SlideflowProvider:
 
             # features shape: (num_tiles, embedding_dim) or (h, w, dim)
             if features.ndim == 3:
-                h, w, d = features.shape
+                _h, _w, d = features.shape
                 features = features.reshape(-1, d)
 
             # Feature-based analysis - cast to float32 (GPU features may be float16)

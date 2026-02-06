@@ -256,7 +256,7 @@ def test_prediction_result_validation():
         PredictionResult(prediction_class="tumor", confidence=1.5, probabilities={"tumor": 1.0})
 
     # Invalid probabilities (don't sum to 1)
-    with pytest.raises(ValueError, match="Probabilities must sum to 1.0"):
+    with pytest.raises(ValueError, match=r"Probabilities must sum to 1\.0"):
         PredictionResult(
             prediction_class="tumor", confidence=0.9, probabilities={"tumor": 0.5, "normal": 0.3}
         )

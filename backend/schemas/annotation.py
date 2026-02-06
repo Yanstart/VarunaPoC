@@ -5,7 +5,7 @@ Request/Response models for the annotation CRUD endpoints.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,25 +20,25 @@ from .geojson import GeoJSONGeometry
 class LabelCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     color: str = Field(default="#FF0000", pattern=r"^#[0-9A-Fa-f]{6}$")
-    category: Optional[str] = None
-    description: Optional[str] = None
+    category: str | None = None
+    description: str | None = None
     sort_order: int = Field(default=0, ge=0)
 
 
 class LabelUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
-    category: Optional[str] = None
-    description: Optional[str] = None
-    sort_order: Optional[int] = Field(None, ge=0)
+    name: str | None = Field(None, min_length=1, max_length=100)
+    color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    category: str | None = None
+    description: str | None = None
+    sort_order: int | None = Field(None, ge=0)
 
 
 class LabelResponse(BaseModel):
     id: UUID
     name: str
     color: str
-    category: Optional[str]
-    description: Optional[str]
+    category: str | None
+    description: str | None
     sort_order: int
     created_at: datetime
     updated_at: datetime
@@ -55,19 +55,19 @@ class AnnotationCreate(BaseModel):
     geometry: GeoJSONGeometry
     geometry_type: str = Field(..., description="polygon, rectangle, point, circle, freehand")
     annotation_type: str = Field(default="manual", description="manual, auto, auto_confirmed")
-    label_id: Optional[UUID] = None
-    confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
-    properties: Optional[Dict[str, Any]] = None
-    created_by: Optional[str] = None
+    label_id: UUID | None = None
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+    properties: Dict[str, Any] | None = None
+    created_by: str | None = None
 
 
 class AnnotationUpdate(BaseModel):
-    geometry: Optional[GeoJSONGeometry] = None
-    geometry_type: Optional[str] = None
-    annotation_type: Optional[str] = None
-    label_id: Optional[UUID] = None
-    confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
-    properties: Optional[Dict[str, Any]] = None
+    geometry: GeoJSONGeometry | None = None
+    geometry_type: str | None = None
+    annotation_type: str | None = None
+    label_id: UUID | None = None
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+    properties: Dict[str, Any] | None = None
 
 
 class AnnotationResponse(BaseModel):
@@ -76,11 +76,11 @@ class AnnotationResponse(BaseModel):
     geometry: GeoJSONGeometry
     geometry_type: str
     annotation_type: str
-    label_id: Optional[UUID]
-    label: Optional[LabelResponse] = None
-    confidence: Optional[float]
-    properties: Optional[Dict[str, Any]]
-    created_by: Optional[str]
+    label_id: UUID | None
+    label: LabelResponse | None = None
+    confidence: float | None
+    properties: Dict[str, Any] | None
+    created_by: str | None
     created_at: datetime
     updated_at: datetime
 

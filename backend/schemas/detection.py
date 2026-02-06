@@ -4,7 +4,7 @@ Detection Schemas - Request/Response for auto-detection pipeline
 Parameters and results for the heatmap-to-regions detection pipeline.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -42,4 +42,4 @@ class DetectionResponse(BaseModel):
     geojson: GeoJSONFeatureCollection
     num_regions: int
     parameters: Dict[str, Any]
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Dict[str, Any] | None = None

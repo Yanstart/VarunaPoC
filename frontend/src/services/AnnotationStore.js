@@ -332,7 +332,7 @@ class AnnotationStore {
             }
 
             // Confidence
-            if (a.confidence == null) unscored++;
+            if (a.confidence === null || a.confidence === undefined) unscored++;
             else if (a.confidence >= 0.8) highConf++;
             else if (a.confidence >= 0.5) medConf++;
             else lowConf++;

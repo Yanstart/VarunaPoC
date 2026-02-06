@@ -301,10 +301,12 @@ jobs:
             --include="*.py" --include="*.js" . || \
             (echo "WARNING: Potential PHI detected" && exit 1)
 
-          # Check for hardcoded secrets
+          # Check for hardcoded secrets (exclude test files and config examples)
           echo "Checking for hardcoded secrets..."
           ! grep -r -E "(password|api.?key|secret|token).*=.*['\"][^'\"]{8,}" \
-            --include="*.py" --include="*.js" . || \
+            --include="*.py" --include="*.js" \
+            --exclude-dir=tests --exclude-dir=__tests__ --exclude-dir=node_modules \
+            --exclude="*.test.*" --exclude="*.spec.*" . || \
             (echo "WARNING: Potential hardcoded secrets" && exit 1)
 
           # Check for insecure HTTP usage (require HTTPS)

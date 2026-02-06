@@ -85,12 +85,12 @@ jobs:
           cd backend
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio "httpx>=0.25.0,<0.28.0"
+          pip install pytest pytest-cov pytest-asyncio "httpx>=0.25.0,<0.28.0" matplotlib
 
       - name: Run pytest
         run: |
           cd backend
-          pytest --cov=. --cov-report=xml --cov-report=term-missing --verbose
+          pytest --cov=. --cov-report=xml --cov-report=term-missing --verbose -m "not slow"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

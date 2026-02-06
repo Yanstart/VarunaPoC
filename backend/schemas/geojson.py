@@ -5,7 +5,7 @@ Standard GeoJSON types for annotation geometry exchange.
 Coordinates are in slide pixel space (not geographic).
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class GeoJSONFeature(BaseModel):
     type: str = Field(default="Feature")
     geometry: GeoJSONGeometry
     properties: Dict[str, Any] = Field(default_factory=dict)
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class GeoJSONFeatureCollection(BaseModel):
@@ -34,4 +34,4 @@ class GeoJSONFeatureCollection(BaseModel):
 
     type: str = Field(default="FeatureCollection")
     features: List[GeoJSONFeature] = Field(default_factory=list)
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Dict[str, Any] | None = None
