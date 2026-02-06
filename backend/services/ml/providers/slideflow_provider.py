@@ -274,9 +274,18 @@ class SlideflowProvider:
         except Exception:
             pass
 
-        # Final fallback: try with mpp directly (256 um per tile)
-        logger.warning(f"No standard magnification found, using tile_um='256' for {slide_path}")
-        return self.sf.WSI(slide_path, tile_px=tile_size, tile_um=256)
+        # No MPP metadata available - slide cannot be processed by Slideflow
+        slide_name = Path(slide_path).name
+        raise HeatmapGenerationError(
+            f"Slide '{slide_name}' has no resolution metadata (microns-per-pixel). "
+            f"Generic TIFF files often lack this information. "
+            f"ML analysis requires slides with MPP data (SVS, MRXS, NDPI, SCN formats recommended).",
+            slide_path=slide_path,
+            prediction_class="",
+            method="open_wsi",
+            provider="slideflow",
+            details={"reason": "missing_mpp", "slide": slide_name},
+        )
 
     # ========================================================================
     # MODEL MANAGEMENT

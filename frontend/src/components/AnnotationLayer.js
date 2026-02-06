@@ -32,6 +32,9 @@ class AnnotationLayer {
         /** @type {Object|null} Slide dimensions {width, height} */
         this.slideDimensions = null;
 
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
+
         this._boundUpdate = this._updateViewBox.bind(this);
         this._create();
         this._setupEventListeners();
@@ -82,19 +85,35 @@ class AnnotationLayer {
             this.render();
         });
 
-        // Annotation store events
-        eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render());
-        eventBus.on(Events.ANNOTATION_CREATED, () => this.render());
-        eventBus.on(Events.ANNOTATION_UPDATED, () => this.render());
-        eventBus.on(Events.ANNOTATION_DELETED, () => this.render());
-        eventBus.on(Events.ANNOTATION_SELECTED, ({ annotationId }) => {
-            this._highlightSelected(annotationId);
-        });
-        eventBus.on(Events.LAYER_VISIBILITY_CHANGED, () => this.render());
-        eventBus.on(Events.LAYER_OPACITY_CHANGED, () => this.render());
-        eventBus.on(Events.DETECTION_PREVIEW, ({ features }) => {
-            this._renderPreviews(features);
-        });
+        // Annotation store events - Store unsubscribe functions
+        this._unsubscribers.push(
+            eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render())
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.ANNOTATION_CREATED, () => this.render())
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.ANNOTATION_UPDATED, () => this.render())
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.ANNOTATION_DELETED, () => this.render())
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.ANNOTATION_SELECTED, ({ annotationId }) => {
+                this._highlightSelected(annotationId);
+            })
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.LAYER_VISIBILITY_CHANGED, () => this.render())
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.LAYER_OPACITY_CHANGED, () => this.render())
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_PREVIEW, ({ features }) => {
+                this._renderPreviews(features);
+            })
+        );
     }
 
     _extractSlideDimensions() {
@@ -355,14 +374,9 @@ class AnnotationLayer {
             this.viewer.removeHandler('resize', this._boundUpdate);
         }
 
-        eventBus.off(Events.ANNOTATIONS_LOADED);
-        eventBus.off(Events.ANNOTATION_CREATED);
-        eventBus.off(Events.ANNOTATION_UPDATED);
-        eventBus.off(Events.ANNOTATION_DELETED);
-        eventBus.off(Events.ANNOTATION_SELECTED);
-        eventBus.off(Events.LAYER_VISIBILITY_CHANGED);
-        eventBus.off(Events.LAYER_OPACITY_CHANGED);
-        eventBus.off(Events.DETECTION_PREVIEW);
+        // Properly unsubscribe from all event listeners
+        this._unsubscribers.forEach(unsubscribe => unsubscribe());
+        this._unsubscribers = [];
 
         if (this.svg && this.svg.parentNode) {
             this.svg.parentNode.removeChild(this.svg);

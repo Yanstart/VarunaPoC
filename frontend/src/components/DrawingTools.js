@@ -60,6 +60,9 @@ class DrawingTools {
         // DOM
         this.element = null;
 
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
+
         this._createToolbar();
         this._setupEventListeners();
         this._setupKeyboardShortcuts();
@@ -122,10 +125,12 @@ class DrawingTools {
         canvas.addEventListener('mouseup', (e) => this._onMouseUp(e));
         canvas.addEventListener('dblclick', (e) => this._onDblClick(e));
 
-        // External tool change
-        eventBus.on(Events.TOOL_CHANGED, ({ tool }) => {
-            if (tool !== this.activeTool) this._setTool(tool);
-        });
+        // External tool change - Store unsubscribe function
+        this._unsubscribers.push(
+            eventBus.on(Events.TOOL_CHANGED, ({ tool }) => {
+                if (tool !== this.activeTool) this._setTool(tool);
+            })
+        );
     }
 
     _setupKeyboardShortcuts() {
@@ -537,6 +542,10 @@ class DrawingTools {
 
     destroy() {
         this._cancelDrawing();
+
+        // Properly unsubscribe from all event listeners
+        this._unsubscribers.forEach(unsubscribe => unsubscribe());
+        this._unsubscribers = [];
 
         // Re-enable OSD navigation
         if (this.viewer) {

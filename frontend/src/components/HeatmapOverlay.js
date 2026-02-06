@@ -43,6 +43,9 @@ class HeatmapOverlay {
         /** @type {HTMLImageElement|null} Cached decoded heatmap image */
         this._cachedImage = null;
 
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
+
         this._boundRender = this._onViewportChange.bind(this);
         this._boundResize = this._onResize.bind(this);
 
@@ -54,23 +57,27 @@ class HeatmapOverlay {
      * @private
      */
     _setupEventListeners() {
-        // Listen for heatmap toggle
-        eventBus.on(Events.ML_HEATMAP_TOGGLE, (data) => {
-            if (data.viewerId === this.viewerId) {
-                if (data.visible) {
-                    this.show(data.slideId, data.predictionClass, data.opacity);
-                } else {
-                    this.hide();
+        // Listen for heatmap toggle - Store unsubscribe functions
+        this._unsubscribers.push(
+            eventBus.on(Events.ML_HEATMAP_TOGGLE, (data) => {
+                if (data.viewerId === this.viewerId) {
+                    if (data.visible) {
+                        this.show(data.slideId, data.predictionClass, data.opacity);
+                    } else {
+                        this.hide();
+                    }
                 }
-            }
-        });
+            })
+        );
 
         // Listen for opacity changes
-        eventBus.on(Events.ML_HEATMAP_OPACITY_CHANGE, (data) => {
-            if (data.viewerId === this.viewerId) {
-                this.setOpacity(data.opacity);
-            }
-        });
+        this._unsubscribers.push(
+            eventBus.on(Events.ML_HEATMAP_OPACITY_CHANGE, (data) => {
+                if (data.viewerId === this.viewerId) {
+                    this.setOpacity(data.opacity);
+                }
+            })
+        );
 
         // Listen for viewport changes to update overlay position
         if (this.viewer) {
@@ -399,8 +406,9 @@ class HeatmapOverlay {
      * Destroy the overlay
      */
     destroy() {
-        eventBus.off(Events.ML_HEATMAP_TOGGLE);
-        eventBus.off(Events.ML_HEATMAP_OPACITY_CHANGE);
+        // Properly unsubscribe from all event listeners
+        this._unsubscribers.forEach(unsubscribe => unsubscribe());
+        this._unsubscribers = [];
 
         if (this.viewer) {
             this.viewer.removeHandler('viewport-change', this._boundRender);

@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/slides")
 
 
 @router.get("/", tags=["navigation"])
-async def list_slides():
+def list_slides():
     """
     Liste toutes les lames détectées dans /Slides (scan récursif complet).
 
@@ -51,7 +51,7 @@ async def list_slides():
 
 
 @router.get("/browse", tags=["navigation"])
-async def browse_slides_directory(
+def browse_slides_directory(
     path: str = Query("/", description="Chemin relatif depuis /Slides"),
 ):
     """
@@ -120,7 +120,7 @@ async def browse_slides_directory(
 
 
 @router.get("/{slide_id}/info", tags=["visualization"])
-async def get_slide_info(slide_id: str):
+def get_slide_info(slide_id: str):
     """
     Récupère métadonnées d'une lame.
 
@@ -157,7 +157,7 @@ async def get_slide_info(slide_id: str):
 
 
 @router.get("/{slide_id}/overview", tags=["visualization"])
-async def get_overview(slide_id: str):
+def get_overview(slide_id: str):
     """
     Extrait image overview d'une lame.
 
@@ -188,7 +188,7 @@ async def get_overview(slide_id: str):
 
 
 @router.get("/{slide_id}/dzi.json", tags=["visualization"])
-async def get_dzi_metadata(slide_id: str):
+def get_dzi_metadata(slide_id: str):
     """
     Récupère métadonnées DZI pour OpenSeadragon (streaming de tuiles).
 
@@ -231,7 +231,7 @@ async def get_dzi_metadata(slide_id: str):
 
 
 @router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
-async def get_tile(slide_id: str, level: int, col: int, row: int):
+def get_tile(slide_id: str, level: int, col: int, row: int):
     """
     Extrait une tuile JPEG depuis une lame (streaming à la demande).
 

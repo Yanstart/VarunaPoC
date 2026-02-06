@@ -18,6 +18,7 @@ class LayerManager {
     constructor(container) {
         this.container = container;
         this.element = null;
+        this._unsubscribers = [];
         this._create();
         this._setupEventListeners();
     }
@@ -47,13 +48,16 @@ class LayerManager {
     }
 
     _setupEventListeners() {
-        eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render());
-        eventBus.on(Events.ANNOTATION_CREATED, () => this.render());
-        eventBus.on(Events.ANNOTATION_DELETED, () => this.render());
-        eventBus.on(Events.DETECTION_CONFIRM, () => this.render());
+        this._unsubscribers.push(
+            eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render()),
+            eventBus.on(Events.ANNOTATION_CREATED, () => this.render()),
+            eventBus.on(Events.ANNOTATION_DELETED, () => this.render()),
+            eventBus.on(Events.DETECTION_CONFIRM, () => this.render())
+        );
     }
 
     render() {
+        if (!this.element) return;
         const list = this.element.querySelector('.layer-manager__list');
         list.innerHTML = '';
 
@@ -153,10 +157,10 @@ class LayerManager {
     }
 
     destroy() {
-        eventBus.off(Events.ANNOTATIONS_LOADED);
-        eventBus.off(Events.ANNOTATION_CREATED);
-        eventBus.off(Events.ANNOTATION_DELETED);
-        eventBus.off(Events.DETECTION_CONFIRM);
+        for (const unsub of this._unsubscribers) {
+            unsub();
+        }
+        this._unsubscribers = [];
 
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);

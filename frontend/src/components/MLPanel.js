@@ -42,6 +42,9 @@ class MLPanel {
         this.opacitySlider = null;
         this.resultsContainer = null;
 
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
+
         this._build();
         this._setupEventListeners();
     }
@@ -142,19 +145,23 @@ class MLPanel {
             this.element.classList.toggle('is-collapsed');
         });
 
-        // Listen for slide loaded events
-        eventBus.on(Events.SLIDE_LOADED, (data) => {
-            if (data.viewerId === this.viewerId) {
-                this.setSlide(data.slideId);
-            }
-        });
+        // Listen for slide loaded events - Store unsubscribe functions
+        this._unsubscribers.push(
+            eventBus.on(Events.SLIDE_LOADED, (data) => {
+                if (data.viewerId === this.viewerId) {
+                    this.setSlide(data.slideId);
+                }
+            })
+        );
 
         // Listen for slide unloaded
-        eventBus.on(Events.SLIDE_UNLOADED, (data) => {
-            if (data.viewerId === this.viewerId) {
-                this.reset();
-            }
-        });
+        this._unsubscribers.push(
+            eventBus.on(Events.SLIDE_UNLOADED, (data) => {
+                if (data.viewerId === this.viewerId) {
+                    this.reset();
+                }
+            })
+        );
     }
 
     /**
@@ -414,9 +421,13 @@ class MLPanel {
      * Destroy the panel
      */
     destroy() {
-        eventBus.off(Events.SLIDE_LOADED);
-        eventBus.off(Events.SLIDE_UNLOADED);
-        this.element.remove();
+        // Properly unsubscribe from all event listeners
+        this._unsubscribers.forEach(unsubscribe => unsubscribe());
+        this._unsubscribers = [];
+
+        if (this.element) {
+            this.element.remove();
+        }
     }
 }
 
