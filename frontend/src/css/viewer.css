@@ -2,6 +2,11 @@
  * Viewer Page Styles - Visualisation des lames
  */
 
+@import './annotation-layer.css';
+@import './drawing-tools.css';
+@import './layer-manager.css';
+@import './detection-panel.css';
+
 .viewer-page {
     width: 100%;
     height: 100vh;
@@ -105,4 +110,64 @@
 
 .info dd {
     color: #e0e0e0;
+}
+
+/* Header buttons */
+.header-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: #2a2a2a;
+    border: 2px solid #333;
+    border-radius: 6px;
+    color: #a0a0a0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.header-button:hover {
+    background: #333;
+    border-color: #4a9eff;
+    color: #e0e0e0;
+}
+
+.header-button.is-active {
+    background: rgba(156, 39, 176, 0.2);
+    border-color: #9c27b0;
+    color: #ba68c8;
+}
+
+.header-button--ml {
+    color: #9c27b0;
+    margin-left: auto;
+}
+
+.header-button--ml:hover {
+    border-color: #9c27b0;
+    color: #ba68c8;
+}
+
+/* ML Panel container in viewer */
+#ml-panel-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 500;
+}
+
+#ml-panel-container .ml-panel {
+    position: relative;
+    top: 0;
+    right: 0;
+}
+
+#ml-panel-container.is-hidden {
+    display: none;
+}
+
+#ml-panel-container .detection-panel {
+    width: auto;
 }

@@ -1,0 +1,309 @@
+/**
+ * AnnotationStore - Client-side state management for annotations
+ *
+ * Manages the local annotation state, communicates with the backend API,
+ * and emits events for UI components (AnnotationLayer, DrawingTools, etc.).
+ *
+ * @module services/AnnotationStore
+ */
+
+import { eventBus } from '../core/EventBus.js';
+import { Events } from '../core/Constants.js';
+import { apiService } from './ApiService.js';
+
+/**
+ * Singleton instance
+ * @type {AnnotationStore|null}
+ */
+let instance = null;
+
+class AnnotationStore {
+    constructor() {
+        if (instance) return instance;
+
+        /** @type {Map<string, Object>} annotation id → annotation object */
+        this.annotations = new Map();
+
+        /** @type {string|null} Currently selected annotation ID */
+        this.selectedId = null;
+
+        /** @type {string} Active drawing tool: select, rectangle, polygon, point, circle, freehand */
+        this.activeTool = 'select';
+
+        /** @type {string|null} Active label ID for new annotations */
+        this.activeLabel = null;
+
+        /** @type {Map<string, boolean>} Layer visibility by label ID or type */
+        this.visibleLayers = new Map();
+
+        /** @type {Map<string, number>} Layer opacity by label ID or type */
+        this.layerOpacity = new Map();
+
+        /** @type {string|null} Current slide ID */
+        this.slideId = null;
+
+        /** @type {Array<Object>} Available labels */
+        this.labels = [];
+
+        /** @type {Array<Object>} Detection preview (not yet saved) */
+        this.detectionPreview = [];
+
+        instance = this;
+    }
+
+    static getInstance() {
+        if (!instance) instance = new AnnotationStore();
+        return instance;
+    }
+
+    // ==========================================
+    // SLIDE MANAGEMENT
+    // ==========================================
+
+    /**
+     * Set the active slide and load its annotations
+     * @param {string} slideId
+     */
+    async setSlide(slideId) {
+        this.slideId = slideId;
+        this.annotations.clear();
+        this.selectedId = null;
+        this.detectionPreview = [];
+
+        await this.loadAnnotations();
+        await this.loadLabels();
+    }
+
+    /**
+     * Clear all state (on page navigation)
+     */
+    clear() {
+        this.annotations.clear();
+        this.selectedId = null;
+        this.slideId = null;
+        this.detectionPreview = [];
+    }
+
+    // ==========================================
+    // ANNOTATION CRUD
+    // ==========================================
+
+    async loadAnnotations() {
+        if (!this.slideId) return;
+
+        try {
+            const annotations = await apiService.getAnnotations(this.slideId);
+            this.annotations.clear();
+            for (const anno of annotations) {
+                this.annotations.set(anno.id, anno);
+            }
+            eventBus.emit(Events.ANNOTATIONS_LOADED, {
+                slideId: this.slideId,
+                count: this.annotations.size,
+            });
+        } catch (err) {
+            console.error('[AnnotationStore] Failed to load annotations:', err);
+        }
+    }
+
+    async createAnnotation(data) {
+        if (!this.slideId) return null;
+
+        try {
+            const annotation = await apiService.createAnnotation(this.slideId, {
+                ...data,
+                label_id: data.label_id || this.activeLabel,
+            });
+            this.annotations.set(annotation.id, annotation);
+            eventBus.emit(Events.ANNOTATION_CREATED, { annotation });
+            return annotation;
+        } catch (err) {
+            console.error('[AnnotationStore] Failed to create annotation:', err);
+            return null;
+        }
+    }
+
+    async updateAnnotation(annotationId, data) {
+        if (!this.slideId) return null;
+
+        try {
+            const annotation = await apiService.updateAnnotation(
+                this.slideId, annotationId, data
+            );
+            this.annotations.set(annotation.id, annotation);
+            eventBus.emit(Events.ANNOTATION_UPDATED, { annotation });
+            return annotation;
+        } catch (err) {
+            console.error('[AnnotationStore] Failed to update annotation:', err);
+            return null;
+        }
+    }
+
+    async deleteAnnotation(annotationId) {
+        if (!this.slideId) return false;
+
+        try {
+            await apiService.deleteAnnotation(this.slideId, annotationId);
+            this.annotations.delete(annotationId);
+            if (this.selectedId === annotationId) {
+                this.selectedId = null;
+            }
+            eventBus.emit(Events.ANNOTATION_DELETED, { annotationId });
+            return true;
+        } catch (err) {
+            console.error('[AnnotationStore] Failed to delete annotation:', err);
+            return false;
+        }
+    }
+
+    // ==========================================
+    // SELECTION
+    // ==========================================
+
+    selectAnnotation(annotationId) {
+        this.selectedId = annotationId;
+        eventBus.emit(Events.ANNOTATION_SELECTED, {
+            annotationId,
+            annotation: annotationId ? this.annotations.get(annotationId) : null,
+        });
+    }
+
+    getSelected() {
+        return this.selectedId ? this.annotations.get(this.selectedId) : null;
+    }
+
+    // ==========================================
+    // TOOLS
+    // ==========================================
+
+    setTool(toolName) {
+        this.activeTool = toolName;
+        eventBus.emit(Events.TOOL_CHANGED, { tool: toolName });
+    }
+
+    setActiveLabel(labelId) {
+        this.activeLabel = labelId;
+    }
+
+    // ==========================================
+    // LAYERS
+    // ==========================================
+
+    setLayerVisibility(layerKey, visible) {
+        this.visibleLayers.set(layerKey, visible);
+        eventBus.emit(Events.LAYER_VISIBILITY_CHANGED, { layerKey, visible });
+    }
+
+    isLayerVisible(layerKey) {
+        return this.visibleLayers.get(layerKey) !== false;
+    }
+
+    setLayerOpacity(layerKey, opacity) {
+        this.layerOpacity.set(layerKey, opacity);
+        eventBus.emit(Events.LAYER_OPACITY_CHANGED, { layerKey, opacity });
+    }
+
+    getLayerOpacity(layerKey) {
+        return this.layerOpacity.get(layerKey) ?? 0.7;
+    }
+
+    // ==========================================
+    // LABELS
+    // ==========================================
+
+    async loadLabels() {
+        try {
+            this.labels = await apiService.getLabels();
+        } catch (err) {
+            console.warn('[AnnotationStore] Labels not available:', err.message);
+            this.labels = [];
+        }
+    }
+
+    getLabelById(labelId) {
+        return this.labels.find(l => l.id === labelId);
+    }
+
+    getLabelColor(labelId) {
+        const label = this.getLabelById(labelId);
+        return label ? label.color : '#FF0000';
+    }
+
+    // ==========================================
+    // DETECTION PREVIEW
+    // ==========================================
+
+    setDetectionPreview(features) {
+        this.detectionPreview = features;
+        eventBus.emit(Events.DETECTION_PREVIEW, { features });
+    }
+
+    clearDetectionPreview() {
+        this.detectionPreview = [];
+        eventBus.emit(Events.DETECTION_PREVIEW, { features: [] });
+    }
+
+    async confirmDetections(featureIndices = null) {
+        if (!this.slideId || this.detectionPreview.length === 0) return;
+
+        const features = featureIndices
+            ? featureIndices.map(i => this.detectionPreview[i])
+            : this.detectionPreview;
+
+        const annotations = features.map(f => ({
+            geometry: f.geometry,
+            geometry_type: 'polygon',
+            annotation_type: 'auto_confirmed',
+            confidence: f.properties?.confidence,
+            properties: f.properties,
+        }));
+
+        try {
+            const created = await apiService.batchCreateAnnotations(
+                this.slideId, annotations
+            );
+            for (const anno of created) {
+                this.annotations.set(anno.id, anno);
+            }
+            this.clearDetectionPreview();
+            eventBus.emit(Events.DETECTION_CONFIRM, { count: created.length });
+            eventBus.emit(Events.ANNOTATIONS_LOADED, {
+                slideId: this.slideId,
+                count: this.annotations.size,
+            });
+            return created;
+        } catch (err) {
+            console.error('[AnnotationStore] Failed to confirm detections:', err);
+            return null;
+        }
+    }
+
+    // ==========================================
+    // EXPORT
+    // ==========================================
+
+    async exportGeoJSON() {
+        if (!this.slideId) return null;
+        return apiService.exportAnnotations(this.slideId);
+    }
+
+    // ==========================================
+    // ACCESSORS
+    // ==========================================
+
+    getAll() {
+        return Array.from(this.annotations.values());
+    }
+
+    getBySlide(slideId) {
+        return this.getAll().filter(a => a.slide_id === slideId);
+    }
+
+    getByType(type) {
+        return this.getAll().filter(a => a.annotation_type === type);
+    }
+}
+
+export const annotationStore = AnnotationStore.getInstance();
+export { AnnotationStore };
+export default annotationStore;

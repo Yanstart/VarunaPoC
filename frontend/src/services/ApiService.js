@@ -367,7 +367,7 @@ class ApiService {
      * @returns {Promise<Object>} Load result
      */
     async loadModel(modelId, config = {}) {
-        return this.post('/api/ml/models/load', {
+        return this.post('/api/ml/models/reload', {
             model_id: modelId,
             ...config
         });
@@ -383,9 +383,7 @@ class ApiService {
      * @returns {Promise<Object>} Prediction result
      */
     async predict(slideId, options = {}) {
-        const body = {
-            slide_id: slideId
-        };
+        const body = {};
 
         if (options.region) {
             body.region = options.region;
@@ -397,7 +395,7 @@ class ApiService {
             body.num_mc_samples = options.numMcSamples;
         }
 
-        return this.post('/api/ml/predict', body);
+        return this.post(`/api/ml/predict/${encodeURIComponent(slideId)}`, body);
     }
 
     /**
@@ -408,12 +406,12 @@ class ApiService {
      * @returns {Promise<Object>} Heatmap result with base64 image
      */
     async generateHeatmap(slideId, predictionClass, options = {}) {
-        return this.post('/api/ml/heatmap', {
-            slide_id: slideId,
+        const params = new URLSearchParams({
             prediction_class: predictionClass,
             resolution_level: options.resolutionLevel || 2,
             colormap: options.colormap || 'jet'
         });
+        return this.get(`/api/ml/heatmap/${encodeURIComponent(slideId)}?${params}`);
     }
 
     /**
@@ -423,11 +421,130 @@ class ApiService {
      * @returns {Promise<Object>} Feature extraction result
      */
     async extractFeatures(slideId, options = {}) {
-        return this.post('/api/ml/features/extract', {
-            slide_id: slideId,
+        return this.post(`/api/ml/features/${encodeURIComponent(slideId)}`, {
             tile_size: options.tileSize || 224,
             overlap: options.overlap || 0
         });
+    }
+
+    // ==========================================
+    // ANNOTATIONS API
+    // ==========================================
+
+    /**
+     * Create an annotation on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} data - Annotation data (geometry, geometry_type, annotation_type, etc.)
+     * @returns {Promise<Object>} Created annotation
+     */
+    async createAnnotation(slideId, data) {
+        return this.post(`/api/annotations/${encodeURIComponent(slideId)}`, data);
+    }
+
+    /**
+     * Get annotations for a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [params={}] - Query parameters (annotation_type, label_id, bbox_*)
+     * @returns {Promise<Array>} List of annotations
+     */
+    async getAnnotations(slideId, params = {}) {
+        return this.get(`/api/annotations/${encodeURIComponent(slideId)}`, {
+            useCache: false,
+            params,
+        });
+    }
+
+    /**
+     * Update an annotation
+     * @param {string} slideId - Slide ID
+     * @param {string} annotationId - Annotation UUID
+     * @param {Object} data - Fields to update
+     * @returns {Promise<Object>} Updated annotation
+     */
+    async updateAnnotation(slideId, annotationId, data) {
+        const url = `${this.baseUrl}/api/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
+        return this._fetchWithBody(url, 'PUT', data);
+    }
+
+    /**
+     * Delete an annotation
+     * @param {string} slideId - Slide ID
+     * @param {string} annotationId - Annotation UUID
+     * @returns {Promise<void>}
+     */
+    async deleteAnnotation(slideId, annotationId) {
+        const url = `${this.baseUrl}/api/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
+        const response = await fetch(url, { method: 'DELETE' });
+        if (!response.ok && response.status !== 204) {
+            throw new ApiError(`Delete failed: ${response.status}`, response.status);
+        }
+    }
+
+    /**
+     * Batch create annotations
+     * @param {string} slideId - Slide ID
+     * @param {Array} annotations - Array of annotation data
+     * @returns {Promise<Array>} Created annotations
+     */
+    async batchCreateAnnotations(slideId, annotations) {
+        return this.post(`/api/annotations/${encodeURIComponent(slideId)}/batch`, {
+            annotations,
+        });
+    }
+
+    /**
+     * Export annotations as GeoJSON
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} GeoJSON FeatureCollection
+     */
+    async exportAnnotations(slideId) {
+        return this.get(`/api/annotations/${encodeURIComponent(slideId)}/export`, {
+            useCache: false,
+        });
+    }
+
+    // ==========================================
+    // LABELS API
+    // ==========================================
+
+    /**
+     * Get all annotation labels
+     * @returns {Promise<Array>} List of labels
+     */
+    async getLabels() {
+        return this.get('/api/labels/');
+    }
+
+    /**
+     * Create a new label
+     * @param {Object} data - {name, color, category, description}
+     * @returns {Promise<Object>} Created label
+     */
+    async createLabel(data) {
+        return this.post('/api/labels/', data);
+    }
+
+    // ==========================================
+    // DETECTION API
+    // ==========================================
+
+    /**
+     * Run auto-detection on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [params={}] - Detection parameters
+     * @returns {Promise<Object>} Detection result with GeoJSON
+     */
+    async detect(slideId, params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.threshold !== undefined) queryParams.set('threshold', params.threshold);
+        if (params.min_area !== undefined) queryParams.set('min_area', params.min_area);
+        if (params.simplify_tolerance !== undefined) queryParams.set('simplify_tolerance', params.simplify_tolerance);
+        if (params.resolution_level !== undefined) queryParams.set('resolution_level', params.resolution_level);
+        if (params.prediction_class) queryParams.set('prediction_class', params.prediction_class);
+
+        const qs = queryParams.toString();
+        const url = `/api/ml/detect/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`;
+        return this.post(url, {});
     }
 
     // ==========================================

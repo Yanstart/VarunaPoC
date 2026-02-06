@@ -22,6 +22,7 @@ import { Events, Pages } from './core/Constants.js';
 
 // Services
 import { apiService } from './services/ApiService.js';
+import { annotationStore } from './services/AnnotationStore.js';
 
 // Viewers
 import { viewerManager } from './viewers/ViewerManager.js';
@@ -29,9 +30,17 @@ import { viewerManager } from './viewers/ViewerManager.js';
 // Components
 import { createFolderBrowser } from './components/FolderBrowser.js';
 import { CompareLayout } from './components/CompareLayout.js';
+import { MLPanel } from './components/MLPanel.js';
+import { HeatmapOverlay } from './components/HeatmapOverlay.js';
+
+// Phase 2: Annotations
+import { AnnotationLayer } from './components/AnnotationLayer.js';
+import { DrawingTools } from './components/DrawingTools.js';
+import { LayerManager } from './components/LayerManager.js';
+import { DetectionPanel } from './components/DetectionPanel.js';
 
 // Legacy support
-import { initViewer, loadSlideWithTiles } from './components/Viewer.js';
+import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -56,6 +65,18 @@ const appState = {
 
     /** Compare layout component (multi-viewer mode) */
     compareLayout: null,
+
+    /** ML Panel component (single viewer mode) */
+    mlPanel: null,
+
+    /** Heatmap overlay component (single viewer mode) */
+    heatmapOverlay: null,
+
+    /** Phase 2: Annotation components */
+    annotationLayer: null,
+    drawingTools: null,
+    layerManager: null,
+    detectionPanel: null,
 
     /** Pending slide for compare mode (selected from slide picker) */
     pendingSlideForPanel: null
@@ -186,10 +207,20 @@ async function showViewerPage(slide) {
                         <rect x="13" y="3" width="8" height="18" rx="1"/>
                     </svg>
                 </button>
+                <button id="ml-btn" class="header-button header-button--ml" title="ML Analysis">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </button>
             </header>
 
             <main class="viewer-main">
-                <div id="viewer" class="viewer"></div>
+                <div class="viewer-area">
+                    <div id="viewer" class="viewer"></div>
+                    <div id="ml-panel-container"></div>
+                </div>
                 <div id="info" class="info">
                     <div class="loading">Loading slide...</div>
                 </div>
@@ -205,13 +236,84 @@ async function showViewerPage(slide) {
         showComparePage(slide);
     });
 
+    // ML button
+    const mlBtn = document.querySelector('#ml-btn');
+    mlBtn.addEventListener('click', () => {
+        toggleMLPanel(slide);
+    });
+
     // Initialize viewer (uses new architecture internally)
     appState.viewer = initViewer('viewer');
 
     // Load slide
     await loadSlide(slide);
 
+    // Get the viewer instance for ML components
+    const viewerInstance = getLegacyViewer();
+    const viewerId = viewerInstance ? viewerInstance.id : 'legacy-viewer';
+
+    // Initialize ML Panel (hidden by default)
+    const mlContainer = document.querySelector('#ml-panel-container');
+    appState.mlPanel = new MLPanel(mlContainer, { viewerId });
+    appState.mlPanel.setSlide(slide.id);
+    mlContainer.classList.add('is-hidden');
+
+    // Initialize Heatmap Overlay (listens for ML_HEATMAP_TOGGLE events)
+    if (viewerInstance) {
+        appState.heatmapOverlay = new HeatmapOverlay(viewerInstance);
+
+        // Phase 2: Annotation Layer (SVG overlay)
+        appState.annotationLayer = new AnnotationLayer(viewerInstance);
+
+        // Phase 2: Drawing Tools (toolbar on viewer)
+        appState.drawingTools = new DrawingTools(viewerInstance, appState.annotationLayer);
+        const viewerArea = document.querySelector('.viewer-area');
+        if (viewerArea) {
+            viewerArea.appendChild(appState.drawingTools.element);
+        }
+
+        // Phase 2: Detection Panel (inside ML panel container, below ML panel)
+        const mlContainer2 = document.querySelector('#ml-panel-container');
+        if (mlContainer2) {
+            const detectionContainer = document.createElement('div');
+            detectionContainer.id = 'detection-panel-container';
+            detectionContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(detectionContainer);
+            appState.detectionPanel = new DetectionPanel(detectionContainer, { slideId: slide.id });
+        }
+    }
+
+    // Phase 2: Layer Manager (in info panel)
+    const infoPanel = document.querySelector('#info');
+    if (infoPanel) {
+        const layerContainer = document.createElement('div');
+        layerContainer.id = 'layer-manager-container';
+        layerContainer.style.marginTop = '16px';
+        infoPanel.appendChild(layerContainer);
+        appState.layerManager = new LayerManager(layerContainer);
+    }
+
+    // Phase 2: Load annotations for this slide
+    annotationStore.setSlide(slide.id);
+
     eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
+}
+
+/**
+ * Toggle ML Panel visibility
+ * @param {Object} slide - Current slide
+ */
+function toggleMLPanel(slide) {
+    if (!appState.mlPanel) return;
+
+    const mlContainer = document.querySelector('#ml-panel-container');
+    if (!mlContainer) return;
+
+    const isHidden = mlContainer.classList.toggle('is-hidden');
+    const mlBtn = document.querySelector('#ml-btn');
+    if (mlBtn) {
+        mlBtn.classList.toggle('is-active', !isHidden);
+    }
 }
 
 /**
@@ -438,6 +540,34 @@ async function loadSlide(slide) {
  * Cleanup previous page components
  */
 function cleanup() {
+    // Destroy Phase 2 annotation components
+    if (appState.detectionPanel) {
+        appState.detectionPanel.destroy();
+        appState.detectionPanel = null;
+    }
+    if (appState.layerManager) {
+        appState.layerManager.destroy();
+        appState.layerManager = null;
+    }
+    if (appState.drawingTools) {
+        appState.drawingTools.destroy();
+        appState.drawingTools = null;
+    }
+    if (appState.annotationLayer) {
+        appState.annotationLayer.destroy();
+        appState.annotationLayer = null;
+    }
+
+    // Destroy ML components
+    if (appState.heatmapOverlay) {
+        appState.heatmapOverlay.destroy();
+        appState.heatmapOverlay = null;
+    }
+    if (appState.mlPanel) {
+        appState.mlPanel.destroy();
+        appState.mlPanel = null;
+    }
+
     // Destroy compare layout
     if (appState.compareLayout) {
         appState.compareLayout.destroy();
@@ -446,6 +576,9 @@ function cleanup() {
 
     // Reset viewer manager
     viewerManager.destroyAll();
+
+    // Clear annotation state
+    annotationStore.clear();
 
     // Clear references
     appState.viewer = null;

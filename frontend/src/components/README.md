@@ -1,28 +1,35 @@
 # Components
 
 ## Purpose
-Reusable UI components using Vanilla JavaScript.
+Reusable UI components using Vanilla JavaScript (class-based).
 
 ## Contents
-- `SlideList.js` - Sidebar component displaying available slides
-- `Viewer.js` - OpenSeadragon viewer wrapper
+
+### Viewer
+- `MLPanel.js` - ML analysis panel (predict, heatmap toggle, opacity slider)
+- `HeatmapOverlay.js` - Canvas overlay for ML attention heatmaps on OpenSeadragon
+
+### Annotations (Phase 2)
+- `AnnotationLayer.js` - SVG overlay for rendering annotations on OpenSeadragon
+- `DrawingTools.js` - Drawing toolbar (rectangle, polygon, point, freehand, circle)
+- `LayerManager.js` - Layer visibility/opacity panel in info sidebar
+- `DetectionPanel.js` - Auto-detection workflow (detect -> preview -> accept/reject -> confirm)
+
+### Navigation
+- `FolderBrowser.js` - Hierarchical folder navigation for slides
+- `CompareLayout.js` - Side-by-side multi-viewer layout
 
 ## Design Pattern
-Simple function-based components:
-- Accept data and callbacks as parameters
-- Return DOM elements ready to insert
-- No state management (parent handles state)
-- No classes or complex OOP
+Class-based components with:
+- Constructor accepts container element + options
+- EventBus for inter-component communication
+- `destroy()` method for cleanup (event listeners, DOM elements)
+- Singleton stores for shared state (AnnotationStore)
 
-## Technical Notes
+## Key Coordinate Systems
+- **OpenSeadragon viewport**: normalized 0.0-1.0 coordinates
+- **Slide pixels**: absolute pixel coordinates (level 0)
+- **Screen pixels**: browser DOM coordinates
 
-### SlideList.js
-- Generates `<ul>` with slides
-- Manages .active state for selection
-- Calls callback on click
-
-### Viewer.js
-- Wraps OpenSeadragon initialization
-- Provides `loadOverview()` helper
-- Phase 1: Simple image mode
-- Phase 2: Will add DZI tiling support
+Mapping: `tiledImage.getBounds(true)` for viewport coords,
+`viewport.viewportToViewerElementCoordinates()` for screen pixels.

@@ -7,6 +7,7 @@
  * @module components/HeatmapOverlay
  */
 
+import OpenSeadragon from 'openseadragon';
 import { apiService } from '../services/ApiService.js';
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
@@ -39,6 +40,12 @@ class HeatmapOverlay {
         this.ctx = null;
         this.overlayElement = null;
 
+        /** @type {HTMLImageElement|null} Cached decoded heatmap image */
+        this._cachedImage = null;
+
+        this._boundRender = this._onViewportChange.bind(this);
+        this._boundResize = this._onResize.bind(this);
+
         this._setupEventListeners();
     }
 
@@ -67,18 +74,9 @@ class HeatmapOverlay {
 
         // Listen for viewport changes to update overlay position
         if (this.viewer) {
-            this.viewer.addHandler('viewport-change', () => {
-                if (this.isVisible) {
-                    this._updateOverlayPosition();
-                }
-            });
-
-            this.viewer.addHandler('resize', () => {
-                if (this.isVisible) {
-                    this._resizeCanvas();
-                    this._renderHeatmap();
-                }
-            });
+            this.viewer.addHandler('viewport-change', this._boundRender);
+            this.viewer.addHandler('animation-finish', this._boundRender);
+            this.viewer.addHandler('resize', this._boundResize);
         }
     }
 
@@ -95,6 +93,7 @@ class HeatmapOverlay {
         this.predictionClass = predictionClass;
         this.opacity = opacity;
         this.isLoading = true;
+        this._cachedImage = null;
 
         eventBus.emit(Events.ML_HEATMAP_LOADING, {
             viewerId: this.viewerId,
@@ -111,16 +110,21 @@ class HeatmapOverlay {
 
             this.heatmapData = result;
 
+            // Pre-load and cache the heatmap image
+            this._cachedImage = await this._loadHeatmapImage();
+
             // Create overlay if needed
             if (!this.overlayElement) {
                 this._createOverlay();
             }
 
             // Render heatmap
-            await this._renderHeatmap();
+            this._resizeCanvas();
+            this._renderHeatmap();
 
             this.isVisible = true;
             this.overlayElement.style.display = 'block';
+            this.overlayElement.style.opacity = this.opacity;
 
             eventBus.emit(Events.ML_HEATMAP_READY, {
                 viewerId: this.viewerId,
@@ -179,6 +183,7 @@ class HeatmapOverlay {
             opacity: ${this.opacity};
             z-index: 100;
             display: none;
+            overflow: hidden;
         `;
 
         // Create canvas
@@ -204,50 +209,50 @@ class HeatmapOverlay {
     }
 
     /**
-     * Resize canvas to match viewer
+     * Resize canvas to match viewer container
      * @private
      */
     _resizeCanvas() {
         if (!this.canvas || !this.viewer) return;
 
         const container = this.viewer.container;
-        this.canvas.width = container.clientWidth;
-        this.canvas.height = container.clientHeight;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+
+        if (this.canvas.width !== w || this.canvas.height !== h) {
+            this.canvas.width = w;
+            this.canvas.height = h;
+        }
     }
 
     /**
-     * Render heatmap to canvas
+     * Render heatmap to canvas using cached image
      * @private
      */
-    async _renderHeatmap() {
-        if (!this.heatmapData || !this.ctx || !this.viewer) return;
+    _renderHeatmap() {
+        if (!this._cachedImage || !this.ctx || !this.viewer || !this.heatmapData) return;
 
         const { canvas, ctx } = this;
 
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Get viewport bounds in image coordinates
-        const viewport = this.viewer.viewport;
-        const containerSize = viewport.getContainerSize();
+        // Get the tiledImage for coordinate conversion
+        const tiledImage = this.viewer.world.getItemAt(0);
+        if (!tiledImage) return;
 
-        // Get the image
-        const heatmapImage = await this._loadHeatmapImage();
-        if (!heatmapImage) return;
+        // Get the full image bounds in viewport coordinates
+        const imageBounds = tiledImage.getBounds(true);
 
-        // Calculate destination rectangle based on viewport
-        const imageBounds = viewport.imageToViewportRectangle(
-            0, 0,
-            this.heatmapData.slide_dimensions[0],
-            this.heatmapData.slide_dimensions[1]
+        // Convert viewport coordinates to viewer element (pixel) coordinates
+        const topLeft = this.viewer.viewport.viewportToViewerElementCoordinates(
+            new OpenSeadragon.Point(imageBounds.x, imageBounds.y)
         );
-
-        const topLeft = viewport.viewportToWindowCoordinates(
-            imageBounds.x, imageBounds.y
-        );
-        const bottomRight = viewport.viewportToWindowCoordinates(
-            imageBounds.x + imageBounds.width,
-            imageBounds.y + imageBounds.height
+        const bottomRight = this.viewer.viewport.viewportToViewerElementCoordinates(
+            new OpenSeadragon.Point(
+                imageBounds.x + imageBounds.width,
+                imageBounds.y + imageBounds.height
+            )
         );
 
         const destX = topLeft.x;
@@ -255,16 +260,16 @@ class HeatmapOverlay {
         const destWidth = bottomRight.x - topLeft.x;
         const destHeight = bottomRight.y - topLeft.y;
 
-        // Draw heatmap scaled to viewport
+        // Draw heatmap scaled to match the slide image position
         ctx.drawImage(
-            heatmapImage,
+            this._cachedImage,
             destX, destY,
             destWidth, destHeight
         );
     }
 
     /**
-     * Load heatmap as image
+     * Load heatmap as image (called once, result is cached)
      * @returns {Promise<HTMLImageElement|null>}
      * @private
      */
@@ -276,7 +281,10 @@ class HeatmapOverlay {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => resolve(img);
-                img.onerror = () => resolve(null);
+                img.onerror = () => {
+                    console.error('[HeatmapOverlay] Failed to decode base64 image');
+                    resolve(null);
+                };
                 img.src = `data:image/png;base64,${this.heatmapData.heatmap_base64}`;
             });
         }
@@ -332,13 +340,12 @@ class HeatmapOverlay {
     }
 
     /**
-     * Convert value to RGBA color using colormap
+     * Convert value to RGBA color using jet colormap
      * @param {number} value - Value between 0 and 1
      * @returns {{r: number, g: number, b: number, a: number}}
      * @private
      */
     _valueToColor(value) {
-        // Jet colormap approximation
         const v = Math.max(0, Math.min(1, value));
 
         let r, g, b;
@@ -368,14 +375,24 @@ class HeatmapOverlay {
     }
 
     /**
-     * Update overlay position on viewport change
+     * Handle viewport change - re-render heatmap at new position
      * @private
      */
-    _updateOverlayPosition() {
-        // Re-render heatmap with new viewport
+    _onViewportChange() {
+        if (!this.isVisible) return;
         requestAnimationFrame(() => {
             this._renderHeatmap();
         });
+    }
+
+    /**
+     * Handle container resize
+     * @private
+     */
+    _onResize() {
+        if (!this.isVisible) return;
+        this._resizeCanvas();
+        this._renderHeatmap();
     }
 
     /**
@@ -385,6 +402,12 @@ class HeatmapOverlay {
         eventBus.off(Events.ML_HEATMAP_TOGGLE);
         eventBus.off(Events.ML_HEATMAP_OPACITY_CHANGE);
 
+        if (this.viewer) {
+            this.viewer.removeHandler('viewport-change', this._boundRender);
+            this.viewer.removeHandler('animation-finish', this._boundRender);
+            this.viewer.removeHandler('resize', this._boundResize);
+        }
+
         if (this.overlayElement) {
             this.overlayElement.remove();
         }
@@ -392,6 +415,7 @@ class HeatmapOverlay {
         this.canvas = null;
         this.ctx = null;
         this.heatmapData = null;
+        this._cachedImage = null;
     }
 }
 

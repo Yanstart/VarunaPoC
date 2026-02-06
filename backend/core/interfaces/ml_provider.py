@@ -475,6 +475,7 @@ def get_provider(provider_name: str) -> MLProvider:
     providers = {
         "slideflow": "services.ml.providers.slideflow_provider.SlideflowProvider",
         "mock": "services.ml.providers.mock_provider.MockProvider",
+        "openslide": "services.ml.providers.openslide_provider.OpenSlideTestProvider",
     }
 
     if provider_name not in providers:

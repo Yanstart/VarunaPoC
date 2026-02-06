@@ -114,6 +114,7 @@ class FormatDetector:
             ".svslide": self._detect_sakura,
             ".czi": self._detect_zeiss_czi,
             ".zvi": self._detect_zeiss_zvi,
+            ".vsi": self._detect_olympus_vsi,
             ".dcm": self._detect_dicom,
             ".tif": self._detect_tiff_variant,
             ".tiff": self._detect_tiff_variant,
@@ -514,19 +515,39 @@ class FormatDetector:
                 notes="CZI detected but OpenSlide cannot open (missing JPEG XR/Zstandard codec or incompatible CZI variant)",
             )
 
-        # Si OpenSlide le reconnait = supporté
-        return SlideFormat(
-            name="Zeiss CZI",
-            entry_point=czi_file,
-            is_supported=True,
-            joint_files=[],
-            companion_dirs=[],
-            metadata_files=[],
-            format_string=format_str,
-            structure_type="single-file",
-            detection_method="OpenSlide detect_format validation",
-            notes="Single-file CZI with embedded image pyramid",
-        )
+        # OpenSlide détecte CZI mais peut échouer à l'ouverture (codec manquant)
+        # Test réel d'ouverture pour vérifier
+        try:
+            slide = openslide.OpenSlide(str(czi_file))
+            slide.close()
+            return SlideFormat(
+                name="Zeiss CZI",
+                entry_point=czi_file,
+                is_supported=True,
+                joint_files=[],
+                companion_dirs=[],
+                metadata_files=[],
+                format_string=format_str,
+                structure_type="single-file",
+                detection_method="OpenSlide detect_format + open validation",
+                notes="Single-file CZI with embedded image pyramid",
+            )
+        except Exception as open_err:
+            logger.warning(
+                f"CZI detected by OpenSlide but cannot open: {czi_file.name} ({open_err})"
+            )
+            return SlideFormat(
+                name="Zeiss CZI",
+                entry_point=czi_file,
+                is_supported=False,
+                joint_files=[],
+                companion_dirs=[],
+                metadata_files=[],
+                format_string=format_str,
+                structure_type="single-file",
+                detection_method="OpenSlide detect_format (open failed)",
+                notes=f"CZI detected but cannot open: {open_err}. Likely missing JPEG XR or Zstandard codec in OpenSlide.",
+            )
 
     def _detect_zeiss_zvi(self, zvi_file: Path) -> Optional[SlideFormat]:
         """
@@ -558,6 +579,54 @@ class FormatDetector:
             structure_type="single-file",
             detection_method="File extension (.zvi)",
             notes="ZVI format NOT SUPPORTED by OpenSlide (only CZI is supported). Please convert to CZI or other supported format.",
+        )
+
+    # =========================================================================
+    # OLYMPUS VSI
+    # =========================================================================
+
+    def _detect_olympus_vsi(self, vsi_file: Path) -> Optional[SlideFormat]:
+        """
+        Olympus VSI - Multi-file format with companion directory.
+
+        Structure:
+            - slide.vsi (entry point)
+            - _slide_/ (companion directory with ETS data files)
+
+        IMPORTANT: VSI is NOT supported by OpenSlide.
+        CellSens/OlyVIA software or conversion to TIFF is required.
+
+        Returns:
+            SlideFormat with is_supported=False
+        """
+        # Check for companion directory (_filename_/)
+        companion_name = f"_{vsi_file.stem}_"
+        companion_dir = vsi_file.parent / companion_name
+        companion_dirs = [companion_dir] if companion_dir.is_dir() else []
+
+        # Count ETS files in companion dir
+        ets_files = []
+        if companion_dir.is_dir():
+            ets_files = list(companion_dir.glob("*.ets"))
+
+        logger.warning(f"VSI format detected but NOT SUPPORTED by OpenSlide: {vsi_file.name}")
+
+        notes = "VSI (Olympus) format NOT SUPPORTED by OpenSlide. "
+        if ets_files:
+            notes += f"Found {len(ets_files)} ETS data files in companion directory. "
+        notes += "Convert to SVS/TIFF using OlyVIA or bioformats2raw."
+
+        return SlideFormat(
+            name="Olympus VSI",
+            entry_point=vsi_file,
+            is_supported=False,
+            joint_files=[],
+            companion_dirs=companion_dirs,
+            metadata_files=[],
+            format_string=None,
+            structure_type="with-companion-dir" if companion_dirs else "single-file",
+            detection_method="File extension (.vsi) + companion directory detection",
+            notes=notes,
         )
 
     # =========================================================================

@@ -60,10 +60,15 @@ markers = [
     "unit: Unit tests (fast, no external dependencies)",
     "integration: Integration tests (require OpenSlide)",
     "slow: Slow tests (large slide files)",
+    "detection: Detection pipeline tests",
+    "annotation: Annotation CRUD and schema tests",
+    "db: Tests requiring PostgreSQL database",
 ]
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
+    "ignore::UserWarning:scipy",
+    "ignore:A NumPy version:UserWarning",
 ]
 
 [tool.coverage.run]

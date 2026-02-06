@@ -272,6 +272,8 @@ async def get_tile(slide_id: str, level: int, col: int, row: int):
 
         return Response(content=tile_bytes, media_type="image/jpeg")
 
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
     except Exception as e:

@@ -14,17 +14,35 @@ References:
 - REST API Design: https://restfulapi.net/
 """
 
+import base64
 import logging
 from io import BytesIO
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core.exceptions import MLProviderError
 from core.interfaces import get_provider
 from services.ml import TagExtractor, TagRouter
+from services.slide_scanner import get_slide_path_by_id
+
+# Formats not supported by Slideflow/OpenSlide for ML analysis
+_UNSUPPORTED_ML_FORMATS = {".dcm", ".dicom"}
+
+
+def _check_slide_format(slide_path: str, slide_id: str):
+    """Raise 400 if slide format is not supported for ML analysis."""
+    from pathlib import Path
+
+    ext = Path(slide_path).suffix.lower()
+    if ext in _UNSUPPORTED_ML_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Slide format '{ext}' is not supported for ML analysis. "
+            f"Supported formats: SVS, MRXS, NDPI, BIF, TIFF, SCN.",
+        )
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,27 +141,85 @@ class ModelInfoResponse(BaseModel):
 # ============================================================================
 
 
+# Singleton cache: avoid reloading heavy ML models on every request
+_ml_provider_instance = None
+_ml_provider_config_hash = None
+
+
 def get_ml_provider():
     """
-    Dependency pour récupérer ML provider.
+    Dependency pour récupérer ML provider (singleton).
+
+    Le provider est initialisé une seule fois au premier appel,
+    puis réutilisé. Le modèle/extractor n'est chargé qu'une fois.
+
+    Configuration via variables d'environnement:
+        ML_ENABLED=true              # Activer/désactiver ML
+        ML_PROVIDER=slideflow        # "slideflow", "openslide", "mock"
+        ML_MODE=extractor            # "extractor" (Phase 1-2) ou "classifier" (Phase 3)
+        ML_EXTRACTOR=ctranspath      # Nom du feature extractor
+        ML_MODEL_PATH=               # Chemin modèle entraîné (Phase 3)
+        ML_CLASSES=tissue,background # Classes pour classification
 
     Returns:
-        MLProvider instance (Slideflow ou Mock selon config)
+        MLProvider instance configurée selon le mode
 
     Raises:
-        HTTPException 503: Si ML features désactivées
+        HTTPException 503: Si ML features désactivées ou provider indisponible
     """
+    global _ml_provider_instance, _ml_provider_config_hash
     import os
 
     ml_enabled = os.getenv("ML_ENABLED", "true").lower() == "true"
     if not ml_enabled:
         raise HTTPException(status_code=503, detail="ML features disabled in configuration")
 
+    # Config hash to detect env changes (hot reload)
     provider_name = os.getenv("ML_PROVIDER", "slideflow")
+    ml_mode = os.getenv("ML_MODE", "extractor")
+    extractor_name = os.getenv("ML_EXTRACTOR", "resnet50_imagenet")
+    model_path = os.getenv("ML_MODEL_PATH", "")
+    config_hash = f"{provider_name}:{ml_mode}:{extractor_name}:{model_path}"
+
+    # Return cached instance if config unchanged
+    if _ml_provider_instance is not None and _ml_provider_config_hash == config_hash:
+        return _ml_provider_instance
 
     try:
         provider = get_provider(provider_name)
+
+        # Auto-configure slideflow provider from env
+        if provider_name == "slideflow" and not provider.model_loaded:
+            classes_str = os.getenv("ML_CLASSES", "tissue,background")
+            classes = [c.strip() for c in classes_str.split(",") if c.strip()]
+
+            if ml_mode == "classifier" and model_path:
+                # Phase 3: trained model
+                provider.load_model(
+                    model_path,
+                    {
+                        "model_id": os.getenv("ML_MODEL_ID", "custom_classifier"),
+                        "mode": "classifier",
+                        "classes": classes,
+                        "tile_size": int(os.getenv("ML_TILE_SIZE", "224")),
+                        "num_mc_samples": int(os.getenv("ML_MC_SAMPLES", "10")),
+                    },
+                )
+            else:
+                # Phase 1-2: feature extractor
+                provider.load_model(
+                    f"extractor://{extractor_name}",
+                    {
+                        "model_id": f"{extractor_name}_features",
+                        "mode": "extractor",
+                        "classes": classes,
+                    },
+                )
+
+        _ml_provider_instance = provider
+        _ml_provider_config_hash = config_hash
         return provider
+
     except Exception as e:
         logger.error(f"Failed to initialize ML provider: {e}")
         raise HTTPException(status_code=503, detail=f"ML provider unavailable: {e!s}")
@@ -209,22 +285,52 @@ async def predict_slide(
         ```
     """
     try:
-        # TODO: Récupérer slide_path depuis DB
-        # Pour l'instant, assumons chemin direct
-        slide_path = f"data/slides/{slide_id}.mrxs"  # Placeholder
+        # Get slide path from scanner
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        # Check if provider is already loaded in extractor mode
+        # → skip tag routing (no trained models needed)
+        if provider.model_loaded and getattr(provider, "mode", "") == "extractor":
+            # Phase 1-2: Use pre-loaded feature extractor directly
+            region_tuple = (
+                (request.region.x, request.region.y, request.region.width, request.region.height)
+                if request.region
+                else None
+            )
+
+            result = provider.predict(slide_path, region=region_tuple)
+
+            return PredictionResponse(
+                slide_id=slide_id,
+                prediction_class=result.prediction_class,
+                confidence=result.confidence,
+                uncertainty=result.uncertainty,
+                probabilities=result.probabilities,
+                execution_time_ms=result.execution_time_ms,
+                model_id=result.model_id,
+                model_name=provider.model_config.get("extractor_name", "feature_extractor"),
+                tags=result.metadata,
+            )
+
+        # Phase 3: Full tag routing → specialized model
+        from pathlib import Path
+
+        ext = Path(slide_path).suffix.upper().lstrip(".")
+        slide_format = ext if ext else "UNKNOWN"
 
         # Extract tags
         logger.info(f"Extracting tags for: {slide_id}")
-        tags = tag_extractor.extract_tags(slide_path, "MRXS")  # TODO: detect format
+        tags = tag_extractor.extract_tags(slide_path, slide_format)
 
         # Route to model
         if request.model_id:
-            # Force specific model
             route = tag_router.get_route_by_model_id(request.model_id)
             if not route:
                 raise HTTPException(status_code=404, detail=f"Model {request.model_id} not found")
         else:
-            # Auto-route based on tags
             route = tag_router.route(tags)
 
         # Load model
@@ -234,7 +340,7 @@ async def predict_slide(
             "model_name": route.model_name,
             "version": route.model_version,
             "classes": route.required_tags.get("classes", []),
-            "tile_size": 224,  # TODO: from config
+            "tile_size": 224,
             "num_mc_samples": request.num_mc_samples,
         }
         provider.load_model(route.model_path, model_config)
@@ -248,8 +354,7 @@ async def predict_slide(
 
         result = provider.predict(slide_path, region=region_tuple)
 
-        # Build response
-        response = PredictionResponse(
+        return PredictionResponse(
             slide_id=slide_id,
             prediction_class=result.prediction_class,
             confidence=result.confidence,
@@ -261,10 +366,8 @@ async def predict_slide(
             tags=tags,
         )
 
-        # TODO: Store prediction in DB (ml_predictions table)
-
-        return response
-
+    except HTTPException:
+        raise
     except MLProviderError as e:
         logger.error(f"ML prediction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -303,23 +406,27 @@ async def extract_features(
         ```
     """
     try:
-        slide_path = f"data/slides/{slide_id}.mrxs"  # Placeholder
+        # Get slide path from scanner
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
 
-        # Route to model (use feature extractor model)
-        # TODO: Implement feature extractor routing
-        route = tag_router.get_route_by_model_id(request.model_id or "feature_extractor")
-
-        # Load model
-        model_config = {
-            "model_id": route.model_id if route else "feature_extractor",
-            "embedding_dim": 512,
-        }
-        provider.load_model(route.model_path if route else "mock://feature_extractor", model_config)
+        # In extractor mode, the provider is already loaded with the extractor
+        # → use it directly without routing
+        if not provider.model_loaded:
+            # Fallback: try to load via routing if provider not pre-loaded
+            route = tag_router.get_route_by_model_id(request.model_id or "feature_extractor")
+            model_config = {
+                "model_id": route.model_id if route else "feature_extractor",
+                "embedding_dim": 512,
+            }
+            provider.load_model(
+                route.model_path if route else "mock://feature_extractor", model_config
+            )
 
         # Extract features
         result = provider.extract_features(slide_path, request.tile_size, request.overlap)
-
-        # TODO: Store embeddings in DB ou S3
 
         response = FeatureExtractionResponse(
             slide_id=slide_id,
@@ -327,11 +434,13 @@ async def extract_features(
             embedding_dim=result.embedding_dim,
             embeddings_shape=list(result.embeddings.shape),
             model_id=result.model_id,
-            storage_path=None,  # TODO: S3 path
+            storage_path=None,
         )
 
         return response
 
+    except HTTPException:
+        raise
     except MLProviderError as e:
         logger.error(f"Feature extraction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -346,9 +455,10 @@ async def get_heatmap(
     provider=Depends(get_ml_provider),
 ):
     """
-    Génère heatmap d'explainability (Grad-CAM).
+    Génère heatmap d'explainability (Grad-CAM ou feature attention).
 
-    Returns PNG image avec heatmap overlay.
+    Returns JSON avec heatmap base64 et slide_dimensions pour overlay
+    sur le viewer OpenSeadragon.
 
     Args:
         slide_id: Identifiant lame
@@ -357,26 +467,26 @@ async def get_heatmap(
         colormap: Colormap matplotlib
 
     Returns:
-        StreamingResponse avec image PNG
+        JSON avec heatmap_base64, slide_dimensions, metadata
 
     Examples:
         ```bash
-        curl "http://localhost:8000/api/ml/heatmap/slide_abc123?prediction_class=gleason_4" \\
-          -o heatmap.png
+        curl "http://localhost:8000/api/ml/heatmap/slide_abc123?prediction_class=tissue"
         ```
     """
     try:
-        slide_path = f"data/slides/{slide_id}.mrxs"  # Placeholder
-
-        # TODO: Load correct model for this slide
+        # Get slide path from scanner
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
 
         # Generate heatmap
         result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
 
-        # Convert to RGB
+        # Convert to RGB PNG
         rgb_heatmap = result.to_rgb(colormap=colormap)
 
-        # Convert to PNG bytes
         from PIL import Image
 
         img = Image.fromarray(rgb_heatmap)
@@ -384,11 +494,98 @@ async def get_heatmap(
         img.save(buffer, format="PNG")
         buffer.seek(0)
 
-        return StreamingResponse(buffer, media_type="image/png")
+        # Encode to base64 for frontend HeatmapOverlay
+        heatmap_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
+        return {
+            "heatmap_base64": heatmap_b64,
+            "slide_dimensions": list(result.slide_dimensions),
+            "slide_id": slide_id,
+            "prediction_class": prediction_class,
+            "resolution_level": resolution_level,
+            "method": result.method,
+            "metadata": result.metadata,
+        }
+
+    except HTTPException:
+        raise
     except MLProviderError as e:
         logger.error(f"Heatmap generation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/detect/{slide_id}")
+async def detect_regions_endpoint(
+    slide_id: str,
+    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Confidence threshold"),
+    min_area: float = Query(100.0, ge=0.0, description="Minimum region area (px^2)"),
+    simplify_tolerance: float = Query(2.0, ge=0.0, description="Douglas-Peucker tolerance"),
+    resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution level"),
+    prediction_class: str = Query("tissue", description="Target class for heatmap"),
+    provider=Depends(get_ml_provider),
+):
+    """
+    Auto-detection: generate heatmap then extract regions as GeoJSON.
+
+    Pipeline:
+    1. Generate heatmap via ML provider
+    2. Threshold + morphological cleaning
+    3. Extract contours, simplify, scale to slide coords
+    4. Return GeoJSON FeatureCollection with confidence per region
+
+    Used by frontend DetectionPanel for accept/reject workflow.
+    """
+    from schemas.detection import DetectionResponse
+    from services.detection.pipeline import detect_regions as run_pipeline
+
+    try:
+        # Get slide path
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        # Generate heatmap via existing ML provider
+        heatmap_result = provider.generate_heatmap(
+            slide_path,
+            prediction_class,
+            resolution_level,
+        )
+
+        # Run detection pipeline
+        geojson = run_pipeline(
+            heatmap=heatmap_result.heatmap,
+            slide_dimensions=heatmap_result.slide_dimensions,
+            threshold=threshold,
+            min_area=min_area,
+            simplify_tolerance=simplify_tolerance,
+        )
+
+        return DetectionResponse(
+            slide_id=slide_id,
+            geojson=geojson,
+            num_regions=len(geojson.features),
+            parameters={
+                "threshold": threshold,
+                "min_area": min_area,
+                "simplify_tolerance": simplify_tolerance,
+                "resolution_level": resolution_level,
+                "prediction_class": prediction_class,
+            },
+            metadata={
+                "heatmap_shape": list(heatmap_result.heatmap.shape),
+                "slide_dimensions": list(heatmap_result.slide_dimensions),
+            },
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Detection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Detection error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Detection error: {e!s}")
 
 
 @router.post("/batch/predict", response_model=BatchJobResponse)

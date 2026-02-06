@@ -385,6 +385,14 @@ class ViewerInstance {
     }
 
     /**
+     * Public accessor for the underlying OpenSeadragon viewer
+     * @type {OpenSeadragon.Viewer|null}
+     */
+    get viewer() {
+        return this._osdViewer;
+    }
+
+    /**
      * Get current viewport bounds (normalized 0-1 coordinates)
      * @returns {Object} Viewport bounds { x, y, width, height, zoom }
      */

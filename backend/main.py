@@ -16,7 +16,13 @@ API Docs:
     http://localhost:8000/redoc (ReDoc)
 """
 
+import logging
 import os
+from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env file (ML config, CORS, etc.)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +31,18 @@ from fastapi.responses import PlainTextResponse
 # IMPORTANT: Configure OpenSlide DLL path AVANT tout import
 # (Nécessaire sur Windows pour trouver libopenslide-0.dll)
 import config_openslide
-from routes import slides
+from routes import ml, slides
+
+# Phase 2: Annotations (optional - requires sqlalchemy + asyncpg)
+try:
+    from routes import annotations
+
+    ANNOTATIONS_ENABLED = True
+except ImportError:
+    ANNOTATIONS_ENABLED = False
+    print("[INFO] Annotations module disabled (install sqlalchemy, asyncpg, geoalchemy2)")
+
+logger = logging.getLogger(__name__)
 
 # Monitoring optionnel (requires prometheus_client)
 try:
@@ -36,7 +53,31 @@ except ImportError:
     MONITORING_ENABLED = False
     print("[INFO] Monitoring disabled (prometheus_client not installed)")
 
+
+@asynccontextmanager
+async def lifespan(_app):
+    """Startup/shutdown events for DB and other resources."""
+    # Startup
+    try:
+        from core.database import init_db
+
+        await init_db()
+        logger.info("Database connection pool initialized")
+    except Exception as e:
+        logger.warning(f"Database not available (annotations disabled): {e}")
+    yield
+    # Shutdown
+    try:
+        from core.database import close_db
+
+        await close_db()
+        logger.info("Database connection pool closed")
+    except Exception:
+        pass
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="VarunaPoC Backend API",
     description="""
 ## Digital Pathology Slide Viewer API
@@ -102,6 +143,10 @@ if MONITORING_ENABLED:
 
 # Routes
 app.include_router(slides.router)
+app.include_router(ml.router, prefix="/api")
+if ANNOTATIONS_ENABLED:
+    app.include_router(annotations.router)
+    app.include_router(annotations.label_router)
 
 
 @app.get("/", tags=["health"])

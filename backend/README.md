@@ -1,122 +1,129 @@
-# Backend - FastAPI + OpenSlide
+# Backend - FastAPI + OpenSlide + SQLAlchemy
 
 ## Purpose
-Serves REST API for histological slide viewing.
-Handles slide detection, metadata extraction, and image serving.
+Serves REST API for histological slide viewing, ML analysis, and annotation management.
+Handles slide detection, metadata extraction, image serving, heatmap generation, and spatial annotations.
 
 ## Contents
 - `main.py` - FastAPI application entry point
 - `requirements.txt` - Python dependencies
 - `.env.example` - Environment variables template
 - `routes/` - API endpoints
-  - `slides.py` - Slides API (list, info, overview)
+  - `slides.py` - Slides API (list, browse, info, overview, DZI tiles)
+  - `ml.py` - ML API (predict, heatmap, detect, features)
+  - `annotations.py` - Annotations CRUD + labels + spatial query + export
 - `services/` - Business logic
   - `slide_scanner.py` - Auto-detection of slides in /Slides
-  - `slide_loader.py` - OpenSlide integration (metadata, overview extraction)
-- `utils/` - Helper functions (currently empty)
+  - `slide_loader.py` - OpenSlide integration (metadata, overview, tiles)
+  - `format_detector.py` - Multi-format slide detection
+  - `annotation_service.py` - Annotation CRUD operations
+  - `detection/` - Heatmap-to-GeoJSON pipeline
+  - `ml/` - ML provider system (Slideflow, mock)
+- `models/` - SQLAlchemy ORM models
+  - `annotation.py` - Annotation model (PostGIS geometry)
+  - `annotation_label.py` - Label model (name, color, category)
+- `schemas/` - Pydantic validation schemas
+  - `annotation.py` - Annotation create/update/response
+  - `detection.py` - Detection parameters and response
+  - `geojson.py` - GeoJSON Feature/FeatureCollection
+- `core/` - Core infrastructure
+  - `database.py` - Async SQLAlchemy engine + session factory
+  - `interfaces/` - Protocol-based interfaces (MLProvider)
+- `alembic/` - Database migrations
+- `tests/` - Pytest test suite
 
 ## Dependencies
 - **FastAPI:** Web framework for APIs
 - **Uvicorn:** ASGI server
 - **OpenSlide Python:** Library for reading slide formats
 - **Pillow:** Image processing (JPEG encoding)
+- **SQLAlchemy[asyncio] + asyncpg:** Async PostgreSQL ORM
+- **GeoAlchemy2:** PostGIS spatial types for SQLAlchemy
+- **Alembic:** Database schema migrations
+- **Slideflow:** ML feature extraction and heatmap generation
+- **SciPy + scikit-image + Shapely:** Detection pipeline (contours, simplification)
 
-Official documentation:
-- OpenSlide: https://openslide.org/api/python/
-- FastAPI: https://fastapi.tiangolo.com/
+## Quick Start
 
-## Installation
-
-### 1. Create virtual environment
+### 1. Install dependencies
 ```bash
 cd backend
-python -m venv venv
-```
-
-### 2. Activate virtual environment
-**Windows:**
-```bash
-venv\Scripts\activate
-```
-
-**Linux/Mac:**
-```bash
-source venv/bin/activate
-```
-
-### 3. Install dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-**IMPORTANT:** OpenSlide Python requires OpenSlide C library installed on system.
-
-**Windows:**
-Download from https://openslide.org/download/
-Extract to C:\OpenSlide and add bin/ to PATH.
-
-**Linux:**
+### 2. Start PostgreSQL (for annotations)
 ```bash
-sudo apt-get install openslide-tools python3-openslide
+docker compose -f ../docker-compose.dev.yml up -d
 ```
 
-**Mac:**
+### 3. Run database migrations
 ```bash
-brew install openslide
+python -m alembic upgrade head
 ```
 
-## Usage
-
-### Start development server
+### 4. Start development server
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Options:
-- `--reload` - Auto-restart on code changes
-- `--host 0.0.0.0` - Accept connections from any IP
-- `--port 8000` - Listen on port 8000
-
-### Access API documentation
+### 5. Access API documentation
 - **Swagger UI:** http://localhost:8000/docs
 - **ReDoc:** http://localhost:8000/redoc
 
-### Test endpoints
+## API Endpoints
+
+### Slides
+- `GET /api/slides/` - List all slides (recursive scan)
+- `GET /api/slides/browse` - Browse folder by folder
+- `GET /api/slides/{id}/info` - Slide metadata
+- `GET /api/slides/{id}/overview` - Overview image (JPEG)
+- `GET /api/slides/{id}/dzi.json` - DZI descriptor for tile streaming
+- `GET /api/slides/{id}/tiles/{level}/{col}_{row}.jpg` - Individual tiles
+
+### ML Analysis
+- `POST /api/ml/predict/{slide_id}` - Run ML prediction
+- `GET /api/ml/heatmap/{slide_id}` - Generate attention heatmap
+- `POST /api/ml/detect/{slide_id}` - Auto-detect regions (heatmap -> GeoJSON)
+- `POST /api/ml/features/{slide_id}` - Extract feature embeddings
+- `GET /api/ml/models` - List available models
+- `GET /api/ml/health` - ML provider status
+
+### Annotations
+- `POST /api/annotations/{slide_id}` - Create annotation
+- `GET /api/annotations/{slide_id}` - List (with spatial bbox filter)
+- `GET /api/annotations/{slide_id}/{id}` - Get single
+- `PUT /api/annotations/{slide_id}/{id}` - Update
+- `DELETE /api/annotations/{slide_id}/{id}` - Delete
+- `POST /api/annotations/{slide_id}/batch` - Batch create
+- `GET /api/annotations/{slide_id}/export` - Export GeoJSON
+
+### Labels
+- `GET/POST /api/labels/` - List/Create labels
+- `GET/PUT/DELETE /api/labels/{id}` - Get/Update/Delete label
+
+## Database
+
+PostgreSQL 16 + PostGIS 3.4 via Docker:
 ```bash
-# Health check
-curl http://localhost:8000/api/health
-
-# List slides
-curl http://localhost:8000/api/slides
-
-# Get slide info
-curl http://localhost:8000/api/slides/{slide_id}/info
-
-# Get overview image
-curl http://localhost:8000/api/slides/{slide_id}/overview --output overview.jpg
+docker compose -f docker-compose.dev.yml up -d  # port 5433
 ```
 
-## Technical Notes
+Tables: `annotations` (with GIST spatial index), `annotation_labels`
+SRID=0 (pixel coordinates, not geographic).
 
-### Phase 1 Simplifications
-- **No caching:** Slides opened/closed on each request (Phase 2 will add Redis/filesystem cache)
-- **No authentication:** Open API (Phase 2 will add basic auth)
-- **Simple overview extraction:** Uses `OpenSlide.get_thumbnail()` (Phase 2 will add DZI tiling)
+## Testing
+```bash
+# All tests
+pytest tests/ -v
 
-### CORS Configuration
-Currently allows http://localhost:5173 (Vite dev server).
-**MUST be restricted in production!** (backend/main.py:30)
+# Unit tests only (no DB required)
+pytest tests/ -m "not db" -v
 
-### Slide Detection
-- Scans `../Slides/` recursively at startup
-- Supports .mrxs, .bif, .tif, .tiff
-- Verifies companion directories for .mrxs files
-- Generates stable MD5-based IDs
+# DB integration tests (requires PostgreSQL)
+pytest tests/test_annotations_api.py -v
+```
 
-### OpenSlide Integration
-- Opens slides on-demand (no persistent connections Phase 1)
-- `get_thumbnail()` automatically chooses best pyramid level
-- Returns RGB PIL.Image, encoded to JPEG
+94 tests, covering: slides API, ML providers, detection pipeline, annotations, coordinate mapping.
 
 ## Last Updated
-2025-10-17 - Phase 1 Hello World
+2026-02-05 - Phase 2: Annotations + Detection + Slideflow ML

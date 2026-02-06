@@ -75,7 +75,31 @@ export const Events = Object.freeze({
     ML_HEATMAP_TOGGLE: 'ml:heatmapToggle',
     ML_HEATMAP_OPACITY_CHANGE: 'ml:heatmapOpacityChange',
     ML_MODEL_LOADED: 'ml:modelLoaded',
-    ML_MODEL_UNLOADED: 'ml:modelUnloaded'
+    ML_MODEL_UNLOADED: 'ml:modelUnloaded',
+
+    // Annotation events
+    ANNOTATION_CREATED: 'annotation:created',
+    ANNOTATION_UPDATED: 'annotation:updated',
+    ANNOTATION_DELETED: 'annotation:deleted',
+    ANNOTATION_SELECTED: 'annotation:selected',
+    ANNOTATIONS_LOADED: 'annotation:loaded',
+
+    // Drawing tool events
+    TOOL_CHANGED: 'tool:changed',
+    DRAWING_START: 'drawing:start',
+    DRAWING_END: 'drawing:end',
+
+    // Layer events
+    LAYER_VISIBILITY_CHANGED: 'layer:visibilityChanged',
+    LAYER_OPACITY_CHANGED: 'layer:opacityChanged',
+
+    // Detection events
+    DETECTION_START: 'detection:start',
+    DETECTION_COMPLETE: 'detection:complete',
+    DETECTION_ERROR: 'detection:error',
+    DETECTION_PREVIEW: 'detection:preview',
+    DETECTION_CONFIRM: 'detection:confirm',
+    DETECTION_REJECT: 'detection:reject'
 });
 
 /**
