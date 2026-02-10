@@ -42,6 +42,28 @@ except ImportError:
     ANNOTATIONS_ENABLED = False
     print("[INFO] Annotations module disabled (install sqlalchemy, asyncpg, geoalchemy2)")
 
+# Phase 3: Auth (optional)
+try:
+    from auth import AUTH_ENABLED
+    from auth import routes as auth_routes
+
+    print(f"[INFO] Auth module loaded (AUTH_ENABLED={AUTH_ENABLED})")
+except ImportError:
+    AUTH_ENABLED = False
+    auth_routes = None
+    print("[INFO] Auth module disabled")
+
+# Phase 3: FHIR stub (optional)
+try:
+    from fhir import FHIR_ENABLED
+    from fhir import routes as fhir_routes
+
+    print(f"[INFO] FHIR module loaded (FHIR_ENABLED={FHIR_ENABLED})")
+except ImportError:
+    FHIR_ENABLED = False
+    fhir_routes = None
+    print("[INFO] FHIR module disabled")
+
 logger = logging.getLogger(__name__)
 
 # Monitoring optionnel (requires prometheus_client)
@@ -147,6 +169,14 @@ app.include_router(ml.router, prefix="/api")
 if ANNOTATIONS_ENABLED:
     app.include_router(annotations.router)
     app.include_router(annotations.label_router)
+
+# Phase 3: Auth routes
+if auth_routes is not None:
+    app.include_router(auth_routes.router)
+
+# Phase 3: FHIR routes
+if fhir_routes is not None and FHIR_ENABLED:
+    app.include_router(fhir_routes.router)
 
 
 @app.get("/", tags=["health"])

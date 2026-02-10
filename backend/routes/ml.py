@@ -22,6 +22,8 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
 from core.interfaces import get_provider
 from services.ml import TagExtractor, TagRouter
@@ -250,6 +252,7 @@ async def predict_slide(
     provider=Depends(get_ml_provider),
     tag_extractor=Depends(get_tag_extractor),
     tag_router=Depends(get_tag_router),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Prédiction ML sur slide complète ou région.
@@ -382,6 +385,7 @@ async def extract_features(
     request: FeatureExtractionRequest = FeatureExtractionRequest(),
     provider=Depends(get_ml_provider),
     tag_router=Depends(get_tag_router),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Extraction de features (embeddings) pour MIL.
@@ -453,6 +457,7 @@ async def get_heatmap(
     resolution_level: int = Query(2, ge=0, le=5, description="Resolution level (0=max)"),
     colormap: str = Query("jet", description="Matplotlib colormap (jet, hot, viridis, etc.)"),
     provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Génère heatmap d'explainability (Grad-CAM ou feature attention).
@@ -523,6 +528,7 @@ async def detect_regions_endpoint(
     resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution level"),
     prediction_class: str = Query("tissue", description="Target class for heatmap"),
     provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Auto-detection: generate heatmap then extract regions as GeoJSON.
@@ -589,7 +595,11 @@ async def detect_regions_endpoint(
 
 
 @router.post("/batch/predict", response_model=BatchJobResponse)
-async def batch_predict(request: BatchPredictionRequest, background_tasks: BackgroundTasks):
+async def batch_predict(
+    request: BatchPredictionRequest,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """
     Batch inference asynchrone.
 
@@ -638,7 +648,7 @@ async def batch_predict(request: BatchPredictionRequest, background_tasks: Backg
 
 
 @router.get("/batch/status/{job_id}", response_model=BatchJobResponse)
-async def get_batch_status(job_id: str):
+async def get_batch_status(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     """
     Récupère statut d'un batch job.
 
@@ -658,7 +668,9 @@ async def get_batch_status(job_id: str):
 
 
 @router.get("/models", response_model=List[ModelInfoResponse])
-async def list_models(tag_router=Depends(get_tag_router)):
+async def list_models(
+    tag_router=Depends(get_tag_router), current_user: CurrentUser = Depends(get_current_user)
+):
     """
     Liste tous les modèles disponibles.
 
@@ -690,7 +702,10 @@ async def list_models(tag_router=Depends(get_tag_router)):
 
 
 @router.post("/models/reload")
-async def reload_models(tag_router=Depends(get_tag_router)):
+async def reload_models(
+    tag_router=Depends(get_tag_router),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
     """
     Reload model configuration (hot reload).
 
@@ -713,7 +728,9 @@ async def reload_models(tag_router=Depends(get_tag_router)):
 
 
 @router.get("/health")
-async def health_check(provider=Depends(get_ml_provider)):
+async def health_check(
+    provider=Depends(get_ml_provider), current_user: CurrentUser = Depends(get_current_user)
+):
     """
     Health check pour ML services.
 

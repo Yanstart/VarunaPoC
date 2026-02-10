@@ -100,7 +100,14 @@ export const Events = Object.freeze({
     DETECTION_ERROR: 'detection:error',
     DETECTION_PREVIEW: 'detection:preview',
     DETECTION_CONFIRM: 'detection:confirm',
-    DETECTION_REJECT: 'detection:reject'
+    DETECTION_REJECT: 'detection:reject',
+
+    // Auth events (Phase 3)
+    AUTH_LOGIN: 'auth:login',
+    AUTH_LOGOUT: 'auth:logout',
+    AUTH_TOKEN_REFRESHED: 'auth:tokenRefreshed',
+    AUTH_ERROR: 'auth:error',
+    AUTH_ROLE_CHANGED: 'auth:roleChanged'
 });
 
 /**
@@ -206,7 +213,9 @@ export const SyncConfig = Object.freeze({
 export const Pages = Object.freeze({
     HOME: 'home',
     VIEWER: 'viewer',
-    COMPARE: 'compare'
+    COMPARE: 'compare',
+    LOGIN: 'login',
+    CALLBACK: 'callback'
 });
 
 /**

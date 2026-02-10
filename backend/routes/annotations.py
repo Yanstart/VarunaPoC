@@ -12,6 +12,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from core.database import get_db
 from schemas.annotation import (
     AnnotationBatchCreate,
@@ -40,9 +42,13 @@ async def create_annotation(
     slide_id: str,
     data: AnnotationCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Create a single annotation on a slide."""
     try:
+        # Populate created_by from authenticated user if not set
+        if not data.created_by:
+            data.created_by = current_user.username
         result = await annotation_service.create_annotation(db, slide_id, data)
         return AnnotationResponse(**result)
     except Exception as e:
@@ -63,6 +69,7 @@ async def list_annotations(
     bbox_x2: Optional[float] = Query(None, description="Spatial filter: max X"),
     bbox_y2: Optional[float] = Query(None, description="Spatial filter: max Y"),
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     List annotations for a slide with optional filters.
@@ -88,6 +95,7 @@ async def list_annotations(
 async def get_annotation_stats(
     slide_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Get annotation statistics for a slide.
@@ -102,6 +110,7 @@ async def get_annotation_stats(
 async def export_annotations(
     slide_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Export all annotations for a slide as GeoJSON FeatureCollection."""
     return await annotation_service.export_annotations_geojson(db, slide_id)
@@ -112,6 +121,7 @@ async def get_annotation(
     slide_id: str,
     annotation_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get a single annotation by ID."""
     result = await annotation_service.get_annotation(db, slide_id, annotation_id)
@@ -126,6 +136,7 @@ async def update_annotation(
     annotation_id: UUID,
     data: AnnotationUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Update an annotation."""
     result = await annotation_service.update_annotation(db, slide_id, annotation_id, data)
@@ -139,6 +150,7 @@ async def delete_annotation(
     slide_id: str,
     annotation_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Delete an annotation."""
     deleted = await annotation_service.delete_annotation(db, slide_id, annotation_id)
@@ -151,6 +163,7 @@ async def batch_create_annotations(
     slide_id: str,
     data: AnnotationBatchCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Batch create annotations (used by auto-detection pipeline)."""
     try:
@@ -169,7 +182,10 @@ label_router = APIRouter(prefix="/api/labels", tags=["Labels"])
 
 
 @label_router.get("/", response_model=List[LabelResponse])
-async def list_labels(db: AsyncSession = Depends(get_db)):
+async def list_labels(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
     """List all annotation labels."""
     labels = await annotation_service.get_labels(db)
     return [LabelResponse.model_validate(label) for label in labels]
@@ -179,6 +195,7 @@ async def list_labels(db: AsyncSession = Depends(get_db)):
 async def create_label(
     data: LabelCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Create a new annotation label."""
     try:
@@ -200,6 +217,7 @@ async def create_label(
 async def get_label(
     label_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get a label by ID."""
     label = await annotation_service.get_label(db, label_id)
@@ -213,6 +231,7 @@ async def update_label(
     label_id: UUID,
     data: LabelUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Update a label."""
     update_data = data.model_dump(exclude_unset=True)
@@ -226,6 +245,7 @@ async def update_label(
 async def delete_label(
     label_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ):
     """Delete a label."""
     deleted = await annotation_service.delete_label(db, label_id)

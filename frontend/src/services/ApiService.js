@@ -13,6 +13,7 @@
  */
 
 import { API } from '../core/Constants.js';
+import { authService } from './AuthService.js';
 
 /**
  * Singleton instance
@@ -146,12 +147,25 @@ class ApiService {
      */
     async _fetch(url) {
         try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
+            const headers = { 'Accept': 'application/json' };
+            this._injectAuthHeader(headers);
+
+            const response = await fetch(url, { method: 'GET', headers });
+
+            if (response.status === 401) {
+                // Try token refresh once
+                const refreshed = await authService.refreshTokenSilently();
+                if (refreshed) {
+                    this._injectAuthHeader(headers);
+                    const retryResponse = await fetch(url, { method: 'GET', headers });
+                    if (retryResponse.ok) return retryResponse.json();
                 }
-            });
+                // Redirect to login
+                if (authService.authEnabled) {
+                    authService.login();
+                    return;
+                }
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -185,14 +199,32 @@ class ApiService {
      */
     async _fetchWithBody(url, method, body) {
         try {
+            const headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+            this._injectAuthHeader(headers);
+
             const response = await fetch(url, {
                 method,
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
+                headers,
                 body: JSON.stringify(body)
             });
+
+            if (response.status === 401) {
+                const refreshed = await authService.refreshTokenSilently();
+                if (refreshed) {
+                    this._injectAuthHeader(headers);
+                    const retryResponse = await fetch(url, {
+                        method, headers, body: JSON.stringify(body)
+                    });
+                    if (retryResponse.ok) return retryResponse.json();
+                }
+                if (authService.authEnabled) {
+                    authService.login();
+                    return;
+                }
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -212,6 +244,18 @@ class ApiService {
                 0,
                 { originalError: error }
             );
+        }
+    }
+
+    /**
+     * Inject Authorization Bearer header if token available.
+     * @param {Object} headers - Headers object to modify
+     * @private
+     */
+    _injectAuthHeader(headers) {
+        const token = authService.accessToken;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
     }
 
@@ -474,7 +518,9 @@ class ApiService {
      */
     async deleteAnnotation(slideId, annotationId) {
         const url = `${this.baseUrl}/api/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
-        const response = await fetch(url, { method: 'DELETE' });
+        const headers = {};
+        this._injectAuthHeader(headers);
+        const response = await fetch(url, { method: 'DELETE', headers });
         if (!response.ok && response.status !== 204) {
             throw new ApiError(`Delete failed: ${response.status}`, response.status);
         }
@@ -556,6 +602,48 @@ class ApiService {
         const qs = queryParams.toString();
         const url = `/api/ml/detect/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`;
         return this.post(url, {});
+    }
+
+    // ==========================================
+    // AUTH API (Phase 3)
+    // ==========================================
+
+    /**
+     * Get current user info
+     * @returns {Promise<Object>} Auth status with user info
+     */
+    async getAuthMe() {
+        return this.get('/api/auth/me', { useCache: false });
+    }
+
+    /**
+     * Activate break-glass emergency access
+     * @param {string} reason - Medical justification
+     * @param {number} [durationMinutes=30] - Duration in minutes
+     * @returns {Promise<Object>} Break-glass activation result
+     */
+    async activateBreakGlass(reason, durationMinutes = 30) {
+        return this.post('/api/auth/break-glass', {
+            reason,
+            duration_minutes: durationMinutes,
+        });
+    }
+
+    /**
+     * Save session state for roaming
+     * @param {Object} state - Viewer state to save
+     * @returns {Promise<Object>} Save confirmation
+     */
+    async saveSessionState(state) {
+        return this.post('/api/auth/session', state);
+    }
+
+    /**
+     * Load saved session state
+     * @returns {Promise<Object>} Saved session state
+     */
+    async loadSessionState() {
+        return this.get('/api/auth/session', { useCache: false });
     }
 
     // ==========================================

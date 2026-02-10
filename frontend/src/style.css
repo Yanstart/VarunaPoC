@@ -24,3 +24,7 @@
 
 /* 4. Layout styles - Multi-viewer layouts */
 @import './css/layouts/compare-layout.css';
+
+/* 5. Auth styles (Phase 3) */
+@import './css/login.css';
+@import './css/user-menu.css';

@@ -15,6 +15,22 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 ## Documents Disponibles
 
+### 0. [SYSTEM_PATTERNS.md](./SYSTEM_PATTERNS.md) (NEW - 2026-02-10)
+
+**Reference architecturale concrete** basee sur le code implementee (Phases 1-3.1).
+
+**Contenu:**
+- Patterns backend (module optionnel, Depends(), RBAC, audit, DB)
+- Patterns frontend (EventBus, Singleton, Component lifecycle, role-based UI)
+- Modele de donnees actuel (annotations, users, audit, sessions)
+- Auth OIDC PKCE + Break-Glass + Session Roaming
+- **Guide d'extension** pour features futures: versioning, expertise croisee, commentaires
+- Checklist d'ajout de feature
+
+**Lire en premier** pour implementer une nouvelle feature sur le code actuel.
+
+---
+
 ### 1. [ARCHITECTURE_V3.md](./ARCHITECTURE_V3.md)
 
 **Document principal** décrivant l'architecture cible complète.

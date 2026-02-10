@@ -313,3 +313,6 @@ safety-report.json
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Audit logs (Phase 3: Auth)
+backend/logs/

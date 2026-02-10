@@ -19,6 +19,54 @@ services:
     networks:
       - varuna-network
 
+  # Keycloak IdP (Phase 3: Auth)
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: varuna-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_dev  # pragma: allowlist secret
+    volumes:
+      - varuna-keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - varuna-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: varuna-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin  # pragma: allowlist secret
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_dev  # pragma: allowlist secret
+      KC_HTTP_PORT: 8080
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./backend/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/tcp/localhost/8080' 2>/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    networks:
+      - varuna-network
+
 networks:
   varuna-network:
     driver: bridge
@@ -27,3 +75,5 @@ networks:
 volumes:
   varuna-db-data:
     name: varuna-db-dev-data
+  varuna-keycloak-db-data:
+    name: varuna-keycloak-db-data

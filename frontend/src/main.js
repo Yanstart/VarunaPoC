@@ -23,6 +23,11 @@ import { Events, Pages } from './core/Constants.js';
 // Services
 import { apiService } from './services/ApiService.js';
 import { annotationStore } from './services/AnnotationStore.js';
+import { authService } from './services/AuthService.js';
+
+// Phase 3: Auth components
+import { LoginPage } from './components/LoginPage.js';
+import { UserMenu } from './components/UserMenu.js';
 
 // Viewers
 import { viewerManager } from './viewers/ViewerManager.js';
@@ -80,7 +85,11 @@ const appState = {
     detectionPanel: null,
 
     /** Pending slide for compare mode (selected from slide picker) */
-    pendingSlideForPanel: null
+    pendingSlideForPanel: null,
+
+    /** Phase 3: Auth components */
+    loginPage: null,
+    userMenu: null
 };
 
 // ==========================================
@@ -98,6 +107,15 @@ async function init() {
         const isAvailable = await apiService.isAvailable();
         if (!isAvailable) {
             throw new Error('Backend is not available');
+        }
+
+        // Phase 3: Check auth requirement
+        const authRequired = await authService.init();
+
+        if (authRequired && !authService.isAuthenticated) {
+            // Show login page
+            showLoginPage();
+            return;
         }
 
         // Setup event listeners
@@ -138,6 +156,17 @@ function setupEventListeners() {
 // ==========================================
 // PAGE RENDERING
 // ==========================================
+
+/**
+ * Show login page (when auth is required)
+ */
+function showLoginPage() {
+    cleanup();
+    const app = document.querySelector('#app');
+    app.innerHTML = '';
+    appState.loginPage = new LoginPage(app);
+    eventBus.emit(Events.PAGE_CHANGED, { page: Pages.LOGIN });
+}
 
 /**
  * Show home page (folder browser)
@@ -215,6 +244,7 @@ async function showViewerPage(slide) {
                         <path d="M2 12l10 5 10-5"/>
                     </svg>
                 </button>
+                <div id="user-menu-slot" class="header-user-menu"></div>
             </header>
 
             <main class="viewer-main">
@@ -303,6 +333,15 @@ async function showViewerPage(slide) {
 
     // Phase 2: Load annotations for this slide
     annotationStore.setSlide(slide.id);
+
+    // Phase 3: User menu
+    const userMenuSlot = document.querySelector('#user-menu-slot');
+    if (userMenuSlot && authService.authEnabled) {
+        appState.userMenu = new UserMenu(userMenuSlot);
+    }
+
+    // Phase 3: Role-based UI visibility
+    _applyRoleVisibility();
 
     eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
 }
@@ -545,6 +584,26 @@ async function loadSlide(slide) {
 // ==========================================
 
 /**
+ * Apply role-based UI visibility.
+ * Hides components that the current user's role doesn't have access to.
+ */
+function _applyRoleVisibility() {
+    const canAnnotate = authService.hasRole('MEDECIN', 'ADMIN_TECHNIQUE');
+    const canML = authService.hasRole('MEDECIN', 'ADMIN_TECHNIQUE');
+
+    // Hide drawing tools for non-physicians
+    if (!canAnnotate && appState.drawingTools) {
+        appState.drawingTools.element.style.display = 'none';
+    }
+
+    // Hide ML button for non-physicians
+    if (!canML) {
+        const mlBtn = document.querySelector('#ml-btn');
+        if (mlBtn) mlBtn.style.display = 'none';
+    }
+}
+
+/**
  * Cleanup previous page components
  */
 function cleanup() {
@@ -591,6 +650,16 @@ function cleanup() {
 
     // Clear annotation state
     annotationStore.clear();
+
+    // Phase 3: Auth components
+    if (appState.userMenu) {
+        appState.userMenu.destroy();
+        appState.userMenu = null;
+    }
+    if (appState.loginPage) {
+        appState.loginPage.destroy();
+        appState.loginPage = null;
+    }
 
     // Clear references
     appState.viewer = null;

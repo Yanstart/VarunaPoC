@@ -11,9 +11,11 @@ API Design:
 """
 
 import openslide
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
+from auth.dependencies import get_current_user
+from auth.schemas import CurrentUser
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.slide_scanner import get_slide_path_by_id, scan_slides_directory
@@ -23,7 +25,7 @@ router = APIRouter(prefix="/api/slides")
 
 
 @router.get("/", tags=["navigation"])
-def list_slides():
+def list_slides(current_user: CurrentUser = Depends(get_current_user)):
     """
     Liste toutes les lames détectées dans /Slides (scan récursif complet).
 
@@ -54,6 +56,7 @@ def list_slides():
 @router.get("/browse", tags=["navigation"])
 def browse_slides_directory(
     path: str = Query("/", description="Chemin relatif depuis /Slides"),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Navigation hiérarchique dans le répertoire /Slides.
@@ -121,7 +124,7 @@ def browse_slides_directory(
 
 
 @router.get("/{slide_id}/info", tags=["visualization"])
-def get_slide_info(slide_id: str):
+def get_slide_info(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
     """
     Récupère métadonnées d'une lame.
 
@@ -163,7 +166,7 @@ def get_slide_info(slide_id: str):
 
 
 @router.get("/{slide_id}/overview", tags=["visualization"])
-def get_overview(slide_id: str):
+def get_overview(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
     """
     Extrait image overview d'une lame.
 
@@ -199,7 +202,7 @@ def get_overview(slide_id: str):
 
 
 @router.get("/{slide_id}/dzi.json", tags=["visualization"])
-def get_dzi_metadata(slide_id: str):
+def get_dzi_metadata(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
     """
     Récupère métadonnées DZI pour OpenSeadragon (streaming de tuiles).
 
@@ -247,7 +250,13 @@ def get_dzi_metadata(slide_id: str):
 
 
 @router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
-def get_tile(slide_id: str, level: int, col: int, row: int):
+def get_tile(
+    slide_id: str,
+    level: int,
+    col: int,
+    row: int,
+    current_user: CurrentUser = Depends(get_current_user),
+):
     """
     Extrait une tuile JPEG depuis une lame (streaming à la demande).
 
