@@ -6,20 +6,20 @@ Reference: https://www.hl7.org/fhir/R4/diagnosticreport.html
 """
 
 from datetime import UTC, datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def build_diagnostic_report(
     slide_id: str,
     slide_name: str = "",
-    patient_id: Optional[str] = None,
-    patient_name: Optional[str] = None,
-    performer_name: Optional[str] = None,
-    performer_sub: Optional[str] = None,
+    patient_id: str | None = None,
+    patient_name: str | None = None,
+    performer_name: str | None = None,
+    performer_sub: str | None = None,
     annotations_count: int = 0,
-    conclusion: Optional[str] = None,
+    conclusion: str | None = None,
     status: str = "preliminary",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Build a FHIR R4 DiagnosticReport resource.
 

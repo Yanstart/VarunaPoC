@@ -10,7 +10,6 @@ State is stored in PostgreSQL (session_states table).
 
 import logging
 from datetime import UTC, datetime
-from typing import Optional
 
 from auth.schemas import SessionStateData
 
@@ -54,7 +53,7 @@ async def save_session_state(
     return saved_at
 
 
-async def load_session_state(user_sub: str) -> Optional[SessionStateData]:
+async def load_session_state(user_sub: str) -> SessionStateData | None:
     """
     Load session state for a user.
 

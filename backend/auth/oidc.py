@@ -9,7 +9,7 @@ Implements OpenID Connect Discovery 1.0:
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -18,13 +18,13 @@ from auth.config import OIDCConfig, get_oidc_config
 logger = logging.getLogger(__name__)
 
 # Cached OIDC discovery and JWKS
-_discovery_cache: Optional[Dict[str, Any]] = None
+_discovery_cache: dict[str, Any] | None = None
 _discovery_cache_time: float = 0
-_jwks_cache: Optional[Dict[str, Any]] = None
+_jwks_cache: dict[str, Any] | None = None
 _jwks_cache_time: float = 0
 
 
-async def get_discovery(config: Optional[OIDCConfig] = None) -> Dict[str, Any]:
+async def get_discovery(config: OIDCConfig | None = None) -> dict[str, Any]:
     """
     Fetch and cache OIDC discovery document.
 
@@ -56,9 +56,7 @@ async def get_discovery(config: Optional[OIDCConfig] = None) -> Dict[str, Any]:
         raise
 
 
-async def get_jwks(
-    config: Optional[OIDCConfig] = None, force_refresh: bool = False
-) -> Dict[str, Any]:
+async def get_jwks(config: OIDCConfig | None = None, force_refresh: bool = False) -> dict[str, Any]:
     """
     Fetch and cache JWKS (JSON Web Key Set).
 
@@ -97,7 +95,7 @@ async def get_jwks(
         raise
 
 
-def find_key_by_kid(jwks: Dict[str, Any], kid: str) -> Optional[Dict[str, Any]]:
+def find_key_by_kid(jwks: dict[str, Any], kid: str) -> dict[str, Any] | None:
     """Find a specific key in JWKS by key ID (kid)."""
     for key in jwks.get("keys", []):
         if key.get("kid") == kid:

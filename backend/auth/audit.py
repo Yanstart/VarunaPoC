@@ -23,7 +23,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import Request
 
@@ -77,12 +77,12 @@ class AuditEvents:
 async def log_audit_event(
     event_type: str,
     action: str,
-    user: Optional[CurrentUser] = None,
-    request: Optional[Request] = None,
-    resource_type: Optional[str] = None,
-    resource_id: Optional[str] = None,
+    user: CurrentUser | None = None,
+    request: Request | None = None,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
     level: str = "INFO",
-    details: Optional[Dict[str, Any]] = None,
+    details: dict[str, Any] | None = None,
 ) -> None:
     """
     Log an audit event to both DB and JSON file.

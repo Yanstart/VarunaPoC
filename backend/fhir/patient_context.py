@@ -9,21 +9,19 @@ In a real hospital deployment, patient context would come from:
 This stub accepts patient_id and patient_name as query parameters.
 """
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class PatientContext(BaseModel):
     """Patient context for FHIR resource generation."""
 
-    patient_id: Optional[str] = None
-    patient_name: Optional[str] = None
+    patient_id: str | None = None
+    patient_name: str | None = None
 
 
 def get_patient_context(
-    patient_id: Optional[str] = None,
-    patient_name: Optional[str] = None,
+    patient_id: str | None = None,
+    patient_name: str | None = None,
 ) -> PatientContext:
     """
     Build patient context from URL parameters.

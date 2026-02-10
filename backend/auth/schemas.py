@@ -3,7 +3,7 @@ Auth Pydantic Schemas - Request/Response models for auth endpoints.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -13,8 +13,8 @@ class CurrentUser(BaseModel):
 
     sub: str = Field(..., description="Subject identifier (unique user ID from IdP)")
     username: str = Field(..., description="Display name / preferred_username")
-    email: Optional[str] = Field(None, description="User email")
-    roles: List[str] = Field(default_factory=list, description="Assigned roles")
+    email: str | None = Field(None, description="User email")
+    roles: list[str] = Field(default_factory=list, description="Assigned roles")
     is_anonymous: bool = Field(False, description="True when AUTH_ENABLED=false")
     break_glass_active: bool = Field(False, description="Emergency access activated")
 
@@ -60,20 +60,20 @@ class BreakGlassResponse(BaseModel):
     expires_at: datetime
     user_sub: str
     reason: str
-    audit_id: Optional[str] = None
+    audit_id: str | None = None
 
 
 class SessionStateData(BaseModel):
     """User session state for cross-workstation roaming."""
 
-    slide_id: Optional[str] = None
-    viewport: Optional[Dict[str, Any]] = None
-    active_tools: Optional[List[str]] = None
+    slide_id: str | None = None
+    viewport: dict[str, Any] | None = None
+    active_tools: list[str] | None = None
     annotations_visible: bool = True
     heatmap_visible: bool = False
-    zoom_level: Optional[float] = None
-    center_x: Optional[float] = None
-    center_y: Optional[float] = None
+    zoom_level: float | None = None
+    center_x: float | None = None
+    center_y: float | None = None
 
 
 class SessionStateResponse(BaseModel):

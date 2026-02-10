@@ -6,7 +6,6 @@ Endpoints:
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -24,8 +23,8 @@ router = APIRouter(prefix="/api/fhir", tags=["FHIR"])
 @router.get("/DiagnosticReport/{slide_id}")
 async def get_diagnostic_report(
     slide_id: str,
-    patient_id: Optional[str] = Query(None, description="Patient ID"),
-    patient_name: Optional[str] = Query(None, description="Patient name"),
+    patient_id: str | None = Query(None, description="Patient ID"),
+    patient_name: str | None = Query(None, description="Patient name"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),  # noqa: B008
 ):
     """

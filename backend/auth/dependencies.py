@@ -7,7 +7,7 @@ All 94 existing tests pass without modification.
 """
 
 import logging
-from typing import Callable, List, Optional
+from typing import Callable
 
 from fastapi import Depends, HTTPException, Request, status
 
@@ -17,7 +17,7 @@ from auth.schemas import CurrentUser
 logger = logging.getLogger(__name__)
 
 
-def _extract_bearer_token(request: Request) -> Optional[str]:
+def _extract_bearer_token(request: Request) -> str | None:
     """Extract Bearer token from Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
@@ -92,7 +92,7 @@ async def get_current_user(request: Request) -> CurrentUser:
     )
 
 
-def _extract_roles(claims: dict, role_claim: str) -> List[str]:
+def _extract_roles(claims: dict, role_claim: str) -> list[str]:
     """
     Extract roles from JWT claims using dot-notation path.
 
