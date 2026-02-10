@@ -1,148 +1,86 @@
 # Contexte Rapide - VarunaPoC
 
 **Pour reprendre le travail rapidement**
+**Derniere mise a jour:** 2026-02-08
 
 ---
 
-## NOUVELLE DIRECTION: V3 MLOps-Ready (TFE 2025-2026)
+## Direction Actuelle: Plateforme WSI Quality-First (MVP 15 semaines)
 
-### Transformation Majeure
-Le projet Varuna passe d'un **PoC viewer simple** vers une **Plateforme WSI modulaire et MLOps-ready**.
+### Transformation
+Le projet Varuna est passe d'un **PoC viewer simple** (Phase 1) a une **Plateforme WSI avec annotations, ML et detection** (Phase 2 terminee). Phase 3 (Auth, PACS, Quality Metrics) a venir.
 
-### Objectifs TFE:
-1. Viewer WSI vendor-neutral (12 formats) - FAIT
-2. Systeme de routage par tags pour modeles IA specialises - A FAIRE
-3. Infrastructure MLOps (capture feedback, versioning, re-entrainement) - A FAIRE
-4. Conformite RGPD/MDR/AI Act - A FAIRE
-5. Integration PACS Telemis - A FAIRE
+### 3 Differenciateurs (cf. docs/PROPOSAL_VARUNA_v2.md):
+1. **Quality-First Annotations** - Metriques IAA, detection outliers, versioning
+2. **Continuous Learning MLOps** - Drift monitoring, feedback loops, CI/CD modeles
+3. **Radical Simplicity** - Zero-config, onboarding 3 min, <100ms latence
 
-### Angles Morts a Resoudre:
-- IA figee -> apprentissage continu
-- Corrections perdues -> capture feedback pathologistes
-- Resultats binaires -> cartographie de confiance
-- Vendor lock-in -> architecture ouverte (deja fait)
+### Positionnement Reglementaire:
+- **Aujourd'hui:** Recherche et enseignement (IVDR Classe A, FDA Exempt)
+- **Moyen terme:** Aide a la decision consultative
+- **Long terme (optionnel):** Certification IVDR Classe C / FDA 510(k)
 
 ---
 
 ## Etat Actuel du Projet
 
-### Version: 2.0.1 (Bugfix Compare Mode)
-### Date: 2025-12-30
-### Prochaine Version: 3.0 (MLOps-Ready)
+### Version: 1.7.0
+### Date: 2026-02-08
+### Branche: feature/slideflow-integration
+### Phase: 2 TERMINEE, Phase 3 A VENIR
 
 ### Ce qui fonctionne:
 - [x] Navigation hierarchique dans /Slides
-- [x] Viewer single avec tile streaming DZI
-- [x] Compare Mode (multi-viewer 2x1, 2x2)
-- [x] Synchronisation pan/zoom (toggle)
-- [x] Mini-map (navigator) sur chaque viewer
-- [x] Formats: .mrxs, .bif, .tif (12 formats via OpenSlide)
+- [x] Viewer single avec tile streaming DZI (< 15ms keep-alive)
+- [x] Compare Mode (multi-viewer 2x1, 2x2, synchronise)
+- [x] 10 formats vendor-neutral via OpenSlide (SVS, NDPI, MRXS, SCN, BIF, TIFF, CZI, DICOM, Sakura, Trestle)
+- [x] 94 lames testees, 3 corrompues correctement rejetees
+- [x] Annotations CRUD (PostgreSQL + PostGIS, 5 outils dessin, labels couleurs, export GeoJSON)
+- [x] ML Slideflow + Phikon-v2 (heatmaps CUDA, detection regions, classification + uncertainty)
+- [x] Detection automatique regions tissulaires (heatmap -> scipy -> shapely -> GeoJSON)
+- [x] Counting/classification stats temps reel
+- [x] 94 tests automatises (pytest)
+- [x] CI/CD GitHub Actions (lint, tests, Docker, Trivy, Bandit, CodeQL, Gitleaks)
 
-### Ce qui est planifie (V3):
-- [ ] Systeme de tags (organe, coloration, marqueur)
-- [ ] Routage automatique vers modeles IA
-- [ ] Capture feedback pathologistes
-- [ ] Infrastructure MLOps (MLflow, DVC)
-- [ ] Securite (OAuth2, audit trail, chiffrement)
-- [ ] Integration PACS Telemis
+### Phase 3 (A VENIR - semaines 10-13):
+- [ ] Auth RBAC + JWT + audit trail
+- [ ] Quality metrics annotations (kappa inter-annotateur)
+- [ ] Integration PACS Telemis (command plugin)
 
----
-
-## Documentation Architecture V3
-
-### Documents Crees par le Conseil des Architectes:
-
-**Architecture Globale:**
-- `docs/architecture/ARCHITECTURE_V3.md` - Vision complete
-- `docs/architecture/MODULE_CONTRACTS.md` - Interfaces entre modules
-- `docs/architecture/REFACTORING_PLAN.md` - Plan de migration
-
-**Securite (CRITIQUE - Score actuel: 3.1/10):**
-- `docs/SECURITY_ARCHITECTURE.md` - Architecture complete
-- `docs/SECURITY_EXECUTIVE_SUMMARY.md` - Resume direction
-- `docs/SECURITY_PHASE1_IMPLEMENTATION.md` - Actions immediates
-
-**MLOps:**
-- `docs/MLOPS_ARCHITECTURE.md` - Reference principale (60+ pages)
-- `docs/MLOPS_INTEGRATION_GUIDE.md` - Guide step-by-step
-- `backend/services/ml/tag_extractor.py` - Code pret
-- `backend/services/ml/tag_router.py` - Code pret
-- `backend/database/schema_ml.sql` - Schema PostgreSQL
-- `backend/config/ml_routes.yaml` - Configuration routage
-
-**Infrastructure:**
-- `docs/INFRASTRUCTURE_ARCHITECTURE.md` - Architecture complete
-- `docker-compose.optimized.yml` - Production-ready
-- `nginx/nginx.conf` - Load balancing + cache
-- `monitoring/` - Prometheus + Grafana
-
-**Backend Refactoring:**
-- `docs/BACKEND_REFACTORING.md` - Plan complet (37h)
-- `docs/BACKEND_ARCHITECTURE_DIAGRAM.md` - Diagrammes
-
-**Frontend Refactoring:**
-- `docs/FRONTEND_REFACTORING.md` - Plan V3 features (70 pages)
+### Phase 4 (A VENIR - semaines 14-15):
+- [ ] Tests E2E (Playwright/Selenium)
+- [ ] Documentation + formation utilisateurs
+- [ ] Mise en production
 
 ---
 
-## Alertes Critiques
+## Documentation Strategique
 
-### SECURITE: AUCUNE AUTHENTIFICATION
-```
-Score actuel: 0/10 sur authentification
-Risque: Acces libre a toutes les donnees patients
-Action: Implementer HTTP Basic Auth CETTE SEMAINE
-```
-
-### CONFORMITE: NON CONFORME RGPD
-```
-Statut: Systeme NON utilisable en production
-Risque: Amende jusqu'a 20M EUR
-Action: Phase 1 securite (5k EUR, 1-2 semaines)
-```
+| Document | Description |
+|----------|-------------|
+| `docs/PROPOSAL_VARUNA_v2.md` | Proposition projet v2 (marche, architecture, roadmap, couts) |
+| `HOSPITAL_DEPLOYMENT_EVALUATION.md` | Evaluation deploiement hospitalier (gaps, comparaison, plan) |
+| `.claude/docs/ARCHITECTURE_V3.md` | Architecture cible (modules, services) |
+| `.claude/docs/MODULE_CONTRACTS.md` | Interfaces entre modules |
 
 ---
 
-## Roadmap V3 (12-18 mois)
+## Alertes
 
-### Phase 2.0: Preparation (2 semaines)
-- [ ] Abstraction Storage (StorageProvider)
-- [ ] Configuration centralisee (pydantic-settings)
-- [ ] API versioning (/api/v1/, /api/v2/)
-- [ ] Tests unitaires (coverage >80%)
-- [ ] Securite Phase 1 (Basic Auth, HTTPS, Audit)
+### SECURITE: PAS D'AUTHENTIFICATION RUNTIME
+```
+Score CI/CD: OK (Trivy, Bandit, CodeQL, Gitleaks)
+Score runtime: 0 (pas d'auth, pas d'audit trail)
+Action: Phase 3, Sprint 1 (Auth RBAC + JWT)
+```
 
-### Phase 2.1: ML Service Prototype (3 semaines)
-- [ ] Service FastAPI separe
-- [ ] Modele mock (detections aleatoires)
-- [ ] Heatmap generator (overlays confiance)
-- [ ] Frontend: bouton "Run AI", affichage heatmap
-
-### Phase 3.1: Infrastructure MLOps (Mois 1-3)
-- [ ] Setup MLflow tracking server
-- [ ] Setup DVC avec remote storage
-- [ ] Database PostgreSQL + schema ML
-- [ ] Setup Label Studio
-
-### Phase 3.2: Tag System & Routing (Mois 4-5)
-- [ ] TagExtractor integration (code pret)
-- [ ] TagRouter integration (code pret)
-- [ ] UI assignation manuelle tags
-
-### Phase 3.3: Feedback Pipeline (Mois 6-7)
-- [ ] Endpoints API feedback
-- [ ] FeedbackPanel UI dans viewer
-- [ ] Dashboard monitoring
-
-### Phase 3.4: Continuous Learning (Mois 8-11)
-- [ ] Pipeline Airflow re-entrainement
-- [ ] A/B testing infrastructure
-- [ ] Monitoring drift actif
-
-### Phase 3.5: Production Models (Mois 12-18)
-- [ ] Gleason grading (prostate)
-- [ ] Ki-67 counting (sein)
-- [ ] HER2 scoring (sein)
+### DEPLOIEMENT HOSPITALIER: PAS PRET
+```
+Verdict: NOT production-ready (cf. HOSPITAL_DEPLOYMENT_EVALUATION.md)
+Gaps critiques: Auth, audit trail, PACS, PHI
+Timeline vers clinical: 9-12 mois
+Positioning actuel: Recherche/enseignement only
+```
 
 ---
 
@@ -165,10 +103,11 @@ npm run dev
 # -> http://localhost:5173
 ```
 
-### Docker (Phase 2.5+)
+### PostgreSQL + PostGIS (pour annotations)
 ```bash
-docker-compose -f docker-compose.optimized.yml up -d
-# -> http://localhost (Nginx load balanced)
+docker compose -f docker-compose.dev.yml up postgres -d
+cd backend && alembic upgrade head
+# Note: port 5433 (pas 5432)
 ```
 
 ---
@@ -177,117 +116,75 @@ docker-compose -f docker-compose.optimized.yml up -d
 
 | Tache | Fichier(s) |
 |-------|-----------|
-| Point d'entree frontend | `frontend/src/main.js` |
+| Entry point frontend | `frontend/src/main.js` |
+| Entry point backend | `backend/main.py` (v1.7.0) |
 | Config/Constantes | `frontend/src/core/Constants.js` |
 | Gestionnaire viewers | `frontend/src/viewers/ViewerManager.js` |
-| Sync entre viewers | `frontend/src/viewers/SyncController.js` |
-| Layout multi-viewer | `frontend/src/components/CompareLayout.js` |
 | Tile streaming | `backend/services/tile_server.py` |
-| Navigation dossiers | `backend/services/folder_browser.py` |
-| **NOUVEAU: Tags ML** | `backend/services/ml/tag_extractor.py` |
-| **NOUVEAU: Routage ML** | `backend/services/ml/tag_router.py` |
-| **NOUVEAU: Config ML** | `backend/config/ml_routes.yaml` |
+| Format detection | `backend/services/format_detector.py` |
+| Annotations CRUD | `backend/routes/annotations.py` |
+| ML inference | `backend/routes/ml.py` |
+| Annotation overlay | `frontend/src/components/AnnotationLayer.js` |
+| Drawing tools | `frontend/src/components/DrawingTools.js` |
+| ML heatmap | `frontend/src/components/HeatmapOverlay.js` |
+| Detection panel | `frontend/src/components/DetectionPanel.js` |
+| Annotation store | `frontend/src/services/AnnotationStore.js` |
+| DB models | `backend/models/annotation.py` |
+| DB migrations | `backend/alembic/` |
 
 ---
 
 ## Architecture en 30 Secondes
 
-### Actuelle (V2):
 ```
 User -> main.js -> showHomePage() / showViewerPage() / showComparePage()
-                         |
-                         v
-              CompareLayout -> ViewerPanel[] -> ViewerInstance -> OpenSeadragon
-                    |
-                    +-- SyncControls -> SyncController -> EventBus
+                        |
+                        v
+             CompareLayout -> ViewerPanel[] -> ViewerInstance -> OpenSeadragon
+                   |
+                   +-- SyncControls -> SyncController -> EventBus
+                   +-- AnnotationLayer (SVG overlay)
+                   +-- DrawingTools (5 outils)
+                   +-- DetectionPanel + CountingPanel
+                   +-- HeatmapOverlay (canvas ML)
+                   +-- LayerManager (visibilite)
+
+Backend:
+  FastAPI -> routes/slides.py    (tiles DZI, info, browse)
+          -> routes/annotations.py (CRUD PostGIS)
+          -> routes/ml.py         (Slideflow + Phikon-v2)
 ```
 
-### Cible (V3):
-```
-API Gateway (Kong/Traefik)
-    +-- Viewer Service (tuiles, metadonnees)
-    +-- ML Service (inference, feedback loop)
-    +-- PACS Plugin (DICOM integration)
-    +-- Storage Service (filesystem/S3/PACS abstrait)
-```
-
-**Patterns:**
-- Singleton: EventBus, ViewerManager, ApiService, StateStore (V3)
-- Factory: ViewerFactory
-- Observer: EventBus
-- Mediator: SyncController
-- State: ViewerState
-- **NOUVEAU V3:** Clean Architecture / Hexagonal, Repository Pattern
+**Patterns:** Singleton (EventBus, ViewerManager), Factory (ViewerFactory), Observer (EventBus), Mediator (SyncController), State (ViewerState)
 
 ---
 
-## Stack Technologique V3
+## Stack Technologique
 
-### Backend:
-- Python 3.11+ / FastAPI (async)
-- OpenSlide (lecture WSI)
-- PostgreSQL (metadonnees, feedback, ML)
-- Redis (cache tuiles, sessions)
-- MLflow (tracking modeles)
-- DVC (versioning datasets)
-
-### Frontend:
-- Vite + Vanilla JS (PAS de React)
-- OpenSeadragon (viewer)
-- WebGL (heatmaps confiance)
-- StateStore (gestion etat centralisee)
-
-### Infrastructure:
-- Docker / Kubernetes
-- Nginx (load balancing, cache)
-- Prometheus + Grafana (monitoring)
-- HTTP/2 (HTTP/3 QUIC futur)
-
----
-
-## Metriques de Performance (TFE Section 5.2)
-
-| Metrique | Exigence | Actuel | Cible V3 |
-|----------|----------|--------|----------|
-| Temps chargement (P95) | < 2s | ~3s | 1.3-1.8s |
-| Latence navigation (P95) | < 100ms | ~150ms | 65ms |
-| Disponibilite | > 99.5% | N/A | 99.73% |
-| Utilisateurs simultanes | 10 | ~3 | 15+ |
-
----
-
-## Regles Importantes (CLAUDE.md)
-
-1. **Pas d'emojis dans les logs Python** (cause erreurs encodage Windows)
-2. **Documenter les erreurs** dans `/docs/ERROR_*.md`
-3. **Documenter les endpoints** avec docstrings FastAPI completes
-4. **Vanilla JS uniquement** - pas de React/Vue/Angular
-5. **Tile streaming** - jamais charger l'image complete
-6. **NOUVEAU: Securite by Design** - Auth + Audit sur tout endpoint
-7. **NOUVEAU: Clean Architecture** - Isolation modules, interfaces claires
+| Composant | Technologie |
+|-----------|-------------|
+| Backend | FastAPI (Python 3.11) |
+| Lecture WSI | OpenSlide 4.0 |
+| Viewer | OpenSeadragon 4.1 (Vanilla JS) |
+| Base donnees | PostgreSQL 15 + PostGIS (port 5433) |
+| ML | Slideflow 2.3+ (Phikon-v2, CUDA) |
+| Frontend build | Vite |
+| CI/CD | GitHub Actions |
+| Monitoring | Prometheus (optionnel) |
 
 ---
 
 ## Contacts / References
 
+- **Repository:** https://github.com/Yanstart/VarunaPoC
 - OpenSeadragon: https://openseadragon.github.io/docs/
 - OpenSlide: https://openslide.org/api/python/
 - FastAPI: https://fastapi.tiangolo.com/
-- MLflow: https://mlflow.org/docs/latest/index.html
-- DVC: https://dvc.org/doc
-- OWASP ASVS: https://owasp.org/www-project-application-security-verification-standard/
+- Slideflow: https://slideflow.dev/
 
 ---
 
 ## Git Branches
 
 - `main` - Production stable
-- `develop` - Developpement actif (branche actuelle)
-- `feature/mlops-infrastructure` - A creer pour Phase 3
-- `feature/security-phase1` - A creer URGENT
-
----
-
-**Derniere mise a jour:** 2025-12-31
-**Version contexte:** 3.0
-**Auteur:** Conseil des Architectes VarunaPoC
+- `feature/slideflow-integration` - Developpement actif (Phase 2)

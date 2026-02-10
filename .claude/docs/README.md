@@ -1,13 +1,13 @@
 # Documentation Architecture V3 - VarunaPoC
 
-**Date:** 2025-12-31
-**Version:** 3.0.0
+**Date:** 2026-02-08
+**Version:** 3.1.0
 
 ---
 
 ## Vue d'Ensemble
 
-Cette documentation définit l'architecture cible pour transformer VarunaPoC d'un **viewer WSI simple** (Phase 1) en une **plateforme MLOps modulaire** (Phase 3).
+Cette documentation definit l'architecture cible pour VarunaPoC. Phase 1-2 terminees (viewer WSI + annotations + ML). Phase 3 (Auth, PACS, Quality) a venir.
 
 **Objectif TFE 2025-2026:** Développer un système d'intelligence artificielle pour l'analyse de lames histologiques, avec apprentissage continu et conformité réglementaire.
 
@@ -114,89 +114,51 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 ## Roadmap
 
-### Phase 2.0: Préparation (2 semaines) - Janvier 2026
-
-**Objectif:** Refactorer code existant sans changer comportement.
+### Phase 1: Initialisation (semaines 1-3) - TERMINE
 
 **Livrables:**
-- StorageProvider abstraction (filesystem, S3, PACS ready)
-- Configuration management (pydantic-settings, feature flags)
-- API versioning (v1/v2)
-- Tests unitaires (>80% coverage)
-- State management frontend (stores)
-
-**Status:** 🔄 En cours (voir REFACTORING_PLAN.md)
+- Viewer basique DZI avec OpenSeadragon
+- Detection formats (3 initiaux → 10 finaux)
+- Navigation hierarchique, overview/thumbnail
+- CI/CD GitHub Actions
 
 ---
 
-### Phase 2.1: ML Service Prototype (3 semaines) - Février 2026
-
-**Objectif:** Créer ML Service minimal avec modèle mock.
+### Phase 2: Core Platform (semaines 4-9) - TERMINE
 
 **Livrables:**
-- ML Service (FastAPI) avec endpoint inference
-- Modèle mock (détections aléatoires)
-- Heatmap generator (PNG overlay)
-- Frontend integration (bouton "Run AI", overlay heatmap)
-
-**Status:** ⏸️ Planifié
+- 10 formats vendor-neutral (94 lames testees)
+- Annotations CRUD (PostgreSQL + PostGIS, 5 outils dessin)
+- ML Slideflow + Phikon-v2 (heatmaps, detection, classification)
+- Compare mode multi-viewer synchronise
+- Counting/classification stats temps reel
+- 94 tests automatises
 
 ---
 
-### Phase 2.2: Feedback Loop MVP (2 semaines) - Mars 2026
+### Phase 3: Enrichissement (semaines 10-13) - A VENIR
 
-**Objectif:** Capturer corrections pathologistes.
-
-**Livrables:**
-- UI correction (AnnotationTool)
-- API feedback (POST /api/ml/feedback)
-- Stockage corrections (PostgreSQL)
-- Dashboard admin (stats corrections)
-
-**Status:** ⏸️ Planifié
+**Livrables prevus:**
+- Auth RBAC + JWT + audit trail
+- Quality metrics annotations (kappa inter-annotateur)
+- Integration PACS Telemis (command plugin, pynetdicom)
 
 ---
 
-### Phase 2.3: PACS Integration POC (3 semaines) - Mars 2026
+### Phase 4: Finalisation (semaines 14-15) - A VENIR
 
-**Objectif:** Query/Retrieve slides depuis PACS Telemis.
-
-**Livrables:**
-- PACS Plugin (pynetdicom)
-- C-FIND, C-MOVE implémentés
-- PacsStorageProvider
-- FolderBrowser onglet "PACS"
-
-**Status:** ⏸️ Planifié
+**Livrables prevus:**
+- Tests E2E (Playwright/Selenium)
+- Documentation + formation utilisateurs
+- Mise en production
 
 ---
 
-### Phase 3.0: MLOps Pipeline (4 semaines) - Mai 2026
+### Post-MVP (Cercles d'expansion)
 
-**Objectif:** Pipeline complet ML avec ré-entraînement.
-
-**Livrables:**
-- MLflow Tracking Server
-- Pipeline training (Airflow/Prefect)
-- DVC versioning datasets
-- A/B testing modèles
-- Drift detection (Evidently AI)
-
-**Status:** ⏸️ Planifié
-
----
-
-### Phase 3.1: Collaboration Temps Réel (3 semaines) - Juin 2026
-
-**Objectif:** Co-visualisation synchronisée.
-
-**Livrables:**
-- WebSocket server
-- Viewport sync multi-users
-- Cursors collaboratifs
-- Annotations temps réel
-
-**Status:** ⏸️ Planifié
+**Cercle 1:** SSO institutionnel, Quality-First complet, collaboration temps reel
+**Cercle 2:** MLOps complet (drift, feedback loops, CI/CD modeles)
+**Cercle 3:** Cytologie, fluorescence, EHDS compliance
 
 ---
 
@@ -207,7 +169,7 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 | Composant | Technologie | Justification |
 |-----------|-------------|---------------|
 | **Framework** | FastAPI | Moderne, async, auto-docs |
-| **Slide Processing** | OpenSlide | Standard industrie, 12 formats |
+| **Slide Processing** | OpenSlide 4.0 | Standard industrie, 10 formats (94 lames) |
 | **ML Tracking** | MLflow | Expérimentation, versioning modèles |
 | **Data Versioning** | DVC | Git pour datasets |
 | **Database** | PostgreSQL | Robuste, ACID, JSON support |
@@ -293,32 +255,27 @@ Cette documentation définit l'architecture cible pour transformer VarunaPoC d'u
 
 ## Contact et Support
 
-**Équipe VarunaPoC:**
-- Lead Architecte: [À compléter]
-- Tech Lead Backend: [À compléter]
-- Tech Lead Frontend: [À compléter]
-- ML Engineer: [À compléter]
+**Repository:** https://github.com/Yanstart/VarunaPoC
 
-**Repository:** https://github.com/[À compléter]/VarunaPoC
-
-**License:** Propriétaire (CHU UCL Namur)
+**License:** Apache 2.0
 
 ---
 
 ## Changelog
 
+### v3.1.0 (2026-02-08)
+
+- Phase 2 terminee, roadmap mise a jour
+- Alignement avec PROPOSAL_VARUNA_v2.md (15 semaines MVP)
+- License Apache 2.0, repo GitHub confirme
+
 ### v3.0.0 (2025-12-31)
 
-- Architecture V3 complète
-- Module contracts définis
-- Plan de refactoring détaillé
-- Roadmap TFE 2025-2026
-
-### v2.0.0 (Phase antérieure)
-
-- Voir git tags pour historique
+- Architecture V3 complete
+- Module contracts definis
+- Plan de refactoring detaille
 
 ---
 
-**Dernière mise à jour:** 2025-12-31
-**Prochaine révision:** Après Phase 2.0 (Février 2026)
+**Derniere mise a jour:** 2026-02-08
+**Prochaine revision:** Apres Phase 3 (Auth RBAC + JWT)

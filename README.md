@@ -1,189 +1,210 @@
 # VarunaPoC - Digital Pathology Slide Viewer
 
-**Viewer web de lames histologiques pour CHU UCL Namur**
+**Plateforme web d'imagerie microscopique pour CHU UCL Namur**
 
-Remplace le client lourd actuel par une solution web moderne, vendor-neutral et sécurisée.
+Viewer vendor-neutral de lames histologiques (WSI) avec annotations, detection ML et mode comparaison. Remplace le client lourd actuel par une solution web moderne, open-source et extensible.
+
+> **Research Use Only** - Ce logiciel est destine a la recherche et a l'enseignement.
+> Il n'est pas certifie CE-IVD/FDA et ne doit pas etre utilise pour le diagnostic primaire.
+
+## Fonctionnalites
+
+### Viewer WSI haute performance
+- Navigation fluide sur images gigapixel (100,000+ x 80,000 px)
+- Tiles en < 15ms (keep-alive), zoom progressif multi-resolution
+- Mode comparaison multi-lames avec synchronisation pan/zoom
+- Mini-map, plein ecran, navigation clavier
+
+### 10 formats vendor-neutral (OpenSlide)
+| Format | Extension | Vendor |
+|--------|-----------|--------|
+| Aperio SVS | `.svs`, `.tif` | Leica |
+| Hamamatsu NDPI | `.ndpi` | Hamamatsu |
+| 3DHistech MIRAX | `.mrxs` | 3DHistech |
+| Leica SCN | `.scn` | Leica |
+| Ventana BIF | `.bif` | Roche |
+| Philips TIFF | `.tif` | Philips |
+| Trestle | `.tif` | Trestle |
+| Sakura | `.svslide` | Sakura |
+| Zeiss CZI | `.czi` | Zeiss |
+| DICOM WSI | `.dcm` | Standard |
+
+94 lames testees, 3 fichiers corrompus correctement rejetes.
+
+### Annotations (PostgreSQL + PostGIS)
+- 5 outils de dessin : rectangle, polygone, point, cercle, freehand
+- Labels avec couleurs, CRUD complet, export GeoJSON
+- Statistiques temps reel (comptage par label/type, distribution confiance)
+
+### ML / IA (Slideflow + Phikon-v2)
+- Heatmaps d'attention (64x64, ~2.5 min GPU CUDA)
+- Detection automatique de regions tissulaires
+- Classification tissue/background avec uncertainty quantification
+
+### Infrastructure
+- 94 tests automatises (pytest)
+- CI/CD GitHub Actions (lint, tests, build Docker, Trivy, Bandit, CodeQL, Gitleaks)
+- Docker multi-container
 
 ## Stack Technique
 
-- **Backend:** FastAPI + OpenSlide (Python)
-- **Frontend:** Vite + Vanilla JavaScript + OpenSeadragon
-- **Formats supportés:** .mrxs (3DHistech), .bif, .tif (Roche/Ventana)
-
-## Phase 1 - Hello World ✅
-
-**Objectif:** Preuve de concept minimaliste - Détection et affichage overview.
-
-**Fonctionnalités:**
-- Auto-détection des lames dans `/Slides`
-- Affichage liste des lames dans sidebar
-- Clic sur lame → Overview affiché dans mini-map OpenSeadragon
-- Zone principale noire (placeholder future navigation)
-
-**Principe 80/20:**
-Code simple, direct, fonctionnel. Pas d'optimisations prématurées.
+| Composant | Technologie |
+|-----------|-------------|
+| Backend API | FastAPI (Python 3.11) |
+| Lecture WSI | OpenSlide 4.0 |
+| Viewer web | OpenSeadragon 4.1 (Vanilla JS) |
+| Base donnees | PostgreSQL 15 + PostGIS |
+| ML Framework | Slideflow 2.3+ (Phikon-v2, CUDA) |
+| Frontend build | Vite |
+| Reverse proxy | Nginx |
 
 ## Installation et Lancement
 
-### Option 1: Docker (Recommandé pour déploiement)
-
-**Phase 1 - Validation locale avec Docker:**
+### Option 1 : Docker (Recommande)
 
 ```bash
-# Déploiement automatisé
-./Scripts/Deployment/deploy-phase1.sh
+# Deploiement Phase 2 (backend + frontend + PostgreSQL)
+docker compose -f docker-compose.dev.yml up -d
 
-# Accès:
+# Acces:
 # Frontend: http://localhost
-# Backend: http://localhost:8000
+# Backend:  http://localhost:8000
 # API Docs: http://localhost:8000/docs
-
-# Arrêt
-./Scripts/Deployment/stop-phase1.sh
 ```
 
-**Documentation complète:**
-- 📖 **[DOCKER_DEPLOYMENT_CHECKLIST.md](DOCKER_DEPLOYMENT_CHECKLIST.md)** - Guide rapide pour déploiement on-site
-- 📖 **[DOCKER_INTEGRATION_GUIDE.md](DOCKER_INTEGRATION_GUIDE.md)** - Documentation complète
-- 📖 **[Scripts/Deployment/README.md](Scripts/Deployment/README.md)** - Référence des scripts
+Voir [DOCKER_DEPLOYMENT_CHECKLIST.md](DOCKER_DEPLOYMENT_CHECKLIST.md) pour le guide complet.
 
-**Prérequis Docker:**
-- Docker Desktop ou Docker Engine installé et running
-- Directory `/local/slides` avec lames de test
-- Scripts exécutables: `chmod +x Scripts/Deployment/*.sh`
+### Option 2 : Developpement Local
 
-### Option 2: Développement Local (Windows/Linux)
-
-### Backend
+**Prerequis :** Python 3.11+, Node.js 18+, OpenSlide, PostgreSQL 15 + PostGIS (optionnel)
 
 ```bash
+# Backend
 cd backend
-
-# Créer environnement virtuel
 python -m venv venv
-
-# Activer (Windows)
-venv\Scripts\activate
-
-# Installer dépendances
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
-
-# Lancer serveur
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
 
-**IMPORTANT:** OpenSlide doit être installé sur le système.
-- Windows: https://openslide.org/download/
-- Linux: `sudo apt-get install openslide-tools`
-
-**Vérifier:** http://localhost:8000/docs
-
-### Frontend
-
-```bash
+# Frontend (nouveau terminal)
 cd frontend
-
-# Installer dépendances
 npm install
-
-# Lancer dev server
 npm run dev
 ```
 
-**Ouvre automatiquement:** http://localhost:5173
+**OpenSlide :**
+- Windows : https://openslide.org/download/
+- Linux : `sudo apt-get install openslide-tools python3-openslide`
 
-## Test Complet
+**PostgreSQL + PostGIS (pour annotations) :**
+```bash
+docker compose -f docker-compose.dev.yml up postgres -d
+cd backend && alembic upgrade head
+```
 
-1. **Backend running:** http://localhost:8000/api/health → `{"status":"healthy"}`
-2. **Frontend running:** http://localhost:5173 → UI s'affiche
-3. **Cliquer sur une lame:** Overview apparaît dans mini-map (coin bas-droit)
-4. **Métadonnées affichées:** Format, dimensions, niveaux pyramidaux
+> **Note :** Le port PostgreSQL est **5433** (pas 5432) pour eviter les conflits.
+
+### Verification
+
+1. Backend : http://localhost:8000/api/health -> `{"status":"healthy"}`
+2. Frontend : http://localhost:5173
+3. API Docs : http://localhost:8000/docs
+4. Cliquer sur une lame -> navigation fluide dans le viewer
 
 ## Structure Projet
 
 ```
 VarunaPoC/
-├── backend/           # FastAPI + OpenSlide
-│   ├── main.py        # Entry point
-│   ├── routes/        # API endpoints
-│   ├── services/      # Business logic (scanner, loader)
-│   └── utils/         # Helpers
+├── backend/                    # FastAPI + OpenSlide + SQLAlchemy
+│   ├── main.py                 # Entry point (v1.7.0)
+│   ├── routes/
+│   │   ├── slides.py           # API slides (list, browse, info, tiles, dzi)
+│   │   ├── annotations.py      # CRUD annotations + labels + stats
+│   │   └── ml.py               # ML inference (heatmap, detect, predict)
+│   ├── services/
+│   │   ├── format_detector.py  # Detection 10+ formats
+│   │   ├── tile_server.py      # Streaming tuiles DZI
+│   │   └── detection/          # Pipeline heatmap -> GeoJSON
+│   ├── models/                 # ORM (Annotation, AnnotationLabel)
+│   ├── schemas/                # Pydantic (annotation, geojson, detection)
+│   ├── alembic/                # Migrations DB
+│   └── tests/                  # 94 tests (pytest)
 │
-├── frontend/          # Vite + OpenSeadragon
+├── frontend/                   # Vite + Vanilla JS + OpenSeadragon
 │   ├── src/
-│   │   ├── main.js         # Entry point
-│   │   ├── components/     # UI components
-│   │   └── utils/          # API client
+│   │   ├── main.js             # Entry point + routing
+│   │   ├── components/
+│   │   │   ├── AnnotationLayer.js   # SVG overlay annotations
+│   │   │   ├── DrawingTools.js      # Rectangle, Polygon, etc.
+│   │   │   ├── LayerManager.js      # Visibilite/opacite
+│   │   │   ├── DetectionPanel.js    # Detection automatique
+│   │   │   ├── CountingPanel.js     # Statistiques temps reel
+│   │   │   ├── HeatmapOverlay.js    # Overlay ML canvas
+│   │   │   ├── MLPanel.js           # Panel analyse ML
+│   │   │   ├── CompareLayout.js     # Mode multi-viewer
+│   │   │   └── FolderBrowser.js     # Navigation dossiers
+│   │   ├── services/
+│   │   │   ├── ApiService.js        # Client API singleton
+│   │   │   └── AnnotationStore.js   # Etat annotations
+│   │   └── core/
+│   │       ├── EventBus.js          # Pub/sub decouplage
+│   │       └── Constants.js         # Configuration
 │   └── index.html
 │
-├── Slides/            # Test slides (gitignored)
-│   ├── 3Dhistec/      # .mrxs files + companions
-│   └── ROCHE/         # .bif, .tif files
+├── docs/                       # Documentation technique
+│   ├── PROPOSAL_VARUNA_v2.md   # Proposal projet v2
+│   ├── ARCHITECTURE.md         # Architecture technique
+│   ├── Manuel/                 # Manuel utilisateur
+│   └── Deployment/             # Guides deploiement
 │
-├── CLAUDE.md          # Guide complet pour Claude Agent
-└── README.md          # Ce fichier
+├── Slides/                     # Lames de test (gitignored)
+├── docker-compose.dev.yml      # PostgreSQL+PostGIS (port 5433)
+└── HOSPITAL_DEPLOYMENT_EVALUATION.md  # Evaluation deploiement hospitalier
 ```
+
+## Tests
+
+```bash
+cd backend
+pytest                              # Tous les tests
+pytest -m unit                      # Tests unitaires
+pytest -m detection                 # Tests detection
+pytest tests/test_format_detector.py  # Tests formats
+```
+
+94 tests passent, 3 skipped (necessitent fichiers slides specifiques).
 
 ## Documentation
 
-### Guides Principaux
-- **CLAUDE.md:** Guide exhaustif pour développement (architecture, docs officielles, scope)
-- **backend/README.md:** Installation backend, API endpoints, OpenSlide
-- **frontend/README.md:** Installation frontend, OpenSeadragon, components
+| Document | Description |
+|----------|-------------|
+| [PROPOSAL_VARUNA_v2.md](docs/PROPOSAL_VARUNA_v2.md) | Proposition projet, analyse marche, roadmap |
+| [HOSPITAL_DEPLOYMENT_EVALUATION.md](HOSPITAL_DEPLOYMENT_EVALUATION.md) | Evaluation deploiement hospitalier |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture technique |
+| [FORMATS_SUPPORTED.md](docs/FORMATS_SUPPORTED.md) | Formats supportes |
+| [ML_INTEGRATION.md](docs/ML_INTEGRATION.md) | Integration ML/Slideflow |
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | Guide deploiement production |
+| [docs/Manuel/](docs/Manuel/) | Manuel utilisateur |
+| API Docs | http://localhost:8000/docs (Swagger UI) |
 
-### Docker (Phase 1 Deployment)
-- **DOCKER_DEPLOYMENT_CHECKLIST.md:** ✅ Guide rapide on-site (30-45 min)
-- **DOCKER_INTEGRATION_GUIDE.md:** Documentation complète Docker
-- **DOCKER_FILES_SUMMARY.md:** Liste de tous les fichiers créés
-- **Scripts/Deployment/README.md:** Référence scripts déploiement
+## Roadmap
 
-### Manuel Utilisateur
-- **docs/Manuel/README.md:** Index manuel utilisateur
-- **docs/Manuel/01-INTRODUCTION.md:** Premiers pas
-- **docs/Manuel/02-NAVIGATION_DOSSIERS.md:** Explorateur de fichiers
+| Phase | Statut | Contenu |
+|-------|--------|---------|
+| **Phase 1** (sem. 1-3) | Termine | Viewer basique, detection formats, overview |
+| **Phase 2** (sem. 4-9) | Termine | 10 formats, annotations PostGIS, ML Slideflow, compare mode |
+| **Phase 3** (sem. 10-13) | A venir | Auth RBAC, audit trail, quality metrics, PACS Telemis |
+| **Phase 4** (sem. 14-15) | A venir | Tests E2E, documentation, mise en production |
 
-### Dossiers
-- **Chaque dossier:** README.md avec détails techniques
+Voir [PROPOSAL_VARUNA_v2.md](docs/PROPOSAL_VARUNA_v2.md) pour la roadmap complete.
 
-## Phase 2 - Prochaines Étapes
+## Licence
 
-- [ ] Tiling DZI pour navigation interactive dans zone principale
-- [ ] Mapping coordonnées OpenSeadragon ↔ OpenSlide (CRITICAL!)
-- [ ] Cache tiles backend (Redis ou filesystem)
-- [ ] Performance optimization (60fps, < 100ms tile load)
-- [ ] Tests avec toutes les lames (.mrxs, .bif, .tif)
-
-## Phase 1 Validée Si
-
-- ✅ Backend détecte toutes les lames dans `/Slides`
-- ✅ OpenSlide ouvre tous formats (.mrxs avec compagnons, .bif, .tif)
-- ✅ Overview extrait avec `get_thumbnail()` (simple, efficace)
-- ✅ Frontend affiche liste et overview dans mini-map
-- ✅ Communication backend ↔ frontend fonctionne
-- ✅ Code commenté et documenté
-
-## Commandes Rapides
-
-```bash
-# Backend
-cd backend && venv\Scripts\activate && uvicorn main:app --reload
-
-# Frontend
-cd frontend && npm run dev
-
-# Test API
-curl http://localhost:8000/api/slides
-curl http://localhost:8000/api/slides/{id}/info
-```
-
-## Support
-
-- Issues: GitHub Issues
-- Documentation: CLAUDE.md
-- API Docs: http://localhost:8000/docs
+Apache 2.0
 
 ---
 
-**STATUS:** Phase 1 Hello World Complete
-**VERSION:** 0.1.0
-**DATE:** 2025-10-17
+**VERSION :** 1.7.0
+**DATE :** 2026-02-08
+**BRANCHE :** feature/slideflow-integration

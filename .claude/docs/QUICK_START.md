@@ -9,15 +9,15 @@
 ### 1. Comprendre la Vision
 
 ```
-VarunaPoC V1 (Actuel)          →          VarunaPoC V3 (Cible)
-┌────────────────────┐                    ┌────────────────────┐
-│  Viewer Monolithe  │                    │  Plateforme MLOps  │
-│  - Tuiles          │                    │  - Viewer          │
-│  - Métadonnées     │                    │  - IA (routage)    │
-│  - Navigation      │                    │  - Feedback loop   │
-└────────────────────┘                    │  - PACS            │
-                                          │  - Collaboration   │
-                                          └────────────────────┘
+VarunaPoC v1.7.0 (Actuel)                    VarunaPoC v2.x (Cible)
+┌────────────────────────────┐          ┌────────────────────────────┐
+│  Plateforme WSI Phase 2    │          │  Plateforme Quality-First  │
+│  - 10 formats (94 lames)  │    →     │  - Auth RBAC + JWT         │
+│  - Annotations PostGIS    │          │  - PACS Telemis            │
+│  - ML Slideflow+Phikon-v2 │          │  - Quality metrics IAA     │
+│  - Compare mode           │          │  - Audit trail             │
+│  - 94 tests, CI/CD        │          │  - Tests E2E               │
+└────────────────────────────┘          └────────────────────────────┘
 ```
 
 **Changement clé:** Modularité maximale, couplage minimal.
@@ -64,7 +64,7 @@ VarunaPoC V1 (Actuel)          →          VarunaPoC V3 (Cible)
 #### Setup Backend (Phase 2.0)
 
 ```bash
-cd backend/viewer-service
+cd backend
 
 # Créer venv
 python -m venv venv
@@ -212,28 +212,28 @@ git push origin feature/storage-abstraction
 version: '3.8'
 
 services:
-  viewer-service:
-    build: ./backend/viewer-service
+  postgres:
+    image: postgis/postgis:15-3.4
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=varuna
+      - POSTGRES_USER=varuna
+      - POSTGRES_PASSWORD=varuna_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
     ports:
       - "8000:8000"
     environment:
-      - STORAGE_PROVIDER=filesystem
+      - DATABASE_URL=postgresql+asyncpg://varuna:varuna_dev@postgres:5432/varuna
       - SLIDES_ROOT=/slides
     volumes:
       - ./Slides:/slides
-
-  ml-service:
-    build: ./backend/ml-service
-    ports:
-      - "8001:8001"
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-
-  mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.9.0
-    ports:
-      - "5000:5000"
-    command: mlflow server --host 0.0.0.0
+    depends_on:
+      - postgres
 
   frontend:
     build: ./frontend
@@ -241,10 +241,12 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_BASE_URL=http://localhost:8000
-      - VITE_API_VERSION=v2
+
+volumes:
+  pgdata:
 ```
 
-Lancer: `docker-compose -f docker-compose.dev.yml up`
+Lancer: `docker compose -f docker-compose.dev.yml up -d`
 
 ---
 
@@ -346,14 +348,14 @@ Version history.
 
 **A:**
 
-1. Créer `backend/viewer-service/services/storage/s3.py`
+1. Creer `backend/services/storage/s3.py`
 2. Implémenter interface `StorageProvider` (voir `base.py`)
 3. Ajouter tests unitaires (`test_storage_s3.py`)
 4. Ajouter config dans `settings.py` (S3_ENDPOINT, etc.)
 5. Update factory:
 
 ```python
-# backend/viewer-service/services/storage/__init__.py
+# backend/services/storage/__init__.py
 
 from .base import StorageProvider
 from .filesystem import FilesystemStorageProvider
@@ -431,5 +433,5 @@ def create_storage_provider(provider_type: str, config) -> StorageProvider:
 
 ---
 
-**Dernière mise à jour:** 2025-12-31
-**Prochaine révision:** Phase 2.0 complétée
+**Derniere mise a jour:** 2026-02-08
+**Prochaine revision:** Apres Phase 3

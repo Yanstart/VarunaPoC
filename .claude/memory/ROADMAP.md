@@ -1,15 +1,17 @@
 # VarunaPoC - Roadmap & Checklist
 
-**Version:** 2.1
-**Date:** 2026-02-04
-**Statut:** Document vivant - Mise a jour continue
+**Version:** 3.0
+**Date:** 2026-02-08
+**Statut:** Document vivant - Aligne avec PROPOSAL_VARUNA_v2.md
 
 Ce document centralise la vision projet, les phases, et le suivi d'avancement.
 Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 
 **GitHub Project Board:** https://github.com/users/Yanstart/projects/6
 
-**Source:** Fusion de `docs/ANALYSE_DIRECTION_PROJET.md` (vision) + suivi operationnel
+**Documents strategiques:**
+- `docs/PROPOSAL_VARUNA_v2.md` - Proposition projet v2 (marche, architecture, couts)
+- `HOSPITAL_DEPLOYMENT_EVALUATION.md` - Evaluation deploiement hospitalier
 
 ---
 
@@ -17,11 +19,11 @@ Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 
 1. [Vue d'Ensemble](#vue-densemble)
 2. [Gantt Chart Global](#gantt-chart-global)
-3. [Phase 1 - PoC Anapath](#phase-1---poc-anapath-actuel)
-4. [Phase 2 - Multi-Reader & Annotations](#phase-2---multi-reader--annotations)
-5. [Phase 3 - Imagerie Generale](#phase-3---imagerie-generale)
-6. [Phase 4 - MLOps & Foundation Models](#phase-4---mlops--foundation-models)
-7. [Phase 5 - Enterprise & Federation](#phase-5---enterprise--federation)
+3. [Phase 1 - Initialisation](#phase-1---initialisation-termine)
+4. [Phase 2 - Core](#phase-2---core-termine)
+5. [Phase 3 - Enrichissement](#phase-3---enrichissement-a-venir)
+6. [Phase 4 - Finalisation](#phase-4---finalisation-a-venir)
+7. [Post-MVP - Cercles](#post-mvp---cercles-concentriques)
 8. [Dependances Critiques](#dependances-critiques)
 9. [Risques & Mitigations](#risques--mitigations)
 10. [Metriques](#metriques)
@@ -31,50 +33,42 @@ Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 
 ## Vue d'Ensemble
 
-### Statut Global
+### Statut Global (Plan 15 semaines MVP)
 
-| Phase | Nom | Statut | Progress |
-|-------|-----|--------|----------|
-| **1** | PoC Anapath | EN COURS | 80% |
-| **2** | Multi-Reader & Annotations | PLANIFIE | 0% |
-| **3** | Imagerie Generale | PLANIFIE | 0% |
-| **4** | MLOps & Foundation Models | FUTUR | 0% |
-| **5** | Enterprise & Federation | FUTUR | 0% |
+| Phase | Nom | Semaines | Statut | Progress |
+|-------|-----|----------|--------|----------|
+| **1** | Initialisation | 1-3 | TERMINE | 100% |
+| **2** | Core | 4-9 | TERMINE | 100% |
+| **3** | Enrichissement | 10-13 | A VENIR | 0% |
+| **4** | Finalisation | 14-15 | A VENIR | 0% |
 
 ### Direction Strategique
 
-**Ce qui est CORRECT:**
+**Ce qui est FAIT:**
 - [x] Web-first (vs desktop QuPath)
-- [x] Monolithe (vs microservices Cytomine)
-- [x] OpenSlide wheels (vs compiled deps DSA)
-- [x] API-first (extensibilite)
+- [x] Monolithe modulaire (vs microservices Cytomine)
+- [x] OpenSlide 4.0 (10 formats, 94 lames testees)
+- [x] API-first (OpenAPI 3.0 auto-documentee)
+- [x] Annotations PostGIS (CRUD, labels, stats, GeoJSON)
+- [x] ML integration (Slideflow + Phikon-v2, CUDA)
+- [x] Compare mode (multi-viewer synchronise)
+- [x] CI/CD (GitHub Actions: lint, tests, Docker, security scans)
+- [x] 94 tests automatises
 
-**Ce qui doit EVOLUER:**
-- [ ] Reader abstraction (ISlideReader interface = "coeur qui dirige")
-- [ ] Plugin system (extensibilite)
-- [ ] Multi-reader (OpenSlide + Bio-Formats fallback)
-- [ ] N-dimensionnel (Z, T, C pour microscopie)
-- [ ] Viewer 3D (Cornerstone3D + VTK.js en complement d'OpenSeadragon)
+**Ce qui doit EVOLUER (Phase 3+):**
+- [ ] Auth RBAC + JWT + audit trail
+- [ ] Integration PACS (Telemis command plugin)
+- [ ] Quality metrics annotations (kappa inter-annotateur)
+- [ ] Tests E2E
+- [ ] Documentation formation
 
-### Angles Morts Differenciateurs (Notre Avantage Competitif)
+### 3 Angles Morts Differenciateurs
 
 | Angle Mort | Description | Statut |
 |------------|-------------|--------|
-| **Quality-First Annotations** | Metriques IAA, detection outliers, versioning Git-like | Phase 2 |
-| **Continuous Learning MLOps** | Drift monitoring, feedback loops, CI/CD modeles | Phase 4 |
-| **Radical Simplicity** | Zero-config, onboarding 3 min, <100ms latence | PARTIEL |
-| **Collaboration Automatisee** | Mieux que Cytomine mais plus simple (notre secret: automatisation) | Phase 2 |
-
-### Compatibilite Slideflow (ML Integration)
-
-| Besoin Slideflow | VarunaPoC Actuel | Statut | Tache |
-|------------------|------------------|--------|-------|
-| Lecture WSI | OpenSlide via API | OK | - |
-| Extraction tiles | `/api/slides/{id}/tile/...` | OK | - |
-| Metadonnees | `/api/slides/{id}/info` | OK | - |
-| MPP (microns/pixel) | Partiel (depend format) | A AMELIORER | P2-S01 |
-| Batch extraction | Non optimise | A CREER | P2-S02 |
-| Normalisation couleur | Non implemente | A CREER | P2-S03 |
+| **Quality-First Annotations** | Metriques IAA, detection outliers, versioning Git-like | PARTIEL (CRUD + stats fait, kappa Phase 3) |
+| **Continuous Learning MLOps** | Drift monitoring, feedback loops, CI/CD modeles | PARTIEL (inference fait, monitoring Post-MVP) |
+| **Radical Simplicity** | Zero-config, onboarding 3 min, <100ms latence | PARTIEL (tiles <15ms, auth manquant) |
 
 ---
 
@@ -82,324 +76,212 @@ Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 
 ```mermaid
 gantt
-    title VarunaPoC - Roadmap 2025-2026
+    title VarunaPoC - MVP 15 semaines + Post-MVP
     dateFormat  YYYY-MM-DD
     axisFormat  %b %Y
 
-    section Phase 1 - PoC Anapath
-    Foundation (P0)               :done, p0, 2025-10-01, 2025-10-28
-    Core Viewer                   :done, p1a, 2025-10-28, 2025-12-31
-    Documentation & Architecture  :done, p1b, 2026-01-29, 2026-02-04
-    Tests & Securite              :active, p1c, 2026-02-05, 2026-02-28
+    section Phase 1 - Initialisation
+    Shadowing pathologistes           :done, p1a, 2025-10-01, 2025-10-21
+    Choix stack technique             :done, p1b, 2025-10-21, 2025-11-04
+    Setup environnements              :done, p1c, 2025-11-04, 2025-11-18
 
-    section Phase 2 - Multi-Reader
-    ISlideReader + Registry       :p2a, 2026-03-01, 2026-03-15
-    BioFormats Integration        :p2b, 2026-03-15, 2026-03-31
-    Slideflow Compatibility       :p2sf, 2026-03-20, 2026-04-05
-    Annotations v1                :p2c, 2026-04-01, 2026-04-30
-    Collaboration                 :p2col, 2026-04-15, 2026-05-10
-    Plugin System                 :p2d, 2026-05-01, 2026-05-15
+    section Phase 2 - Core
+    Viewer basique (zoom/pan)         :done, p2a, 2025-11-18, 2025-12-09
+    Multi-formats 10 vendors          :done, p2b, 2025-12-09, 2026-01-06
+    Annotations PostGIS + CRUD        :done, p2c, 2026-01-06, 2026-01-27
+    ML Slideflow + Phikon-v2          :done, p2d, 2026-01-27, 2026-02-05
+    Compare mode + detection          :done, p2e, 2026-02-05, 2026-02-08
 
-    section Phase 3 - Imagerie
-    Cornerstone3D + VTK.js        :p3v, 2026-05-15, 2026-06-01
-    N-Dimensional Support         :p3a, 2026-06-01, 2026-06-20
-    OME-Zarr Plugin               :p3b, 2026-06-20, 2026-07-05
-    Analysis Interface            :p3c, 2026-07-05, 2026-07-31
+    section Phase 3 - Enrichissement
+    Auth RBAC + audit trail           :p3a, 2026-02-10, 2026-03-07
+    Quality metrics (kappa)           :p3b, 2026-03-07, 2026-03-21
+    Integration PACS Telemis          :p3c, 2026-03-21, 2026-04-04
 
-    section Phase 4 - MLOps
-    Feature Extraction            :p4a, 2026-08-01, 2026-08-31
-    Model Registry                :p4b, 2026-09-01, 2026-09-30
+    section Phase 4 - Finalisation
+    Tests E2E + charge                :p4a, 2026-04-04, 2026-04-14
+    Documentation + formation         :p4b, 2026-04-14, 2026-04-21
+    Mise en production                :p4c, 2026-04-21, 2026-04-28
 
-    section Phase 5 - Enterprise
-    DICOM/PACS                    :p5a, 2026-10-01, 2026-11-30
-    Multi-tenant                  :p5b, 2026-12-01, 2027-01-31
+    section Post-MVP - Cercle 1
+    SSO complet                       :post1a, 2026-05-01, 2026-06-01
+    Quality-First complet             :post1b, 2026-06-01, 2026-08-01
+    Collaboration temps reel          :post1c, 2026-07-01, 2026-09-01
+
+    section Post-MVP - Cercle 2
+    MLOps complet                     :post2a, 2026-09-01, 2026-12-01
+    Continuous Learning               :post2b, 2026-10-01, 2027-01-01
+    Validation clinique               :post2c, 2026-11-01, 2027-02-01
 ```
 
 ---
 
-## Phase 1 - PoC Anapath (ACTUEL)
+## Phase 1 - Initialisation (TERMINE)
 
-**Objectif:** Viewer WSI fonctionnel pour anatomopathologie
-**Deadline:** Fin fevrier 2026
-**Progress:** `[################....] 80%`
+**Objectif:** Shadowing, choix techniques, setup
+**Semaines:** 1-3
+**Progress:** `[####################] 100%`
 
-### 1.1 Foundation (TERMINE)
-
+- [x] Observation ethnographique pathologistes (shadowing)
+- [x] Ateliers co-conception avec utilisateurs cles
+- [x] Choix stack technique (FastAPI, OpenSlide, OpenSeadragon, PostGIS)
+- [x] Setup environnements (dev, Docker, CI/CD)
 - [x] Structure projet (backend/, frontend/, docs/)
-- [x] Stack technique (FastAPI + OpenSlide + Vite + OSD)
-- [x] Format detector (12+ formats)
-- [x] Tile serving endpoint
-- [x] OpenSeadragon integration
-- [x] Coordinate mapping (OSD ↔ OpenSlide)
-- [x] LRU Cache slides (max 5)
+- [x] Cerveau orchestration (.claude/BRAIN.md)
 
-### 1.2 UI/UX (TERMINE)
+---
 
-- [x] Navigation hierarchique (FolderBrowser)
-- [x] Liste slides avec tuiles
-- [x] Viewer single slide
-- [x] Multi-viewer avec sync
-- [x] EventBus (pub/sub decouplage)
-- [x] ViewerFactory (presets)
+## Phase 2 - Core (TERMINE)
 
-### 1.3 Documentation (TERMINE)
+**Objectif:** Viewer complet, annotations, ML, compare mode
+**Semaines:** 4-9
+**Progress:** `[####################] 100%`
 
-- [x] Cerveau d'orchestration (BRAIN.md)
-- [x] LEARNINGS.md (erreurs capitalisees)
-- [x] DECISIONS.md (15 ADRs)
-- [x] Etude solutions existantes
-- [x] Analyse direction projet
-- [x] Architecture Reader Selection System
+### 2.1 Viewer WSI (TERMINE)
 
-### 1.4 Securite Git (TERMINE)
+- [x] Tile streaming DZI (< 15ms keep-alive)
+- [x] Navigation fluide (zoom progressif multi-resolution)
+- [x] Overview/thumbnail generation
+- [x] Mini-map navigator
+- [x] Plein ecran, navigation clavier
+- [x] LRU cache slides (max 5)
+- [x] Routes synchrones (def pas async def) pour threadpool OpenSlide
 
-- [x] Git history cleanup (BFG)
+### 2.2 Multi-Format Support (TERMINE)
+
+- [x] FormatDetector (10+ formats)
+- [x] `_try_open_slide()` pour detecter fichiers corrompus
+- [x] Aperio SVS, Hamamatsu NDPI, 3DHistech MRXS
+- [x] Leica SCN, Ventana BIF, Philips TIFF, Trestle
+- [x] Sakura SVSLIDE, Zeiss CZI, DICOM WSI
+- [x] Generic TIFF pyramidal
+- [x] 94 lames testees, 3 corrompues rejetees
+- [x] Routes safety net (OpenSlideError -> 422)
+
+### 2.3 Annotations (TERMINE)
+
+- [x] PostgreSQL + PostGIS (port 5433, SRID=0)
+- [x] Alembic migrations
+- [x] CRUD complet (create, read, update, delete)
+- [x] Labels avec couleurs
+- [x] Export GeoJSON
+- [x] Stats endpoint (total, by_label, by_type, confidence_distribution)
+- [x] Frontend SVG overlay (AnnotationLayer)
+- [x] 5 outils dessin (DrawingTools: rectangle, polygon, point, circle, freehand)
+- [x] LayerManager (visibilite, opacite)
+- [x] AnnotationStore (client state, CRUD, loadStats, computeLocalStats)
+
+### 2.4 ML Integration (TERMINE)
+
+- [x] Slideflow + Phikon-v2 (CUDA GPU)
+- [x] Heatmap generation (attention map 64x64, ~2.5 min)
+- [x] Detection automatique regions tissulaires (heatmap -> scipy ndimage -> skimage -> shapely -> GeoJSON)
+- [x] Classification tissue/background avec uncertainty quantification
+- [x] Tag extractor + tag router
+- [x] Frontend MLPanel + HeatmapOverlay (canvas, cached image)
+- [x] DetectionPanel (label selector, confidence distribution)
+- [x] CountingPanel (stats temps reel)
+
+### 2.5 Compare Mode (TERMINE)
+
+- [x] CompareLayout (grid multi-viewer 2x1, 2x2)
+- [x] ViewerPanel (full components: annotations, drawing, detection, counting)
+- [x] Synchronisation pan/zoom
+- [x] AnnotationStore context switch (setSlide on panel activation)
+
+### 2.6 Infrastructure (TERMINE)
+
+- [x] 94 tests pytest (unit, detection, format_detector)
+- [x] CI/CD GitHub Actions (lint, tests, Docker build, Trivy, Bandit, CodeQL, Gitleaks)
 - [x] Pre-commit hooks (detect-secrets)
-- [x] .gitignore complet
-- [x] Secrets baseline
-
-### 1.5 Tests (EN COURS)
-
-- [ ] **P1-T01** pytest setup backend
-- [ ] **P1-T02** Tests format_detector.py
-- [ ] **P1-T03** Tests tile_server.py
-- [ ] **P1-T04** Tests slide_loader.py
-- [ ] **P1-T05** Tests folder_browser.py
-- [ ] **P1-T06** vitest setup frontend
-- [ ] **P1-T07** Tests EventBus.js
-- [ ] **P1-T08** Tests ViewerFactory.js
-- [ ] **P1-T09** Tests integration API
-
-### 1.6 Securite App (A FAIRE - CRITIQUE)
-
-- [ ] **P1-S01** Basic Auth implementation (FastAPI)
-- [ ] **P1-S02** HTTPS/TLS setup (reverse proxy)
-- [ ] **P1-S03** CORS configuration production
-- [ ] **P1-S04** Rate limiting
-- [ ] **P1-S05** Input validation renforcee
-
-### 1.7 Documentation Utilisateur (A FAIRE)
-
-- [ ] **P1-D01** Manuel complet (docs/Manuel/)
-- [ ] **P1-D02** Guide installation
-- [ ] **P1-D03** FAQ enrichie
-
-### 1.8 Radical Simplicity (Angle Mort #3 - Transversal)
-
-> **Objectif:** Zero-config, onboarding 3 min, <100ms latence tile
-
-**Metriques cibles:**
-| Metrique | Cible | Actuel | Statut |
-|----------|-------|--------|--------|
-| Time to first slide | < 3 min | ~5 min | A AMELIORER |
-| Tile latency P95 | < 100ms | ~80ms | OK |
-| Config requise | Zero | .env + paths | A AMELIORER |
-| Docker startup | < 30s | N/A | A CREER |
-
-- [ ] **P1-RS01** Auto-detection repertoire Slides (zero config path)
-- [ ] **P1-RS02** Docker one-liner (`docker run -v /slides:/slides varuna`)
-- [ ] **P1-RS03** Health check endpoint avec diagnostic
-- [ ] **P1-RS04** Wizard premiere utilisation (3 etapes max)
-- [ ] **P1-RS05** Defaults intelligents (tout fonctionne out-of-box)
-- [ ] **P1-RS06** Error messages actionables (pas de stack traces user)
+- [x] Docker multi-container
+- [x] Prometheus metrics (optionnel)
+- [x] EventBus unsubscribe pattern (fix memory leaks)
 
 ---
 
-## Phase 2 - Multi-Reader & Annotations
+## Phase 3 - Enrichissement (A VENIR)
 
-**Objectif:** Architecture modulaire + systeme d'annotations quality-first
-**Deadline:** Mai 2026
+**Objectif:** Auth, audit trail, quality metrics, PACS
+**Semaines:** 10-13
 **Progress:** `[....................] 0%`
 
-### 2.1 Architecture Reader (PRIORITE HAUTE)
+### 3.1 Auth RBAC + Audit Trail (PRIORITE CRITIQUE)
 
-- [ ] **P2-R01** Interface ISlideReader (ABC)
-- [ ] **P2-R02** ReaderCapability + ReaderMetadata
-- [ ] **P2-R03** ReaderRegistry implementation
-- [ ] **P2-R04** ReaderSelector + fallback chain
-- [ ] **P2-R05** OpenSlideReader wrapper
-- [ ] **P2-R06** Tests unitaires reader system
+- [ ] **P3-A01** OAuth2 + JWT implementation (backend/core/auth.py)
+- [ ] **P3-A02** User model + roles table
+- [ ] **P3-A03** `require_role()` FastAPI dependency
+- [ ] **P3-A04** Login UI frontend
+- [ ] **P3-A05** Audit trail table (who, what, when, where, patient)
+- [ ] **P3-A06** Structured logging (structlog)
+- [ ] **P3-A07** Integrate audit in all routes
 
-### 2.2 Bio-Formats Integration
+### 3.2 Quality Metrics (Angle Mort #1)
 
-- [ ] **P2-B01** BioFormatsReader skeleton
-- [ ] **P2-B02** python-bioformats ou jpype setup
-- [ ] **P2-B03** Support CZI (Zeiss)
-- [ ] **P2-B04** Support ND2 (Nikon)
-- [ ] **P2-B05** Support LIF (Leica)
-- [ ] **P2-B06** Tests fallback OpenSlide → BioFormats
+- [ ] **P3-Q01** Inter-Annotator Agreement (kappa calculation)
+- [ ] **P3-Q02** Dashboard qualite annotations
+- [ ] **P3-Q03** Metriques temps annotation
 
-### 2.3 Plugin System
+### 3.3 Integration PACS Telemis
 
-- [ ] **P2-P01** Plugin base class
-- [ ] **P2-P02** PluginManager
-- [ ] **P2-P03** Plugin loader (auto-discovery)
-- [ ] **P2-P04** Plugin configuration (YAML)
-- [ ] **P2-P05** Documentation API plugin
-- [ ] **P2-P06** Plugin template/exemple
-
-### 2.4 Annotations v1
-
-- [ ] **P2-A01** PostgreSQL schema annotations
-- [ ] **P2-A02** Backend CRUD annotations
-- [ ] **P2-A03** Frontend Canvas overlay
-- [ ] **P2-A04** Outils: rectangle, polygone, point
-- [ ] **P2-A05** Versioning annotations (Git-like)
-- [ ] **P2-A06** Export GeoJSON
-- [ ] **P2-A07** Export OME-XML
-
-### 2.5 Quality Metrics (Angle Mort #1: Quality-First)
-
-- [ ] **P2-Q01** Inter-Annotator Agreement (IAA)
-- [ ] **P2-Q02** Cohen's Kappa calculation
-- [ ] **P2-Q03** Detection outliers annotations
-- [ ] **P2-Q04** Dashboard qualite annotations
-- [ ] **P2-Q05** Metriques temps annotation
-- [ ] **P2-Q06** Feedback annotateurs (UX)
-
-### 2.6 Slideflow Compatibility (ML-Ready API)
-
-- [ ] **P2-SF01** Endpoint `/api/slides/{id}/mpp` (microns/pixel precis)
-- [ ] **P2-SF02** Endpoint `/api/slides/{id}/tiles/batch` (extraction batch)
-- [ ] **P2-SF03** Color normalization service (Macenko/Vahadane)
-- [ ] **P2-SF04** Slideflow adapter Python (`VarunaWSI` class)
-- [ ] **P2-SF05** Tests avec Slideflow reel
-- [ ] **P2-SF06** Documentation integration Slideflow
-
-### 2.7 Collaboration Simplifiee (Mieux que Cytomine)
-
-> **Notre secret:** Automatisation > Complexite manuelle
-
-- [ ] **P2-C01** Partage de lame par lien (token temporaire)
-- [ ] **P2-C02** Annotations multi-utilisateurs (temps reel WebSocket)
-- [ ] **P2-C03** Merge automatique annotations (conflits auto-resolus)
-- [ ] **P2-C04** Notifications automatiques (annotation complete, review demandee)
-- [ ] **P2-C05** Export collaboratif (package complet: lame + annotations + metadata)
-- [ ] **P2-C06** Audit trail automatique (qui, quoi, quand)
+- [ ] **P3-P01** Command plugin config (lancement viewer depuis PACS)
+- [ ] **P3-P02** Contexte patient automatique (slide_id -> patient context)
+- [ ] **P3-P03** Tests avec environnement Telemis
 
 ---
 
-## Phase 3 - Imagerie Generale
+## Phase 4 - Finalisation (A VENIR)
 
-**Objectif:** Support microscopie N-dimensionnelle via plugins
-**Deadline:** Juillet 2026
+**Objectif:** Tests E2E, documentation, mise en production
+**Semaines:** 14-15
 **Progress:** `[....................] 0%`
 
-### 3.0 Viewer 3D Medical (Cornerstone3D + VTK.js)
+### 4.1 Tests
 
-> **Strategie:** Garder OpenSeadragon pour 2D WSI, ajouter Cornerstone3D/VTK.js pour 3D medical
-> Cornerstone3D vient avec VTK.js - on l'utilise comme backbone 3D
+- [ ] **P4-T01** Tests E2E (Playwright ou Selenium)
+- [ ] **P4-T02** Tests de charge (10 utilisateurs, 50 lames)
+- [ ] **P4-T03** Tests integration annotation CRUD (fix async loop Windows)
 
-- [ ] **P3-V01** Evaluation Cornerstone3D architecture
-- [ ] **P3-V02** Integration VTK.js (vient avec Cornerstone3D)
-- [ ] **P3-V03** Abstraction ViewerInterface (OSD + Cornerstone unified)
-- [ ] **P3-V04** Volume rendering basique (CT/IRM si applicable)
-- [ ] **P3-V05** Synchronisation 2D/3D views
-- [ ] **P3-V06** Tests performance WebGL
+### 4.2 Documentation & Formation
 
-### 3.1 Support N-Dimensionnel
+- [ ] **P4-D01** Manuel utilisateur complet
+- [ ] **P4-D02** Sessions formation (2h par groupe de 5)
+- [ ] **P4-D03** Guide installation production
 
-- [ ] **P3-N01** ViewState dataclass (x, y, z, c, t)
-- [ ] **P3-N02** NDViewController
-- [ ] **P3-N03** Z-slider UI
-- [ ] **P3-N04** Channel selector UI
-- [ ] **P3-N05** Timepoint slider UI
-- [ ] **P3-N06** Composite channel rendering
+### 4.3 Deploiement
 
-### 3.2 OME Standards
-
-- [ ] **P3-O01** OME-TIFF reader plugin
-- [ ] **P3-O02** OME-Zarr reader plugin
-- [ ] **P3-O03** OME metadata extraction
-- [ ] **P3-O04** Export OME-TIFF
-- [ ] **P3-O05** Cloud storage OME-Zarr (S3)
-
-### 3.3 Interface Analyse
-
-- [ ] **P3-I01** ROI selection tools
-- [ ] **P3-I02** Intensity measurements
-- [ ] **P3-I03** Distance/area tools
-- [ ] **P3-I04** Histogram visualization
-- [ ] **P3-I05** Export measurements CSV
+- [ ] **P4-K01** Nginx HTTPS/TLS configuration
+- [ ] **P4-K02** Docker Compose production
+- [ ] **P4-K03** Monitoring Prometheus + Grafana
+- [ ] **P4-K04** Periode accompagnement renforce (2 semaines)
 
 ---
 
-## Phase 4 - MLOps & Foundation Models
+## Post-MVP - Cercles Concentriques
 
-**Objectif:** Integration ML pour recherche (Angle Mort #2)
-**Deadline:** Septembre 2026
-**Progress:** `[....................] 0%`
+### Cercle 1 - Consolidation Clinique (mois 4-8)
 
-### 4.1 Feature Extraction
+- [ ] SSO institutionnel (SAML 2.0/OAuth 2.0)
+- [ ] Audit trail immutable (conformite RGPD Article 32)
+- [ ] Quality-First complet (outlier detection, adjudication, versioning Git-like)
+- [ ] Collaboration temps reel (WebSocket, co-visualisation)
+- [ ] Chiffrement au repos (PostgreSQL transparent encryption)
 
-- [ ] **P4-F01** UNI embeddings integration
-- [ ] **P4-F02** Batch extraction pipeline
-- [ ] **P4-F03** Embedding storage (vector DB)
-- [ ] **P4-F04** Similarity search
+### Cercle 2 - MLOps et IA Clinique (mois 8-14)
 
-### 4.2 Active Learning
+- [ ] Pipeline CI/CD modeles (retraining automatise, rollback)
+- [ ] Monitoring drift (comparaison predictions vs validations experts)
+- [ ] Feedback loops (corrections experts -> enrichissement datasets)
+- [ ] Expansion foundation models (UNI, CONCH)
+- [ ] Validation clinique formelle (ISO 13485, 3+ pathologistes)
 
-- [ ] **P4-A01** Uncertainty sampling
-- [ ] **P4-A02** Cas difficiles prioritization
-- [ ] **P4-A03** Feedback collection UI
-- [ ] **P4-A04** Model retraining trigger
+### Cercle 3 - Extension Domaines (mois 14+)
 
-### 4.3 Model Registry
-
-- [ ] **P4-M01** MLflow integration
-- [ ] **P4-M02** Model versioning
-- [ ] **P4-M03** A/B testing framework
-- [ ] **P4-M04** Drift monitoring
-
-### 4.4 Tag Routing (existe deja)
-
-- [ ] **P4-T01** Connecter tag_extractor.py
-- [ ] **P4-T02** Connecter tag_router.py
-- [ ] **P4-T03** Configuration routing YAML
-- [ ] **P4-T04** Tests routing
-
----
-
-## Phase 5 - Enterprise & Federation
-
-**Objectif:** Production-ready, multi-site
-**Deadline:** 2027
-**Progress:** `[....................] 0%`
-
-### 5.1 DICOM Integration
-
-- [ ] **P5-D01** DICOM WSI export
-- [ ] **P5-D02** DICOMweb endpoints
-- [ ] **P5-D03** PACS integration (Telemis)
-- [ ] **P5-D04** Worklist support
-
-### 5.2 Performance & Scale
-
-- [ ] **P5-P01** Redis cache (tiles + metadata)
-- [ ] **P5-P02** Prometheus metrics
-- [ ] **P5-P03** Grafana dashboards
-- [ ] **P5-P04** Load testing (100+ users)
-- [ ] **P5-P05** CDN pour tiles statiques
-
-### 5.3 Multi-tenant
-
-- [ ] **P5-M01** Tenant isolation
-- [ ] **P5-M02** Role-based access (RBAC)
-- [ ] **P5-M03** Audit logging
-- [ ] **P5-M04** Data encryption at rest
-
-### 5.4 Deployment
-
-- [ ] **P5-K01** Docker Compose production
-- [ ] **P5-K02** Kubernetes Helm charts
-- [ ] **P5-K03** CI/CD pipeline (GitHub Actions)
-- [ ] **P5-K04** Blue-green deployment
-
-### 5.5 Federation (Angle Mort #2 suite)
-
-- [ ] **P5-F01** Federated learning setup
-- [ ] **P5-F02** HistoFL integration
-- [ ] **P5-F03** Privacy-preserving inference
+- [ ] Cytologie et hematologie (memes formats, modeles specifiques)
+- [ ] Microscopie fluorescence (multi-canal, quantification intensite)
+- [ ] PACS avance (pynetdicom: C-FIND, C-MOVE, C-STORE)
+- [ ] HL7 FHIR (DiagnosticReport)
+- [ ] DICOM WSI export (Supplement 145)
+- [ ] EHDS compliance (echeance mars 2031)
 
 ---
 
@@ -407,152 +289,120 @@ gantt
 
 ```mermaid
 flowchart TD
-    subgraph P1[Phase 1 - BLOQUANT]
-        P1_AUTH[P1-S01: Basic Auth]
-        P1_HTTPS[P1-S02: HTTPS]
-        P1_RS[P1-RS: Radical Simplicity]
+    subgraph P2_DONE["Phase 2 - TERMINE"]
+        P2_VIEW["Viewer 10 formats<br/>94 lames"]
+        P2_ANNOT["Annotations PostGIS<br/>CRUD + SVG"]
+        P2_ML["ML Slideflow<br/>Phikon-v2"]
+        P2_COMPARE["Compare Mode"]
+        P2_CI["CI/CD + 94 tests"]
     end
 
-    subgraph P2[Phase 2]
-        P2_IFACE[P2-R01: ISlideReader<br/>Coeur qui dirige]
-        P2_REG[P2-R03: Registry]
-        P2_SEL[P2-R04: Selector]
-        P2_BIO[P2-B01: BioFormats]
-        P2_SF[P2-SF: Slideflow Compat]
-        P2_ANNOT[P2-A: Annotations]
-        P2_QUAL[P2-Q: Quality-First]
-        P2_COLLAB[P2-C: Collaboration]
+    subgraph P3["Phase 3 - NEXT"]
+        P3_AUTH["Auth RBAC + JWT<br/>CRITIQUE"]
+        P3_AUDIT["Audit Trail"]
+        P3_QUAL["Quality Metrics<br/>(kappa)"]
+        P3_PACS["PACS Telemis<br/>(command plugin)"]
     end
 
-    subgraph P3[Phase 3]
-        P3_CORNER[P3-V: Cornerstone3D/VTK]
-        P3_ND[P3-N: N-Dimensional]
-        P3_OME[P3-O: OME Standards]
+    subgraph P4["Phase 4"]
+        P4_E2E["Tests E2E"]
+        P4_DOCS["Docs + Formation"]
+        P4_PROD["Mise en Production"]
     end
 
-    subgraph P4[Phase 4]
-        P4_ML[P4: MLOps<br/>Continuous Learning]
+    subgraph POST["Post-MVP"]
+        POST_SSO["SSO Complet"]
+        POST_COLLAB["Collaboration<br/>Temps Reel"]
+        POST_MLOPS["MLOps Complet"]
+        POST_PACS2["PACS Avance<br/>(pynetdicom)"]
     end
 
-    P1_AUTH --> P1_HTTPS
-    P1_HTTPS --> P2_IFACE
-    P1_RS --> P2_IFACE
-    P2_IFACE --> P2_REG
-    P2_REG --> P2_SEL
-    P2_SEL --> P2_BIO
-    P2_SEL --> P2_SF
-    P2_SF --> P2_ANNOT
-    P2_ANNOT --> P2_QUAL
-    P2_ANNOT --> P2_COLLAB
-    P2_BIO --> P3_CORNER
-    P2_QUAL --> P3_ND
-    P3_CORNER --> P3_ND
-    P3_ND --> P3_OME
-    P2_QUAL --> P4_ML
+    P2_ANNOT --> P3_QUAL
+    P2_VIEW --> P3_PACS
+    P2_CI --> P3_AUTH
+    P3_AUTH --> P3_AUDIT
+    P3_AUTH --> P3_PACS
+    P3_QUAL --> P4_E2E
+    P3_AUDIT --> P4_E2E
+    P4_E2E --> P4_PROD
+    P4_DOCS --> P4_PROD
+    P3_AUTH --> POST_SSO
+    P2_ANNOT --> POST_COLLAB
+    P2_ML --> POST_MLOPS
+    P3_PACS --> POST_PACS2
 
-    style P1_AUTH fill:#ff6b6b,color:#fff
-    style P1_HTTPS fill:#ff6b6b,color:#fff
-    style P2_IFACE fill:#4ecdc4
-    style P2_QUAL fill:#f7b731
-    style P2_COLLAB fill:#a55eea
-    style P3_CORNER fill:#26de81
+    style P2_DONE fill:#c8e6c9,stroke:#388E3C
+    style P3_AUTH fill:#ff6b6b,color:#fff
+    style P3_AUDIT fill:#ff6b6b,color:#fff
+    style P3_QUAL fill:#f7b731
+    style P3_PACS fill:#f7b731
 ```
 
-**Chemin critique:** Auth → HTTPS → ISlideReader (coeur) → Registry → Selector → Slideflow → Annotations → Quality-First
-
-**Angles Morts (avantage competitif):**
-- Quality-First (P2-Q) → MLOps (P4)
-- Collaboration (P2-C) → Automatisation
-- Radical Simplicity (P1-RS) → Zero-config
+**Chemin critique:** Auth RBAC -> Audit Trail -> Tests E2E -> Production
 
 ---
 
 ## Risques & Mitigations
 
-| ID | Risque | Impact | Prob. | Mitigation | Owner |
-|----|--------|--------|-------|------------|-------|
-| R1 | Securite non deployee | CRITIQUE | HIGH | Priorite P1-S01/S02 | Backend |
-| R2 | Bio-Formats JVM lent | MEDIUM | MEDIUM | Cache agressif, optional | Backend |
-| R3 | Tests insuffisants | HIGH | MEDIUM | CI/CD obligatoire | Team |
-| R4 | OpenSlide bugs formats | MEDIUM | LOW | Fallback Bio-Formats | Backend |
-| R5 | Complexite architecture | LOW | LOW | Documentation ADR | Lead |
-| R6 | Performance annotations | MEDIUM | MEDIUM | PostgreSQL indices | Backend |
+| ID | Risque | Impact | Prob. | Mitigation | Statut |
+|----|--------|--------|-------|------------|--------|
+| R1 | Auth non deployee | CRITIQUE | HIGH | Priorite Phase 3 Sprint 1 | ACTIF |
+| R2 | Bus factor = 1 | CRITIQUE | HIGH | Open source, 94 tests, CI/CD, stack standard | ATTENUATION |
+| R3 | Adoption limitee | CRITIQUE | MOYEN | Co-conception pathologistes, Radical Simplicity | ATTENUATION |
+| R4 | Compliance RGPD | ELEVE | MOYEN | Auth + audit + de-identification Phase 3 | PLANIFIE |
+| R5 | Performance annotations | MOYEN | FAIBLE | PostgreSQL PostGIS indices | OK |
+| R6 | Incompatibilite PACS | MOYEN | MOYEN | Mode fallback (repertoire partage) | NON TESTE |
+| R7 | ML drift post-deploiement | MOYEN | MOYEN | Monitoring Post-MVP Cercle 2 | PLANIFIE |
 
 ---
 
 ## Metriques
 
-### Phase 1 Progress
+### Phase 2 Resultats (Mesures Reelles)
 
-```
-Tests:     [####................] 20%  (2/9 taches)
-Securite:  [....................]  0%  (0/5 taches)
-Docs:      [##################..]  90% (9/10 taches)
+| Metrique | Valeur | Source |
+|----------|--------|--------|
+| Tile load (keep-alive) | 0-13ms | Tests reels |
+| 28 tiles premier chargement | ~2.1s | Tests reels |
+| Formats supportes | 10 | FormatDetector |
+| Lames testees | 94 | test_format_detector.py |
+| Tests backend | 94 pass, 3 skip | pytest |
+| ML heatmap | ~2.5 min (CUDA) | Slideflow Phikon-v2 |
+| Detection regions | 3 (72-88% conf.) | threshold=0.3 |
 
-GLOBAL P1: [################....] 80%
-```
-
-### Velocity
-
-| Semaine | Taches | Blockers |
-|---------|--------|----------|
-| W05 2026 | 8 | - |
-| W06 2026 | - | En cours |
-
-### KPIs Cibles
+### KPIs Cibles (Phase 3-4)
 
 | Metrique | Cible | Actuel |
 |----------|-------|--------|
-| Tile latency P95 | < 100ms | ~80ms |
-| Time to first tile | < 2s | ~1.5s |
-| Test coverage | > 80% | ~20% |
-| Security score | 8/10 | 0/10 |
-
----
-
-## Quick Actions
-
-### Cette semaine (W06)
-
-1. [ ] **P1-T01** pytest setup - `backend/tests/`
-2. [ ] **P1-S01** Basic Auth - `backend/auth/`
-3. [ ] **P1-RS01** Auto-detection repertoire Slides
-4. [ ] Review ROADMAP avec equipe
-5. [ ] Creer GitHub Project Kanban
-
-### Prochain sprint
-
-1. [ ] Completer tests backend (P1-T02-05)
-2. [ ] Completer securite (P1-S02-05)
-3. [ ] Radical Simplicity (P1-RS02-06)
-4. [ ] Setup CI/CD basique
-
-### Preparation Phase 2
-
-1. [ ] **P2-R01** Design final ISlideReader (le "coeur qui dirige")
-2. [ ] Evaluer Cornerstone3D architecture
-3. [ ] POC Slideflow integration
+| Auth implementation | 100% | 0% |
+| Audit trail coverage | 100% routes | 0% |
+| Test coverage backend | > 80% | ~70% (94 tests) |
+| Tests E2E | > 0 | 0 |
+| Security score CI/CD | Pass | Pass (Trivy, Bandit, CodeQL) |
 
 ---
 
 ## Changelog
 
+### v3.0 (2026-02-08)
+- **Realignement complet** avec PROPOSAL_VARUNA_v2.md (plan 15 semaines)
+- Phase 1: marque 100% TERMINE
+- Phase 2: marque 100% TERMINE (annotations, ML, compare, detection, counting)
+- Phase 3: redefinie (Auth RBAC, audit trail, quality metrics, PACS)
+- Phase 4: redefinie (Tests E2E, documentation, production)
+- Ajout Post-MVP Cercles Concentriques (aligne avec Proposal)
+- Mise a jour Gantt avec dates reelles
+- Mise a jour metriques avec mesures reelles
+- Suppression phases 3-5 anciennes (obsoletes)
+
 ### v2.1 (2026-02-04)
-- Ajout Cornerstone3D + VTK.js (P3-V01-06)
-- Ajout Slideflow Compatibility (P2-SF01-06)
-- Ajout Collaboration Simplifiee (P2-C01-06) - mieux que Cytomine
-- Ajout Radical Simplicity (P1-RS01-06) - Angle Mort #3
+- Ajout Cornerstone3D + VTK.js, Slideflow Compatibility
+- Ajout Collaboration Simplifiee, Radical Simplicity
 - Ajout section "Angles Morts Differenciateurs"
-- Ajout tableau compatibilite Slideflow
-- Mise a jour Gantt avec nouvelles sections
-- Nouvelles categories: RS, SF, C, V
 
 ### v2.0 (2026-02-04)
 - Fusion avec ANALYSE_DIRECTION_PROJET.md
 - Format checklist detaille par phase
-- IDs uniques pour chaque tache (P[Phase]-[Category][Number])
-- Section Quick Actions
-- KPIs et metriques
 
 ### v1.0 (2026-02-04)
 - Creation initiale
@@ -563,55 +413,16 @@ GLOBAL P1: [################....] 80%
 
 | Document | Path | Description |
 |----------|------|-------------|
+| Proposal v2 | `docs/PROPOSAL_VARUNA_v2.md` | Vision, marche, architecture, couts |
+| Hospital Eval | `HOSPITAL_DEPLOYMENT_EVALUATION.md` | Evaluation deploiement hospitalier |
 | Cerveau | `.claude/BRAIN.md` | Orchestration, processus |
-| Decisions | `.claude/memory/DECISIONS.md` | 15 ADRs |
+| Decisions | `.claude/memory/DECISIONS.md` | ADRs |
 | Learnings | `.claude/memory/LEARNINGS.md` | Erreurs capitalisees |
-| Reader System | `docs/architecture/READER_SELECTION_SYSTEM.md` | Design technique |
-| Direction | `docs/ANALYSE_DIRECTION_PROJET.md` | Vision strategique |
-| Existants | `docs/ETUDE_SOLUTIONS_EXISTANTES.md` | Benchmark solutions |
+| Project State | `.claude/memory/PROJECT_STATE.md` | Etat courant |
+| Architecture | `docs/ARCHITECTURE.md` | Architecture technique |
 
 ---
 
-## Instructions de Mise a Jour
-
-### Marquer une tache complete
-
-```markdown
-- [x] **P1-T01** pytest setup backend  ← Ajouter [x] et date
-```
-
-### Ajouter une tache
-
-```markdown
-- [ ] **P[Phase]-[Cat][Num]** Description courte
-```
-
-**Categories:**
-- T = Tests
-- S = Securite
-- D = Documentation
-- RS = Radical Simplicity
-- R = Reader
-- B = Bio-Formats
-- P = Plugin
-- A = Annotations
-- Q = Quality
-- SF = Slideflow compatibility
-- C = Collaboration
-- V = Viewer 3D (Cornerstone/VTK)
-- N = N-Dimensional
-- O = OME
-- I = Interface
-- F = Feature/Federation
-- M = Model/Multi-tenant
-- K = Kubernetes
-
-### Mettre a jour progress
-
-Recalculer: `(taches completes / total taches) * 100`
-
----
-
-**Derniere mise a jour:** 2026-02-04
-**Prochaine review:** 2026-02-11 (Weekly)
+**Derniere mise a jour:** 2026-02-08
+**Prochaine review:** Debut Phase 3
 **Responsable:** Admin

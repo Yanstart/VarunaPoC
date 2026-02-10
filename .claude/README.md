@@ -177,7 +177,7 @@ When you make a request, the chief-architect:
 | **error-documenter** | Document non-trivial errors following protocol | Any agent encountering complex errors |
 | **manual-updater** | Update user documentation when features complete | frontend-tech-lead, chief-architect |
 | **api-documenter** | Document FastAPI endpoints with comprehensive docstrings | backend-tech-lead |
-| **slide-tester** | Test features across all slide formats (.mrxs, .bif, .tif) | performance-engineer, backend-tech-lead |
+| **slide-tester** | Test features across all 10 slide formats (94 lames) | performance-engineer, backend-tech-lead |
 | **coordinate-validator** | Validate OSD↔OpenSlide coordinate mapping accuracy | performance-engineer, frontend-tech-lead |
 
 ---
@@ -663,7 +663,7 @@ The chief-architect will:
 ### For Testing
 
 ✅ **DO:**
-- Test with all supported formats (.mrxs, .bif, .tif)
+- Test with all 10 supported formats (SVS, NDPI, MRXS, SCN, BIF, TIFF, CZI, DICOM, Sakura, Trestle)
 - Validate coordinate accuracy
 - Check performance targets (60fps, < 100ms tiles)
 - Run regression tests before releases
@@ -815,6 +815,7 @@ Chief Architect: "Done! Metadata is now displayed. I've updated the
 
 ---
 
-**Version:** 1.0
-**Last Updated:** 2025-12-03
+**Version:** 2.0
+**Last Updated:** 2026-02-08
+**Project Version:** 1.7.0 (Phase 2 complete)
 **Maintained by:** Chief Architect + Specialist Team

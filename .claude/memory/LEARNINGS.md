@@ -88,7 +88,7 @@
 ## 2026-01-29 - Pas de Signature Co-Authored-By
 
 **Contexte:** Commit du Cerveau d'Orchestration
-**Probleme:** Signature `Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>` ajoutee automatiquement
+**Probleme:** Signature `Co-Authored-By` ajoutee automatiquement par Claude Code
 **Solution:** L'admin ne veut PAS de cette signature dans les commits
 **A Retenir:** **NE JAMAIS ajouter `Co-Authored-By` dans les messages de commit.** L'admin prefere des commits sans attribution a Claude.
 **Fichiers:** Tous les commits futurs
@@ -113,6 +113,146 @@
 
 ---
 
+## 2026-02-05 - Port PostgreSQL 5433 (pas 5432)
+
+**Contexte:** Installation PostgreSQL + PostGIS pour annotations
+**Probleme:** Port 5432 deja occupe par TimescaleDB existant
+**Solution:** Utiliser port 5433 partout: docker-compose.dev.yml, .env, .env.example, .env.phase1, alembic.ini, core/database.py (default fallback)
+**A Retenir:** Toujours verifier les ports disponibles. Mettre a jour TOUS les fichiers de config si on change un port.
+**Fichiers:** `docker-compose.dev.yml`, `.env*`, `backend/alembic.ini`, `backend/core/database.py`
+
+---
+
+## 2026-02-05 - dotenv dans alembic/env.py
+
+**Contexte:** Alembic ne trouvait pas la bonne database URL
+**Probleme:** `load_dotenv()` manquant dans `alembic/env.py` → fallback port 5432 au lieu de 5433
+**Solution:** Ajouter `from dotenv import load_dotenv; load_dotenv()` en haut de `alembic/env.py`
+**A Retenir:** Alembic ne charge PAS automatiquement .env. Il faut le faire explicitement.
+**Fichiers:** `backend/alembic/env.py`
+
+---
+
+## 2026-02-05 - GeoAlchemy2 Auto-Index
+
+**Contexte:** Migration 001 creait un index spatial
+**Probleme:** GeoAlchemy2 cree automatiquement un index spatial sur les colonnes `Geometry`. Notre migration le creait aussi → index en double → erreur
+**Solution:** Supprimer le `create_index` explicite de la migration
+**A Retenir:** GeoAlchemy2 gere les index spatiaux automatiquement via le type `Geometry()`.
+**Fichiers:** `backend/alembic/versions/001_create_annotations.py`
+
+---
+
+## 2026-02-05 - ForeignKey manquant sur label_id
+
+**Contexte:** Annotation.label_id n'avait pas de ForeignKey
+**Probleme:** SQLAlchemy relationship "label" echouait silencieusement sans `ForeignKey("annotation_labels.id")`
+**Solution:** Ajouter ForeignKey + nettoyer __table_args__
+**A Retenir:** Toujours verifier que les columns avec relationship ont leur ForeignKey explicite.
+**Fichiers:** `backend/models/annotation.py`
+
+---
+
+## 2026-02-05 - async def vs def pour routes OpenSlide (CRITIQUE)
+
+**Contexte:** Routes slides.py avec `async def` + I/O synchrone OpenSlide
+**Probleme:** `async def` + code synchrone bloque l'event loop asyncio. 28 tiles prenaient 30s+ au lieu de ~2s.
+**Solution:** Changer toutes les 6 routes de `async def` en `def`. FastAPI les execute alors dans le threadpool automatiquement.
+**A Retenir:** **REGLE D'OR:** Si une route fait de l'I/O synchrone (OpenSlide, fichiers), utiliser `def` pas `async def`. FastAPI est intelligent et dispatche les `def` routes dans un threadpool.
+**Fichiers:** `backend/routes/slides.py` (6 routes)
+
+---
+
+## 2026-02-05 - Keep-Alive TCP Essentiel sur Windows
+
+**Contexte:** Tiles lentes meme apres fix async
+**Probleme:** Sans keep-alive, chaque connexion TCP prend ~2s (Windows Defender HTTP inspection)
+**Solution:** Browsers utilisent keep-alive par defaut. Premiere connexion lente (~2s), les suivantes en 0-13ms.
+**A Retenir:** Ne pas desactiver keep-alive. Si les tiles sont lentes en dev, c'est probablement le premier chargement (cold connection).
+**Fichiers:** `backend/routes/slides.py`
+
+---
+
+## 2026-02-05 - scan_slides_directory est Lent
+
+**Contexte:** scan_slides_directory appelee dans les routes
+**Probleme:** Prend ~1.5s car scan recursif + FormatDetector. Bloquait chaque requete.
+**Solution:** Cacher le resultat dans `_slide_cache` de `get_slide_path_by_id()`. Ne jamais appeler directement dans les routes.
+**A Retenir:** Les operations de scan sont couteuses. Toujours cacher les resultats.
+**Fichiers:** `backend/routes/slides.py`, `backend/services/slide_scanner.py`
+
+---
+
+## 2026-02-06 - Event Listener Leaks (eventBus.off sans callback)
+
+**Contexte:** Composants frontend detruits mais recevant encore des events
+**Probleme:** `eventBus.off(event)` sans reference exacte du callback = no-op. Arrow functions dans `on()` + `off()` sans ref → listener jamais retire → composants morts crashent.
+**Solution:** Stocker les unsubscribe functions retournees par `eventBus.on()` dans `this._unsubscribers[]`, appeler chacune dans `destroy()`.
+**A Retenir:** **Pattern obligatoire pour tout composant frontend:**
+```javascript
+constructor() {
+    this._unsubscribers = [];
+    this._unsubscribers.push(eventBus.on(Events.X, (data) => this._handle(data)));
+}
+destroy() {
+    this._unsubscribers.forEach(unsub => unsub());
+}
+```
+**Fichiers:** LayerManager, AnnotationLayer, DrawingTools, HeatmapOverlay, MLPanel
+
+---
+
+## 2026-02-06 - detect_format() vs OpenSlide Open (Broken Slides)
+
+**Contexte:** Certaines slides detectees par format_detector mais qui plantent a l'ouverture
+**Probleme:** `openslide.detect_format()` peut reussir sur des fichiers corrompus (JPEG corrompu, main image manquante, images dissimilaires)
+**Solution:** Ajouter helper `_try_open_slide()` dans format_detector.py. Tester l'ouverture reelle, pas juste la detection.
+**A Retenir:** **`detect_format() ≠ peut ouvrir`**. Toujours valider avec un vrai `OpenSlide()` constructor.
+**Fichiers corrompus decouverts:** Hamamatsu-1.ndpi, Leica-3.scn, Leica-Fluorescence-1.scn
+**Fichiers:** `backend/services/format_detector.py`, `backend/routes/slides.py` (catch OpenSlideError → 422)
+
+---
+
+## 2026-02-06 - HeatmapOverlay Image Rechargee en Boucle
+
+**Contexte:** HeatmapOverlay rechargeait l'image a chaque viewport-change
+**Probleme:** Performance degradee, flickering
+**Solution:** Cacher l'image dans `this._cachedImage`. Coordinate mapping via `tiledImage.getBounds(true)`.
+**A Retenir:** Cacher les ressources lourdes (images, data) et ne les recharger que quand la source change.
+**Fichiers:** `frontend/src/components/HeatmapOverlay.js`
+
+---
+
+## 2026-02-06 - ViewerPanel Double SLIDE_LOADED
+
+**Contexte:** ViewerPanel.loadSlide() emettait SLIDE_LOADED, mais ViewerInstance aussi
+**Probleme:** Double emission → double init des composants → bugs
+**Solution:** Retirer l'emission de ViewerPanel, laisser ViewerInstance etre la seule source
+**A Retenir:** Un seul composant doit etre la source de verite pour chaque event.
+**Fichiers:** `frontend/src/components/ViewerPanel.js`, `frontend/src/viewers/ViewerInstance.js`
+
+---
+
+## 2026-02-08 - Documentation Drift Massive
+
+**Contexte:** Mise a jour repo apres documents strategiques (PROPOSAL_VARUNA_v2, HOSPITAL_DEPLOYMENT_EVALUATION)
+**Probleme:** README.md disait v0.1.0 Phase 1 avec 3 formats. Realite: v1.7.0 Phase 2 avec 10 formats, annotations, ML, 94 tests.
+**Solution:** Reecriture complete README.md, PROJECT_STATE.md, ROADMAP.md, CONTEXT.md, FILES.md
+**A Retenir:** Mettre a jour la documentation EN MEME TEMPS que le code. Ne pas laisser la doc diverger.
+**Fichiers:** `README.md`, `.claude/memory/PROJECT_STATE.md`, `.claude/memory/ROADMAP.md`, `.claude/docs/CONTEXT.md`, `.claude/docs/FILES.md`
+
+---
+
+## 2026-02-08 - Processus de Propagation Obligatoire
+
+**Contexte:** Le cerveau (.claude/) etait incoherent car les fichiers satellites n'etaient pas mis a jour apres chaque tache
+**Probleme:** BRAIN.md v1.0 n'avait qu'une vague etape "Capitalisation" sans matrice de propagation. Resultat: 10 fichiers incoherents (versions differentes, agents inexistants, compteurs faux)
+**Solution:** BRAIN.md v2.1 avec etapes 7 (Capitalisation) + 8 (Propagation), matrice de propagation explicite, carte des fichiers du cerveau, exemples concrets, seuil de declenchement
+**A Retenir:** La capitalisation sans propagation = dette documentaire garantie. La matrice de propagation transforme une discipline floue en processus verifiable.
+**Fichiers:** `.claude/BRAIN.md`, `MEMORY.md` (auto-memory)
+
+---
+
 ## Template pour Nouvelles Entrees
 
 ```markdown
@@ -127,4 +267,4 @@
 
 ---
 
-**Derniere mise a jour:** 2026-02-04
+**Derniere mise a jour:** 2026-02-08

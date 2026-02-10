@@ -33,6 +33,7 @@ Slides-old/**
 *.swp
 *.DS_Store
 Thumbs.db
+nul
 
 # =========================
 # Environnements Python / IDE

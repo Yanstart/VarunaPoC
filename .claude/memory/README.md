@@ -9,9 +9,10 @@
 | Fichier | But | Quand Mettre a Jour |
 |---------|-----|---------------------|
 | **LEARNINGS.md** | Erreurs et solutions | Apres resolution d'un probleme non trivial |
-| **DECISIONS.md** | Architecture Decision Records | Apres toute decision technique significative |
+| **DECISIONS.md** | Architecture Decision Records (20 ADRs) | Apres toute decision technique significative |
 | **SOURCES.md** | References officielles | Quand on decouvre une nouvelle source utile |
 | **PROJECT_STATE.md** | Etat actuel du projet | Debut de chaque session / apres changement majeur |
+| **ROADMAP.md** | Plan MVP 15 semaines | Apres completion phase ou changement plan |
 
 ---
 
@@ -21,16 +22,16 @@
 
 ```
 1. Lire PROJECT_STATE.md
-   → Comprendre ou en est le projet
+   → Comprendre ou en est le projet (v1.7.0, Phase 2 complete)
    → Voir les fichiers non commites
    → Connaitre les priorites
 
 2. Si le probleme semble familier:
-   → Chercher dans LEARNINGS.md
+   → Chercher dans LEARNINGS.md (20+ entrees)
    → Eviter de refaire les memes erreurs
 
 3. Si une decision technique est necessaire:
-   → Verifier DECISIONS.md
+   → Verifier DECISIONS.md (20 ADRs)
    → Voir si un ADR existe deja
 ```
 
@@ -105,22 +106,29 @@
 ### Par Domaine
 
 **Backend:**
-- Learnings: BIF Direction LEFT, MRXS Companion Directory
-- Decisions: ADR-002 (OpenSlide), ADR-003 (DZI), ADR-008 (MD5 Hash), ADR-009 (LRU Cache)
+- Learnings: BIF Direction, MRXS Companion, Port 5433, dotenv Alembic, async→sync routes, scan_slides cache, detect_format vs open
+- Decisions: ADR-002 (OpenSlide), ADR-003 (DZI), ADR-008 (MD5 Hash), ADR-009 (LRU Cache), ADR-016 (PostGIS), ADR-019 (sync def), ADR-020 (Slideflow+Phikon-v2)
 
 **Frontend:**
-- Learnings: OSD Coordonnees Normalisees, Event Suppression Boucles
-- Decisions: ADR-001 (Vanilla JS), ADR-004 (EventBus), ADR-005 (Factory), ADR-006 (State), ADR-007 (SyncController)
+- Learnings: OSD Coordonnees, Event Suppression, Event Listener Leaks, HeatmapOverlay cache, ViewerPanel double SLIDE_LOADED
+- Decisions: ADR-001 (Vanilla JS), ADR-004 (EventBus), ADR-005 (Factory), ADR-006 (State), ADR-007 (SyncController), ADR-017 (Unsubscribe Pattern), ADR-018 (SVG Overlay)
 
 **Securite:**
-- Decisions: ADR-011 (Basic Auth) [propose]
+- Decisions: ADR-011 (RBAC + JWT) [propose]
 
 **MLOps:**
-- Decisions: ADR-012 (Tag Routing) [propose]
+- Decisions: ADR-012 (Tag Routing) [propose], ADR-020 (Slideflow+Phikon-v2) [accepte]
+
+**Architecture:**
+- Decisions: ADR-014 (Multi-Reader Scoring), ADR-015 (Specialistes)
 
 **Orchestration:**
 - Decisions: ADR-010 (Cerveau d'Orchestration)
 
+**Organisation:**
+- Decisions: ADR-013 (Archives/)
+- Learnings: Contenu hors contexte, Documentation drift
+
 ---
 
-**Derniere mise a jour:** 2026-01-29
+**Derniere mise a jour:** 2026-02-08

@@ -13,7 +13,7 @@
 - **API Python:** https://openslide.org/api/python/
 - **Formats supportes:** https://openslide.org/formats/
 - **GitHub Issues:** https://github.com/openslide/openslide/issues
-- **Usage:** Lecture de tous les formats de lames histologiques
+- **Usage:** Lecture de tous les formats de lames histologiques (10 formats, 94 lames testees)
 
 ### OpenSeadragon (Frontend - Viewer Gigapixel)
 - **Site:** https://openseadragon.github.io/
@@ -28,13 +28,77 @@
 - **Tutorial:** https://fastapi.tiangolo.com/tutorial/
 - **Reference API:** https://fastapi.tiangolo.com/reference/
 - **Security:** https://fastapi.tiangolo.com/tutorial/security/
-- **Usage:** API REST pour servir les tuiles et metadonnees
+- **Usage:** API REST pour servir les tuiles, annotations et inference ML
 
 ### Vite (Frontend - Build Tool)
 - **Site:** https://vitejs.dev/
 - **Guide:** https://vitejs.dev/guide/
 - **Config:** https://vitejs.dev/config/
 - **Usage:** Serveur de developpement et build de production
+
+---
+
+## Phase 2 - Annotations & Base de Donnees
+
+### PostgreSQL + PostGIS (Base de donnees annotations)
+- **PostgreSQL:** https://www.postgresql.org/docs/15/
+- **PostGIS:** https://postgis.net/documentation/
+- **PostGIS Geometry:** https://postgis.net/docs/geometry.html
+- **Usage:** Stockage annotations avec geometries spatiales (SRID=0, coordonnees pixels)
+
+### SQLAlchemy (ORM async)
+- **Site:** https://www.sqlalchemy.org/
+- **Async:** https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html
+- **Usage:** ORM pour models Annotation/AnnotationLabel, async engine
+
+### GeoAlchemy2 (PostGIS pour SQLAlchemy)
+- **Documentation:** https://geoalchemy-2.readthedocs.io/
+- **Usage:** Types Geometry dans SQLAlchemy, index spatiaux automatiques
+
+### Alembic (Migrations DB)
+- **Documentation:** https://alembic.sqlalchemy.org/
+- **Tutorial:** https://alembic.sqlalchemy.org/en/latest/tutorial.html
+- **Usage:** Migrations schema DB (versions/001_create_annotations.py)
+- **Note:** Necessite `load_dotenv()` explicite dans env.py
+
+### Shapely (Geometries Python)
+- **Documentation:** https://shapely.readthedocs.io/
+- **Usage:** Simplification de contours, conversion vers GeoJSON dans pipeline detection
+
+---
+
+## Phase 2 - ML & Detection
+
+### Slideflow (ML pour WSI)
+- **Site:** https://slideflow.dev/
+- **Documentation:** https://slideflow.dev/docs/
+- **GitHub:** https://github.com/jamesdolezal/slideflow
+- **Usage:** Framework ML pour lames histologiques. Integration Phikon-v2, heatmaps, predictions
+- **Limitation:** Ne supporte pas DICOM ni Generic TIFF sans MPP metadata
+
+### Phikon-v2 (Foundation Model Pathologie)
+- **HuggingFace:** https://huggingface.co/owkin/phikon-v2
+- **Paper:** DINO-based pathology foundation model (Owkin)
+- **Usage:** Feature extraction pour heatmaps d'attention (64x64, ~2.5min GPU CUDA)
+- **Prerequis:** transformers>=4.22 pour `AutoImageProcessor`
+
+### SciPy (Traitement scientifique)
+- **Documentation:** https://docs.scipy.org/doc/scipy/
+- **ndimage:** https://docs.scipy.org/doc/scipy/reference/ndimage.html
+- **Usage:** `scipy.ndimage.label()` pour segmentation regions dans heatmaps
+
+### scikit-image (Traitement d'images)
+- **Documentation:** https://scikit-image.org/docs/stable/
+- **Contours:** https://scikit-image.org/docs/stable/api/skimage.measure.html
+- **Usage:** `skimage.measure.find_contours()` pour extraction contours regions
+
+### Pillow (Image Processing)
+- **Documentation:** https://pillow.readthedocs.io/
+- **Usage:** Manipulation d'images Python, generation thumbnails/overviews
+
+### Pydantic
+- **Documentation:** https://docs.pydantic.dev/
+- **Usage:** Validation de donnees et schemas (AnnotationCreate, DetectionResult, GeoJSON)
 
 ---
 
@@ -46,10 +110,14 @@
 - **Supplement 145 (WSI):** Whole Slide Microscopic Image IOD
 - **Usage:** Standard pour l'imagerie medicale et integration PACS
 
+### IVDR (In Vitro Diagnostic Regulation)
+- **Texte:** https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32017R0746
+- **Usage:** Classification reglementaire (Classe A pour recherche, Classe C pour diagnostic)
+
 ### HL7 (Health Level 7)
 - **Site:** https://www.hl7.org/
 - **FHIR:** https://hl7.org/fhir/
-- **Usage:** Interoperabilite avec systemes hospitaliers
+- **Usage:** Interoperabilite avec systemes hospitaliers (Phase 3+)
 
 ---
 
@@ -74,35 +142,30 @@
 
 ---
 
-## MLOps & Machine Learning
+## MLOps & Machine Learning (Post-MVP)
 
 ### MLflow
 - **Site:** https://mlflow.org/
 - **Documentation:** https://mlflow.org/docs/latest/index.html
 - **Tracking:** https://mlflow.org/docs/latest/tracking.html
 - **Model Registry:** https://mlflow.org/docs/latest/model-registry.html
-- **Usage:** Tracking des experiences, registre des modeles
+- **Usage:** Tracking des experiences, registre des modeles (Phase 3+)
 
 ### DVC (Data Version Control)
 - **Site:** https://dvc.org/
 - **Documentation:** https://dvc.org/doc
-- **Usage:** Versioning des datasets et pipelines ML
+- **Usage:** Versioning des datasets et pipelines ML (Phase 3+)
 
 ### PyTorch
 - **Site:** https://pytorch.org/
 - **Documentation:** https://pytorch.org/docs/stable/index.html
 - **Tutorials:** https://pytorch.org/tutorials/
-- **Usage:** Framework pour modeles deep learning
-
-### TensorFlow
-- **Site:** https://www.tensorflow.org/
-- **Documentation:** https://www.tensorflow.org/api_docs
-- **Usage:** Alternative a PyTorch pour deep learning
+- **Usage:** Framework pour modeles deep learning (utilise via Slideflow)
 
 ### Evidently AI (Drift Detection)
 - **Site:** https://www.evidentlyai.com/
 - **Documentation:** https://docs.evidentlyai.com/
-- **Usage:** Detection de drift dans les predictions ML
+- **Usage:** Detection de drift dans les predictions ML (Phase 3+)
 
 ### CLAM (Computational Pathology)
 - **GitHub:** https://github.com/mahmoodlab/CLAM
@@ -121,12 +184,12 @@
 ### Kubernetes
 - **Documentation:** https://kubernetes.io/docs/
 - **Concepts:** https://kubernetes.io/docs/concepts/
-- **Usage:** Orchestration de containers en production
+- **Usage:** Orchestration de containers en production (Phase 3+)
 
 ### Prometheus (Monitoring)
 - **Documentation:** https://prometheus.io/docs/
 - **Query Language:** https://prometheus.io/docs/prometheus/latest/querying/basics/
-- **Usage:** Collection de metriques
+- **Usage:** Collection de metriques (monitoring.py optionnel)
 
 ### Grafana (Dashboards)
 - **Documentation:** https://grafana.com/docs/
@@ -136,6 +199,10 @@
 - **Documentation:** https://nginx.org/en/docs/
 - **Usage:** Reverse proxy, load balancing, cache
 
+### GitHub Actions (CI/CD)
+- **Documentation:** https://docs.github.com/en/actions
+- **Usage:** CI/CD (lint, tests, Docker build, Trivy, Bandit, CodeQL, Gitleaks)
+
 ---
 
 ## JavaScript & Web
@@ -144,7 +211,8 @@
 - **Site:** https://developer.mozilla.org/
 - **JavaScript:** https://developer.mozilla.org/en-US/docs/Web/JavaScript
 - **Canvas API:** https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API
-- **Usage:** Reference pour JavaScript et APIs Web
+- **SVG:** https://developer.mozilla.org/en-US/docs/Web/SVG
+- **Usage:** Reference pour JavaScript, APIs Web, SVG (annotations overlay)
 
 ### Chrome DevTools
 - **Documentation:** https://developer.chrome.com/docs/devtools/
@@ -160,17 +228,9 @@
 - **PEP 8 (Style):** https://peps.python.org/pep-0008/
 - **Usage:** Reference langage Python
 
-### Pillow (Image Processing)
-- **Documentation:** https://pillow.readthedocs.io/
-- **Usage:** Manipulation d'images Python
-
-### Pydantic
-- **Documentation:** https://docs.pydantic.dev/
-- **Usage:** Validation de donnees et settings
-
 ---
 
-## Outils PACS
+## Outils PACS (Phase 3)
 
 ### Orthanc
 - **Site:** https://www.orthanc-server.com/
@@ -179,7 +239,7 @@
 
 ### pynetdicom
 - **Documentation:** https://pydicom.github.io/pynetdicom/
-- **Usage:** Implementation DICOM networking en Python
+- **Usage:** Implementation DICOM networking en Python (C-FIND, C-MOVE, C-GET, C-STORE)
 
 ---
 
@@ -210,4 +270,4 @@ Toute proposition importante devrait etre verifiable par:
 
 ---
 
-**Derniere mise a jour:** 2026-01-29
+**Derniere mise a jour:** 2026-02-08

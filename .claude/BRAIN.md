@@ -1,7 +1,7 @@
 # Cerveau d'Orchestration VarunaPoC
 
-**Version:** 1.0
-**Date:** 2026-01-29
+**Version:** 2.1
+**Date:** 2026-02-08
 
 Ce document est le **point d'entree central** pour toute interaction Claude Code sur ce projet. Il definit le processus systematique de traitement des demandes utilisateur.
 
@@ -60,10 +60,16 @@ UTILISATEUR PROMPT
        |                  - Mise a jour documentation
        |
        v
-[7. CAPITALISATION] ---> Enregistrer les apprentissages
-                         - Mettre a jour LEARNINGS.md
-                         - Ajouter decision dans DECISIONS.md
-                         - Commit les changements
+[7. CAPITALISATION] ---> Mettre a jour le cerveau (OBLIGATOIRE)
+       |                  - Evaluer ce qui a change (matrice ci-dessous)
+       |                  - Mettre a jour les fichiers memoire concernes
+       |                  - Propager aux fichiers satellites si necessaire
+       |
+       v
+[8. PROPAGATION] ------> Verifier coherence satellites
+                         - Executer la matrice de propagation
+                         - Corriger toute incoherence detectee
+                         - S'assurer que le cerveau reste une source de verite
 ```
 
 ---
@@ -86,10 +92,10 @@ UTILISATEUR PROMPT
 | erreur, bug, crash, ne marche pas | performance-engineer | error-documenter | - |
 | documentation, manuel, user guide | frontend-tech-lead | manual-updater | - |
 | API, endpoint, route | backend-tech-lead | api-documenter | fastapi.tiangolo.com |
-| pattern, factory, strategy, modulaire | design-patterns-specialist | - | refactoring.guru, GOF |
-| scoring, algorithme, complexite, tri | algorithms-specialist | - | CLRS, algorithm visualizations |
-| interface, abstraction, plugin, extensible | design-patterns-specialist | - | Clean Architecture |
-| fallback, priorite, selection, routing | algorithms-specialist | - | - |
+| pattern, factory, strategy, modulaire | lead-architecte | - | refactoring.guru, GOF |
+| annotation, dessin, label, svg | frontend-tech-lead | - | MDN SVG docs |
+| detection, heatmap, inference, phikon | ml-architect | - | slideflow.dev |
+| comptage, stats, classification | backend-tech-lead | - | - |
 
 ### Par Type de Demande
 
@@ -109,12 +115,10 @@ UTILISATEUR PROMPT
 **But:** Vision projet, phases, Gantt Mermaid, suivi d'avancement
 
 **Contenu:**
-- Gantt chart global (Phases 0-5)
-- Gantt detail (Phase 1 & 2)
-- Liste des taches par statut (Termine, En cours, A faire, Backlog)
-- Dependances critiques (flowchart)
-- Risques et mitigations
+- Plan MVP 15 semaines (Phases 1-4 + Post-MVP circles)
+- Avancement par phase (Phase 1-2: 100%, Phase 3-4: A venir)
 - Metriques de suivi
+- Delivrables par phase
 
 **Utilisation:**
 - Consulter avant de planifier une nouvelle tache
@@ -147,19 +151,6 @@ UTILISATEUR PROMPT
 **Consequences:** Impact positif et negatif
 **Alternatives Rejetees:** Autres options considerees
 **Validation Admin:** Oui/Non + commentaire
-```
-
-### .claude/memory/SESSION_CONTEXT.md
-**But:** Contexte de la session courante (reset a chaque nouvelle conversation)
-
-**Structure:**
-```markdown
-## Session [DATE]
-**Objectif Principal:** [Ce que l'utilisateur veut accomplir]
-**Fichiers Modifies:** Liste cumulative
-**Taches Completees:** Checklist
-**Taches Restantes:** Checklist
-**Questions en Attente:** Pour l'admin
 ```
 
 ---
@@ -335,17 +326,142 @@ git commit -m "type(scope): description
 
 ---
 
+## Capitalisation & Propagation (Etapes 7-8) - OBLIGATOIRE
+
+### Principe
+
+A la fin de **chaque tache** (pas seulement en fin de session), Claude DOIT:
+1. Identifier ce qui a change
+2. Mettre a jour les fichiers memoire concernes
+3. Verifier si des fichiers satellites doivent etre propages
+
+### Carte des Fichiers du Cerveau
+
+```
+BRAIN.md (orchestration - rarement modifie)
+│
+├── memory/ (ETAT & APPRENTISSAGES)
+│   ├── PROJECT_STATE.md   ← Snapshot: version, features, sante
+│   ├── ROADMAP.md         ← Plan: phases, avancement, timeline
+│   ├── LEARNINGS.md       ← Erreurs: bugs, workarounds, gotchas
+│   ├── DECISIONS.md       ← Architecture: ADRs, choix techniques
+│   ├── SOURCES.md         ← References: docs officielles, outils
+│   └── README.md          ← Index de la memoire
+│
+├── docs/ (REFERENCE TECHNIQUE)
+│   ├── CONTEXT.md         ← Resume rapide pour reprendre le travail
+│   ├── FILES.md           ← Arborescence fichiers du projet
+│   ├── README.md          ← Vue d'ensemble architecture
+│   └── QUICK_START.md     ← Guide demarrage rapide
+│
+└── Fichiers racine projet
+    └── README.md          ← Description publique du projet
+```
+
+### Matrice de Propagation
+
+**Apres chaque tache, evaluer CHAQUE ligne de cette matrice:**
+
+| Ce qui a change | Fichiers a mettre a jour | Priorite |
+|-----------------|--------------------------|----------|
+| **Bug corrige avec workaround** | `LEARNINGS.md` (nouvelle entree) | HAUTE |
+| **Decision architecturale** | `DECISIONS.md` (nouvel ADR) | HAUTE |
+| **Nouveau fichier cree** | `docs/FILES.md` (ajouter dans l'arbre) | HAUTE |
+| **Feature implementee** | `PROJECT_STATE.md` (ajouter dans "Ce qui fonctionne") | HAUTE |
+| **Phase avancee/completee** | `ROADMAP.md` (MAJ avancement), `PROJECT_STATE.md` | HAUTE |
+| **Nouvelle dependance/outil** | `SOURCES.md` (ajouter reference) | MOYENNE |
+| **Version bump** | `PROJECT_STATE.md`, `CONTEXT.md`, `README.md` (racine) | MOYENNE |
+| **Nouveau test ajoute** | `PROJECT_STATE.md` (compteur tests) | BASSE |
+| **Config modifiee** | `CONTEXT.md` (section "Comment Demarrer") | BASSE |
+| **Endpoint API ajoute/modifie** | `docs/FILES.md` (routes), `PROJECT_STATE.md` | MOYENNE |
+
+### Processus de Propagation (Checklist Mentale)
+
+A executer apres chaque tache:
+
+```
+1. QUOI a change?
+   → Lister les fichiers modifies et la nature du changement
+
+2. MEMOIRE directe (toujours verifier):
+   □ Bug/workaround?           → LEARNINGS.md
+   □ Decision technique?       → DECISIONS.md
+   □ Nouvelle source/outil?    → SOURCES.md
+
+3. ETAT du projet (si feature/fix significatif):
+   □ Nouvelle feature?         → PROJECT_STATE.md
+   □ Progression phase?        → ROADMAP.md
+   □ Nouveau fichier?          → docs/FILES.md
+
+4. CONTEXTE (si changement structurel):
+   □ Architecture modifiee?    → docs/CONTEXT.md, docs/README.md
+   □ Version changee?          → PROJECT_STATE.md, CONTEXT.md, README.md racine
+   □ Stack modifie?            → CONTEXT.md, docs/README.md
+
+5. COHERENCE (verification finale):
+   □ Les versions sont-elles alignees partout?
+   □ Les compteurs (tests, formats, ADRs) sont-ils corrects?
+   □ Pas de reference a des fichiers/agents/features inexistants?
+```
+
+### Exemples Concrets
+
+**Exemple 1: Bug fix "tiles lentes"**
+```
+Changement: Routes async def → def dans slides.py
+Propagation:
+  ✓ LEARNINGS.md → Nouvelle entree "async def vs def"
+  ✓ PROJECT_STATE.md → Performance "Tiles < 15ms" (mise a jour metrique)
+  ✗ DECISIONS.md → Oui si c'est un choix architectural → ADR-019
+  ✗ FILES.md → Non, pas de nouveau fichier
+  ✗ ROADMAP.md → Non, pas de changement de phase
+```
+
+**Exemple 2: Feature "annotations CRUD"**
+```
+Changement: Nouveau module annotations (models, schemas, routes, frontend)
+Propagation:
+  ✓ PROJECT_STATE.md → Ajouter dans "Ce qui fonctionne"
+  ✓ ROADMAP.md → Cocher la tache, MAJ pourcentage phase
+  ✓ FILES.md → Ajouter tous les nouveaux fichiers dans l'arbre
+  ✓ DECISIONS.md → ADR-016 (PostGIS), ADR-018 (SVG overlay)
+  ✓ SOURCES.md → PostGIS, SQLAlchemy, GeoAlchemy2, Alembic, Shapely
+  ✓ CONTEXT.md → MAJ "Ce qui fonctionne"
+  ✗ LEARNINGS.md → Oui si bugs rencontres (port 5433, ForeignKey, etc.)
+```
+
+**Exemple 3: Simple rename/typo fix**
+```
+Changement: Correction typo dans un commentaire
+Propagation:
+  ✗ Aucune mise a jour necessaire
+  (Les corrections triviales ne polluent pas le cerveau)
+```
+
+### Seuil de Declenchement
+
+**NE PAS propager si:**
+- Changement purement cosmétique (typo, formatage)
+- Exploration/recherche sans modification de code
+- Question simple repondue sans implementation
+
+**TOUJOURS propager si:**
+- Un fichier de code a ete cree ou significativement modifie
+- Un bug non trivial a ete corrige
+- Une decision technique a ete prise
+- L'etat du projet a change (feature ajoutee, test ajoute, phase avancee)
+
+---
+
 ## Checklist Fin de Session
 
-Avant de terminer une session:
+Avant de terminer une session, verifier:
 
+- [ ] Etapes 7-8 (Capitalisation + Propagation) executees pour chaque tache?
 - [ ] Toutes les modifications commitees?
-- [ ] LEARNINGS.md mis a jour si nouvelle decouverte?
-- [ ] DECISIONS.md mis a jour si decision architecturale?
-- [ ] ROADMAP.md mis a jour si tache completee ou ajoutee?
-- [ ] Documentation mise a jour si feature complete?
 - [ ] Aucun fichier temporaire laisse?
 - [ ] Aucune modification non testee?
+- [ ] Le cerveau est coherent (versions, compteurs, references)?
 
 ---
 
@@ -354,105 +470,32 @@ Avant de terminer une session:
 ### Agents (Delegation via Task)
 
 ```
-chief-architect     → Orchestration generale
-backend-tech-lead   → FastAPI, OpenSlide, Python
-frontend-tech-lead  → Vite, JS, OpenSeadragon
-performance-engineer→ Coordinates, caching, profiling
-ml-architect        → MLOps, models, feedback loop
-infrastructure-architect → Docker, K8s, CI/CD
-lead-architecte     → Architecture globale, patterns
-security-architect  → Auth, encryption, compliance
-integration-engineer→ DICOM, PACS, HL7
-design-patterns-specialist → Patterns GOF, SOLID, Clean Architecture
-algorithms-specialist      → Structures donnees, complexite, scoring
+chief-architect          → Orchestration generale
+backend-tech-lead        → FastAPI, OpenSlide, SQLAlchemy, Python
+frontend-tech-lead       → Vite, JS, OpenSeadragon, SVG overlays
+performance-engineer     → Coordinates, caching, profiling, tiles
+ml-architect             → Slideflow, Phikon-v2, MLOps, detection pipeline
+infrastructure-architect → Docker, K8s, CI/CD, GitHub Actions
+lead-architecte          → Architecture globale, patterns, design decisions
+security-architect       → Auth RBAC, encryption, RGPD compliance
+integration-engineer     → DICOM, PACS Telemis, HL7, pynetdicom
 ```
 
 ### Skills (Workflows Automatises)
 
 ```
-error-documenter    → Documenter erreurs dans docs/ERROR_*.md
-manual-updater      → Mettre a jour docs/Manuel/
-api-documenter      → Documenter endpoints FastAPI
-slide-tester        → Tester tous formats (.mrxs, .bif, .tif)
-coordinate-validator→ Valider mapping coordonnees
+error-documenter     → Documenter erreurs dans docs/ERROR_*.md
+manual-updater       → Mettre a jour docs/Manuel/
+api-documenter       → Documenter endpoints FastAPI
+slide-tester         → Tester tous les 10 formats supportes (94 lames)
+coordinate-validator → Valider mapping coordonnees OSD↔OpenSlide
 ```
 
 ---
 
-## Specialistes Fondamentaux (Support Decisionnaire)
+## Support Decisionnaire
 
-Ces specialistes sont invoques par l'orchestrateur pour valider les approches, resoudre les problemes complexes, et guider les decisions architecturales.
-
-### Design Patterns Specialist
-
-**Role:** Expert en patterns de conception (GOF), principes SOLID, Clean Architecture.
-
-**Quand l'invoquer:**
-- Choix entre plusieurs approches architecturales
-- Conception de systeme modulaire/extensible
-- Validation qu'un design respecte les bonnes pratiques
-- Refactoring pour ameliorer la maintenabilite
-
-**Expertise:**
-- **Patterns Creationnels:** Factory, Abstract Factory, Builder, Singleton, Prototype
-- **Patterns Structurels:** Adapter, Bridge, Composite, Decorator, Facade, Proxy
-- **Patterns Comportementaux:** Chain of Responsibility, Strategy, Observer, State
-- **Principes SOLID:** Single Responsibility, Open/Closed, Liskov, Interface Segregation, Dependency Inversion
-- **Clean Architecture:** Layers, Boundaries, Dependency Rule
-
-**Format de Consultation:**
-```markdown
-## Consultation Design Patterns
-
-**Probleme:** [Description du probleme architectural]
-
-**Contexte:**
-- Systeme actuel: [Description]
-- Contraintes: [Liste]
-- Objectifs: [Liste]
-
-**Options considerees:**
-1. [Option A]
-2. [Option B]
-
-**Questions:**
-- Quel pattern est le plus adapte?
-- Quels sont les trade-offs?
-- Comment assurer l'extensibilite?
-```
-
-### Algorithms Specialist
-
-**Role:** Expert en structures de donnees, complexite algorithmique, systemes de scoring et selection.
-
-**Quand l'invoquer:**
-- Conception de systeme de scoring/priorite
-- Optimisation de performance algorithmique
-- Choix de structure de donnees optimale
-- Validation de complexite (Big-O)
-
-**Expertise:**
-- **Structures:** Arrays, Lists, Trees, Heaps, Graphs, Hash Tables
-- **Algorithmes:** Tri, Recherche, Graph traversal, Dynamic Programming
-- **Complexite:** Time/Space complexity, Amortized analysis
-- **Patterns algorithmiques:** Greedy, Divide & Conquer, Backtracking
-
-**Format de Consultation:**
-```markdown
-## Consultation Algorithmes
-
-**Probleme:** [Description du probleme algorithmique]
-
-**Donnees:**
-- Input: [Type et taille]
-- Output attendu: [Description]
-- Contraintes: [Temps, memoire, etc.]
-
-**Questions:**
-- Quelle structure de donnees utiliser?
-- Quelle complexite viser?
-- Comment gerer les cas limites?
-```
+Pour les questions de patterns et d'architecture, utiliser **lead-architecte** (agent existant). Pour les questions algorithmiques/performance, utiliser **performance-engineer**. Ces agents couvrent les cas d'usage precedemment attribues aux specialistes design-patterns et algorithmes (cf. ADR-015).
 
 ---
 
@@ -621,19 +664,17 @@ Refs #[P2-R02], #[P2-R03]"
    - Merge ferme automatiquement l'issue
    - Mettre a jour ROADMAP.md avec [x] statut
 
-### Statistiques Projet (2026-02-04)
+### Etat Projet (2026-02-08)
 
 | Metrique | Valeur |
 |----------|--------|
-| Total Issues | 49 |
-| Phase 1 | 13 issues |
-| Phase 2 | 24 issues |
-| Phase 3 | 5 issues |
-| Phase 4 | 5 issues |
-| Phase 5 | 4 issues |
-| Critical Priority | 2 issues |
-| High Priority | 25 issues |
-| Angles Morts | 11 issues |
+| Version | 1.7.0 |
+| Phase | 2 complete, 3 a venir |
+| Tests | 94 pass, 3 skip |
+| Formats | 10 (94 lames testees) |
+| Branche active | feature/slideflow-integration |
+| Securite runtime | 0 (pas d'auth) |
+| ADRs | 20 |
 
 ---
 
