@@ -82,6 +82,7 @@ jobs:
             VCS_REF=${{ github.sha }}
 
       - name: Generate artifact attestation
+        continue-on-error: true  # Not available on private repos
         uses: actions/attest-build-provenance@v1
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}
