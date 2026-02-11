@@ -1,0 +1,33 @@
+# VarunaPoC - Production Deployment (GitOps managed)
+# Image tags are automatically updated by CD pipeline
+# DO NOT edit image tags manually - they are overwritten on each deploy
+
+version: "3.8"
+
+services:
+  backend:
+    image: ghcr.io/yanstart/varunapoc/backend:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - /Slides:/Slides:ro
+    environment:
+      - SLIDES_DIR=/Slides
+      - CORS_ORIGINS=*
+      - AUTH_ENABLED=${AUTH_ENABLED:-false}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    image: ghcr.io/yanstart/varunapoc/frontend:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy

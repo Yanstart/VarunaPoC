@@ -1,23 +1,14 @@
-# Gitleaks configuration
-# https://github.com/gitleaks/gitleaks
+# Gitleaks v8 configuration
+# Allowlist false positives for VarunaPoC
+# https://github.com/gitleaks/gitleaks#configuration
 
-[extend]
-# Use default gitleaks rules as base
-
-# Allowlist false positives
 [allowlist]
+  description = "VarunaPoC global allowlist"
   paths = [
-    # detect-secrets baseline contains hashed secrets (not actual secrets)
-    '''.secrets.baseline''',
+    # detect-secrets baseline contains hashed secrets (SHA hashes, not real secrets)
+    '''\.secrets\.baseline$''',
+    # Docker Compose dev file contains Keycloak/PostgreSQL dev-only passwords
+    '''docker-compose\.dev\.yml$''',
+    # Keycloak realm export contains test user password hashes
+    '''keycloak/realm-export\.json$''',
   ]
-
-  # Keycloak dev environment connection strings (test-only passwords)
-  [[allowlist.regexTarget]]
-    description = "Keycloak dev JDBC connection string"
-    target = "match"
-    regex = '''jdbc:postgresql://keycloak-db'''
-
-  [[allowlist.regexTarget]]
-    description = "Keycloak realm export (test users with 'password')"
-    target = "match"
-    regex = '''realm-export\.json'''

@@ -151,7 +151,9 @@ def generate_slide_id(file_path: Path) -> str:
         "a1b2c3d4e5f6"
     """
     path_str = str(file_path)  # Utiliser le même que slide_scanner (pas .resolve())
-    return hashlib.md5(path_str.encode()).hexdigest()[:12]  # Tronquer à 12 caractères
+    return hashlib.md5(path_str.encode(), usedforsecurity=False).hexdigest()[
+        :12
+    ]  # Tronquer à 12 caractères
 
 
 def browse_directory(relative_path: str = "/") -> Dict:
