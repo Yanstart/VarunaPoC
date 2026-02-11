@@ -1,0 +1,23 @@
+# Gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+[extend]
+# Use default gitleaks rules as base
+
+# Allowlist false positives
+[allowlist]
+  paths = [
+    # detect-secrets baseline contains hashed secrets (not actual secrets)
+    '''.secrets.baseline''',
+  ]
+
+  # Keycloak dev environment connection strings (test-only passwords)
+  [[allowlist.regexTarget]]
+    description = "Keycloak dev JDBC connection string"
+    target = "match"
+    regex = '''jdbc:postgresql://keycloak-db'''
+
+  [[allowlist.regexTarget]]
+    description = "Keycloak realm export (test users with 'password')"
+    target = "match"
+    regex = '''realm-export\.json'''
