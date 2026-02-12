@@ -18,7 +18,7 @@ import './style.css';
 
 // Core
 import { eventBus } from './core/EventBus.js';
-import { Events, Pages } from './core/Constants.js';
+import { Events, Pages, StorageKeys } from './core/Constants.js';
 
 // Services
 import { apiService } from './services/ApiService.js';
@@ -93,6 +93,71 @@ const appState = {
 };
 
 // ==========================================
+// PACS DEEP LINK HELPERS
+// ==========================================
+
+/**
+ * Parse /slide/{name} from current URL path.
+ * @returns {string|null} Slide name if URL matches, null otherwise
+ */
+function parseSlideRoute() {
+    const match = window.location.pathname.match(/^\/slide\/(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Resolve a slide by name via API and open it in the viewer.
+ * Cleans the URL back to '/' after resolution.
+ * @param {string} slideName - Filename stem from PACS
+ */
+async function openSlideByName(slideName) {
+    const app = document.querySelector('#app');
+    app.innerHTML = `
+        <div class="loading-page">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p>Opening slide...</p>
+                <p class="slide-name-display">${slideName}</p>
+            </div>
+        </div>
+    `;
+
+    try {
+        const slide = await apiService.getSlideByName(slideName);
+        // Clean URL to root (no router, entry point only)
+        window.history.replaceState(null, '', '/');
+        await showViewerPage(slide);
+    } catch (err) {
+        console.error('[PACS] Failed to resolve slide:', slideName, err);
+        showSlideNotFoundError(slideName, err);
+    }
+}
+
+/**
+ * Show PACS-specific error page when slide name cannot be resolved.
+ * @param {string} slideName - The name that was searched
+ * @param {Error} err - The error from the API
+ */
+function showSlideNotFoundError(slideName, err) {
+    window.history.replaceState(null, '', '/');
+    const statusHint = err.status === 409
+        ? 'Multiple slides match this name. Contact your administrator.'
+        : 'The slide may not be scanned yet, or the name may be incorrect.';
+
+    document.querySelector('#app').innerHTML = `
+        <div class="error-page">
+            <div class="error">
+                <h2>Slide Not Found</h2>
+                <p class="slide-name-display">${slideName}</p>
+                <p>${err.message || 'Unknown error'}</p>
+                <p class="note">${statusHint}</p>
+                <button onclick="location.href='/'">Go to Home</button>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
 // INITIALIZATION
 // ==========================================
 
@@ -109,17 +174,31 @@ async function init() {
             throw new Error('Backend is not available');
         }
 
+        // PACS: detect /slide/{name} BEFORE auth redirect
+        const slideRoute = parseSlideRoute();
+        if (slideRoute) {
+            sessionStorage.setItem(StorageKeys.PENDING_SLIDE_NAME, slideRoute);
+        }
+
         // Phase 3: Check auth requirement
         const authRequired = await authService.init();
 
         if (authRequired && !authService.isAuthenticated) {
-            // Show login page
+            // Show login page (pending slide saved in sessionStorage)
             showLoginPage();
             return;
         }
 
         // Setup event listeners
         setupEventListeners();
+
+        // PACS: check for pending deep link (from URL or pre-auth save)
+        const pendingSlide = sessionStorage.getItem(StorageKeys.PENDING_SLIDE_NAME);
+        if (pendingSlide) {
+            sessionStorage.removeItem(StorageKeys.PENDING_SLIDE_NAME);
+            await openSlideByName(pendingSlide);
+            return;
+        }
 
         // Show home page
         showHomePage();
@@ -891,6 +970,45 @@ additionalStyles.textContent = `
 
     .error-page button:hover {
         background: var(--color-primary-light, #6bb0ff);
+    }
+
+    /* PACS deep link loading page */
+    .loading-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        padding: 20px;
+    }
+
+    .loading-content {
+        text-align: center;
+        color: var(--color-text-primary, #e0e0e0);
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 16px;
+        border: 3px solid var(--color-border, #333);
+        border-top-color: var(--color-primary, #4a9eff);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .slide-name-display {
+        font-family: monospace;
+        font-size: 14px;
+        color: var(--color-text-muted, #666);
+        background: var(--color-bg-surface, #0d0d0d);
+        padding: 4px 12px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-top: 8px;
     }
 `;
 document.head.appendChild(additionalStyles);

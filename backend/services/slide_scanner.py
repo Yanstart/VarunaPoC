@@ -108,7 +108,17 @@ def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
 
 
 # Cache ID->Path (évite rescans répétés)
-_slide_cache = {}
+_slide_cache: Dict[str, str] = {}
+_slide_data_cache: Dict[str, Dict] = {}
+
+
+def _ensure_cache_populated():
+    """Populate both caches if empty (single scan shared by all lookups)."""
+    global _slide_cache, _slide_data_cache
+    if not _slide_cache:
+        slides = scan_slides_directory()
+        _slide_cache = {s["id"]: s["path"] for s in slides}
+        _slide_data_cache = {s["id"]: s for s in slides}
 
 
 def get_slide_path_by_id(slide_id: str) -> Optional[str]:
@@ -126,11 +136,36 @@ def get_slide_path_by_id(slide_id: str) -> Optional[str]:
         - Redémarrer serveur pour forcer rescan
         - Retourne toujours le POINT D'ENTRÉE (pas fichiers joints)
     """
-    global _slide_cache
-
-    if not _slide_cache:
-        # Premier appel: remplir cache
-        slides = scan_slides_directory()
-        _slide_cache = {s["id"]: s["path"] for s in slides}
-
+    _ensure_cache_populated()
     return _slide_cache.get(slide_id)
+
+
+def get_slide_by_name(slide_name: str) -> Optional[Dict]:
+    """
+    Match slide by filename stem (case-insensitive).
+
+    Used by Telemis PACS integration: the PACS sends examindex
+    (e.g. 'AO.25B27859.2.1.3') which corresponds to the slide
+    filename stem without extension.
+
+    Args:
+        slide_name: Filename stem to search for (e.g. 'AO.25B27859.2.1.3')
+
+    Returns:
+        Full slide dict if exactly one match, None if no match.
+
+    Raises:
+        ValueError: If multiple slides match (ambiguous name).
+    """
+    _ensure_cache_populated()
+    name_lower = slide_name.lower()
+    matches = []
+    for slide_data in _slide_data_cache.values():
+        stem = Path(slide_data["name"]).stem.lower()
+        if stem == name_lower or slide_data["name"].lower() == name_lower:
+            matches.append(slide_data)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ValueError(f"Ambiguous: {len(matches)} slides match '{slide_name}'")
+    return None
