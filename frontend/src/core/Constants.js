@@ -129,6 +129,7 @@ export const API = Object.freeze({
         SLIDE_INFO: (id) => `/api/slides/${id}/info`,
         SLIDE_OVERVIEW: (id) => `/api/slides/${id}/overview`,
         TILE: (id, level, x, y, w, h) => `/api/slides/${id}/tile/${level}/${x}/${y}/${w}/${h}`,
+        SLIDE_BY_NAME: (name) => `/api/slides/by-name/${encodeURIComponent(name)}`,
     },
 });
 
@@ -259,6 +260,7 @@ export const StorageKeys = Object.freeze({
     PREFERRED_LAYOUT: 'varuna_preferredLayout',
     SYNC_ENABLED: 'varuna_syncEnabled',
     DEBUG_MODE: 'varuna_debugMode',
+    PENDING_SLIDE_NAME: 'varuna_pending_slide',
 });
 
 /**

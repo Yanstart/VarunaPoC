@@ -18,7 +18,7 @@ from auth.dependencies import get_current_user
 from auth.schemas import CurrentUser
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
-from services.slide_scanner import get_slide_path_by_id, scan_slides_directory
+from services.slide_scanner import get_slide_by_name, get_slide_path_by_id, scan_slides_directory
 from services.tile_server import tile_server
 
 router = APIRouter(prefix="/api/slides")
@@ -121,6 +121,37 @@ def browse_slides_directory(
         raise HTTPException(404, str(e))
     except Exception as e:
         raise HTTPException(500, f"Error browsing directory: {e}")
+
+
+@router.get("/by-name/{slide_name:path}", tags=["pacs-integration"])
+def resolve_slide_by_name(
+    slide_name: str,
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Resolve slide by filename stem (Telemis PACS integration).
+
+    Telemis substitutes {$study.examindex$} in its plugin URL, which
+    corresponds to the slide filename without extension (e.g. 'AO.25B27859.2.1.3').
+    This endpoint performs a case-insensitive match against all scanned slides.
+
+    Args:
+        slide_name: Filename stem (may contain dots)
+
+    Returns:
+        Full slide metadata dict (same shape as /api/slides list items)
+
+    Raises:
+        404: No slide matches the given name
+        409: Multiple slides match (ambiguous)
+    """
+    try:
+        slide = get_slide_by_name(slide_name)
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+    if not slide:
+        raise HTTPException(404, f"No slide found matching '{slide_name}'")
+    return slide
 
 
 @router.get("/{slide_id}/info", tags=["visualization"])

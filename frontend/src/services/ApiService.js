@@ -331,6 +331,15 @@ class ApiService {
     }
 
     /**
+     * Resolve slide by filename stem (PACS integration)
+     * @param {string} name - Slide filename stem (e.g. 'AO.25B27859.2.1.3')
+     * @returns {Promise<Object>} Slide metadata
+     */
+    async getSlideByName(name) {
+        return this.get(`/api/slides/by-name/${encodeURIComponent(name)}`, { useCache: false });
+    }
+
+    /**
      * Get slide info
      * @param {string} slideId - Slide ID
      * @returns {Promise<Object>} Slide metadata
