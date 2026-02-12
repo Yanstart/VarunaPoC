@@ -19,7 +19,7 @@ const validTransitions = new Map([
     [ViewerStates.LOADING, new Set([ViewerStates.READY, ViewerStates.ERROR, ViewerStates.DESTROYING])],
     [ViewerStates.READY, new Set([ViewerStates.LOADING, ViewerStates.DESTROYING])],
     [ViewerStates.ERROR, new Set([ViewerStates.LOADING, ViewerStates.IDLE, ViewerStates.DESTROYING])],
-    [ViewerStates.DESTROYING, new Set([])] // Terminal state
+    [ViewerStates.DESTROYING, new Set([])], // Terminal state
 ]);
 
 /**
@@ -272,7 +272,7 @@ class ViewerState {
             isReady: this.isReady,
             hasError: this.isError,
             error: this.error ? this.error.message : null,
-            lastTransitionTime: this.lastTransitionTime
+            lastTransitionTime: this.lastTransitionTime,
         };
     }
 

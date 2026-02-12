@@ -122,7 +122,7 @@ class MockProvider:
         random.seed(seed_value)
 
         # Simulate inference delay (50-200ms)
-        delay = random.uniform(0.05, 0.2)
+        delay = random.uniform(0.05, 0.2)  # nosec B311
         time.sleep(delay)
 
         # Generate mock predictions
@@ -138,7 +138,7 @@ class MockProvider:
         confidence = float(probs[pred_idx])
 
         # Mock uncertainty (higher for ambiguous cases)
-        uncertainty = random.uniform(0.01, 0.15)
+        uncertainty = random.uniform(0.01, 0.15)  # nosec B311
 
         # Probabilities dict
         probabilities = {cls: float(probs[i]) for i, cls in enumerate(classes)}
@@ -192,7 +192,7 @@ class MockProvider:
         time.sleep(0.2)
 
         # Mock parameters
-        num_patches = random.randint(500, 2000)  # Realistic range
+        num_patches = random.randint(500, 2000)  # nosec B311
         embedding_dim = self.model_config.get("embedding_dim", 512)
 
         # Generate random embeddings

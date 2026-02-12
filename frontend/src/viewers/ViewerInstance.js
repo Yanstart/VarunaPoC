@@ -64,7 +64,7 @@ class ViewerInstance {
         this.options = {
             showNavigator: true,
             emitEvents: true,
-            ...options
+            ...options,
         };
 
         /**
@@ -158,7 +158,7 @@ class ViewerInstance {
             animationTime: OSD_CONFIG.ANIMATION_TIME,
 
             // No initial tile source
-            tileSources: null
+            tileSources: null,
         });
 
         // Bind event handlers
@@ -167,7 +167,7 @@ class ViewerInstance {
         // Emit creation event
         this._emitGlobal(Events.VIEWER_CREATED, { viewerId: this.id });
 
-        console.log(`[ViewerInstance] Created viewer "${this.id}"`);
+        console.warn(`[ViewerInstance] Created viewer "${this.id}"`);
     }
 
     /**
@@ -176,25 +176,25 @@ class ViewerInstance {
      */
     _bindEventHandlers() {
         // Viewport change handler
-        this._boundHandlers.viewportChange = (event) => {
+        this._boundHandlers.viewportChange = (_event) => {
             if (!this.suppressViewportEvents && this.state.isReady) {
                 const viewport = this.getViewport();
                 this._emit('viewportChange', viewport);
                 this._emitGlobal(Events.VIEWER_VIEWPORT_CHANGE, {
                     viewerId: this.id,
-                    viewport
+                    viewport,
                 });
             }
         };
 
         // Pan handler
-        this._boundHandlers.pan = (event) => {
+        this._boundHandlers.pan = (_event) => {
             if (!this.suppressViewportEvents && this.state.isReady) {
                 const viewport = this.getViewport();
                 this._emit('pan', viewport);
                 this._emitGlobal(Events.VIEWER_PAN, {
                     viewerId: this.id,
-                    viewport
+                    viewport,
                 });
             }
         };
@@ -204,12 +204,12 @@ class ViewerInstance {
             if (!this.suppressViewportEvents && this.state.isReady) {
                 const data = {
                     zoom: event.zoom,
-                    viewport: this.getViewport()
+                    viewport: this.getViewport(),
                 };
                 this._emit('zoom', data);
                 this._emitGlobal(Events.VIEWER_ZOOM, {
                     viewerId: this.id,
-                    ...data
+                    ...data,
                 });
             }
         };
@@ -220,9 +220,9 @@ class ViewerInstance {
             this._emit('ready', { slideId: this.slideId });
             this._emitGlobal(Events.SLIDE_LOADED, {
                 viewerId: this.id,
-                slideId: this.slideId
+                slideId: this.slideId,
             });
-            console.log(`[ViewerInstance] Slide loaded in viewer "${this.id}"`);
+            console.warn(`[ViewerInstance] Slide loaded in viewer "${this.id}"`);
         };
 
         // Error handler
@@ -233,7 +233,7 @@ class ViewerInstance {
             this._emitGlobal(Events.SLIDE_ERROR, {
                 viewerId: this.id,
                 slideId: this.slideId,
-                error: error.message
+                error: error.message,
             });
             console.error(`[ViewerInstance] Error in viewer "${this.id}":`, error);
         };
@@ -264,7 +264,7 @@ class ViewerInstance {
         }
 
         if (this.slideId === slideId && this.state.isReady) {
-            console.log(`[ViewerInstance] Slide "${slideId}" already loaded in viewer "${this.id}"`);
+            console.warn(`[ViewerInstance] Slide "${slideId}" already loaded in viewer "${this.id}"`);
             return;
         }
 
@@ -275,7 +275,7 @@ class ViewerInstance {
 
         try {
             // Fetch DZI metadata
-            console.log(`[ViewerInstance] Loading DZI metadata for slide "${slideId}"`);
+            console.warn(`[ViewerInstance] Loading DZI metadata for slide "${slideId}"`);
             const response = await fetch(`${API.BASE_URL}/api/slides/${slideId}/dzi.json`);
 
             if (!response.ok) {
@@ -286,7 +286,7 @@ class ViewerInstance {
             this.slideMetadata = dziMetadata;
             this.slideId = slideId;
 
-            console.log(`[ViewerInstance] DZI metadata loaded:`, dziMetadata);
+            console.warn('[ViewerInstance] DZI metadata loaded:', dziMetadata);
 
             // Create tile source
             const tileSource = this._createTileSource(slideId, dziMetadata);
@@ -300,7 +300,7 @@ class ViewerInstance {
             this._emitGlobal(Events.SLIDE_ERROR, {
                 viewerId: this.id,
                 slideId,
-                error: error.message
+                error: error.message,
             });
             throw error;
         }
@@ -333,7 +333,7 @@ class ViewerInstance {
              * Get scale factor for a level
              * Maps OSD level to OpenSlide downsample
              */
-            getLevelScale: function(level) {
+            getLevelScale: function (level) {
                 const openslideLevel = metadata.levels - 1 - level;
                 const downsample = metadata.level_downsamples[openslideLevel];
                 return 1.0 / downsample;
@@ -342,23 +342,23 @@ class ViewerInstance {
             /**
              * Get number of tiles at a level
              */
-            getNumTiles: function(level) {
+            getNumTiles: function (level) {
                 const openslideLevel = metadata.levels - 1 - level;
                 const [width, height] = metadata.level_dimensions[openslideLevel];
 
                 return {
                     x: Math.ceil(width / metadata.tile_size),
-                    y: Math.ceil(height / metadata.tile_size)
+                    y: Math.ceil(height / metadata.tile_size),
                 };
             },
 
             /**
              * Get tile URL
              */
-            getTileUrl: function(level, x, y) {
+            getTileUrl: function (level, x, y) {
                 const openslideLevel = metadata.levels - 1 - level;
                 return `${baseUrl}/api/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
-            }
+            },
         };
     }
 
@@ -378,10 +378,10 @@ class ViewerInstance {
         this._emit('unloaded', { slideId: previousSlideId });
         this._emitGlobal(Events.SLIDE_UNLOADED, {
             viewerId: this.id,
-            slideId: previousSlideId
+            slideId: previousSlideId,
         });
 
-        console.log(`[ViewerInstance] Slide unloaded from viewer "${this.id}"`);
+        console.warn(`[ViewerInstance] Slide unloaded from viewer "${this.id}"`);
     }
 
     /**
@@ -409,7 +409,7 @@ class ViewerInstance {
             y: bounds.y,
             width: bounds.width,
             height: bounds.height,
-            zoom: zoom
+            zoom: zoom,
         };
     }
 
@@ -430,7 +430,7 @@ class ViewerInstance {
             viewport.x,
             viewport.y,
             viewport.width,
-            viewport.height
+            viewport.height,
         );
 
         this._osdViewer.viewport.fitBounds(bounds, immediately);
@@ -559,7 +559,7 @@ class ViewerInstance {
             state: this.state.current,
             viewport: this.getViewport(),
             hasError: this.state.isError,
-            error: this.state.error?.message || null
+            error: this.state.error?.message || null,
         };
     }
 
@@ -576,7 +576,7 @@ class ViewerInstance {
      * Cleans up resources and event handlers
      */
     destroy() {
-        console.log(`[ViewerInstance] Destroying viewer "${this.id}"`);
+        console.warn(`[ViewerInstance] Destroying viewer "${this.id}"`);
 
         // Transition to destroying state
         this.state.transitionTo(ViewerStates.DESTROYING, { force: true });
@@ -606,7 +606,7 @@ class ViewerInstance {
         this.slideMetadata = null;
         this.container = null;
 
-        console.log(`[ViewerInstance] Viewer "${this.id}" destroyed`);
+        console.warn(`[ViewerInstance] Viewer "${this.id}" destroyed`);
     }
 }
 

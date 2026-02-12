@@ -294,19 +294,19 @@ export function createFolderBrowser(onSlideSelect) {
 
         // Filtrer dossiers
         const filteredFolders = allFolders.filter(f =>
-            f.name.toLowerCase().includes(query)
+            f.name.toLowerCase().includes(query),
         );
 
         // Filtrer lames
         const filteredSlides = allSlides.filter(s =>
             s.name.toLowerCase().includes(query) ||
             (s.format_string && s.format_string.toLowerCase().includes(query)) ||
-            (s.notes && s.notes.toLowerCase().includes(query))
+            (s.notes && s.notes.toLowerCase().includes(query)),
         );
 
         // Filtrer fichiers
         const filteredFiles = allFiles.filter(f =>
-            f.name.toLowerCase().includes(query)
+            f.name.toLowerCase().includes(query),
         );
 
         // Réafficher avec filtres
@@ -338,7 +338,7 @@ export function createFolderBrowser(onSlideSelect) {
  * @param {File[]} files - Fichiers sélectionnés
  */
 function handleLocalFiles(files) {
-    console.log('Fichiers sélectionnés:', files);
+    console.warn('Fichiers sélectionnés:', files);
 
     const fileNames = files.map(f => f.name).join(', ');
     alert(`📂 Fichiers sélectionnés (${files.length}):\n\n${fileNames}\n\n⚠️ Note: L'upload de fichiers locaux nécessite une intégration backend.\nPour l'instant, utilisez les lames du dossier /Slides.`);

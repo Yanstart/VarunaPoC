@@ -143,10 +143,10 @@ export class UserMenu {
             'Break-Glass Emergency Access\n\n' +
             'This grants temporary elevated privileges and is logged as a CRITICAL audit event.\n' +
             'A review by an administrator is required.\n\n' +
-            'Enter medical justification (min 10 characters):'
+            'Enter medical justification (min 10 characters):',
         );
         if (!reason || reason.length < 10) {
-            if (reason !== null) alert('Justification must be at least 10 characters.');
+            if (reason !== null) {alert('Justification must be at least 10 characters.');}
             return;
         }
         try {
@@ -168,7 +168,7 @@ export class UserMenu {
                 heatmap_visible: false,
             };
             await apiService.saveSessionState(state);
-            console.log('[UserMenu] Session saved');
+            console.warn('[UserMenu] Session saved');
         } catch (err) {
             console.error('[UserMenu] Save session failed:', err);
         }
@@ -179,7 +179,7 @@ export class UserMenu {
         try {
             const result = await apiService.loadSessionState();
             if (result.state && result.state.slide_id) {
-                console.log('[UserMenu] Restoring session, slide:', result.state.slide_id);
+                console.warn('[UserMenu] Restoring session, slide:', result.state.slide_id);
                 // Emit event to navigate to the slide
                 const { eventBus } = await import('../core/EventBus.js');
                 const { Events } = await import('../core/Constants.js');
@@ -188,7 +188,7 @@ export class UserMenu {
                     slideId: result.state.slide_id,
                 });
             } else {
-                console.log('[UserMenu] No saved session');
+                console.warn('[UserMenu] No saved session');
             }
         } catch (err) {
             console.error('[UserMenu] Restore session failed:', err);
@@ -196,7 +196,7 @@ export class UserMenu {
     }
 
     _getInitials(name) {
-        if (!name || name === 'anonymous') return '?';
+        if (!name || name === 'anonymous') {return '?';}
         const parts = name.split(/[.\-_\s]/);
         if (parts.length >= 2) {
             return (parts[0][0] + parts[1][0]).toUpperCase();

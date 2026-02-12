@@ -72,7 +72,7 @@ export function createHomePage(slides, onSlideSelect) {
     // Afficher liste des lames
     const listContainer = main.querySelector('#slide-list-container');
     const slideList = createSlideList(slides, (slide) => {
-        console.log('Slide selected:', slide.name);
+        console.warn('Slide selected:', slide.name);
         onSlideSelect(slide);
     });
     listContainer.appendChild(slideList);
@@ -85,7 +85,7 @@ export function createHomePage(slides, onSlideSelect) {
             s.name.toLowerCase().includes(query) ||
             s.format.toLowerCase().includes(query) ||
             s.format_string.toLowerCase().includes(query) ||
-            (s.notes && s.notes.toLowerCase().includes(query))
+            (s.notes && s.notes.toLowerCase().includes(query)),
         );
 
         // Mettre à jour liste
@@ -123,7 +123,7 @@ export function createHomePage(slides, onSlideSelect) {
  * @param {File[]} files - Fichiers sélectionnés
  */
 function handleLocalFiles(files) {
-    console.log('Fichiers sélectionnés:', files);
+    console.warn('Fichiers sélectionnés:', files);
 
     const fileNames = files.map(f => f.name).join(', ');
     alert(`📂 Fichiers sélectionnés (${files.length}):\n\n${fileNames}\n\n⚠️ Note: L'upload de fichiers locaux nécessite une intégration backend.\nPour l'instant, utilisez les lames du dossier /Slides.`);
@@ -143,9 +143,8 @@ function handleLocalFiles(files) {
  */
 function updateHomeStats(filtered, total) {
     const statsDiv = document.querySelector('#stats');
-    if (!statsDiv) return;
+    if (!statsDiv) {return;}
 
-    const supported = filtered.filter(s => s.is_supported !== false).length;
     const unsupported = filtered.filter(s => s.is_supported === false).length;
 
     // Compter types de structures

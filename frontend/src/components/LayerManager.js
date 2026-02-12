@@ -52,12 +52,12 @@ class LayerManager {
             eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render()),
             eventBus.on(Events.ANNOTATION_CREATED, () => this.render()),
             eventBus.on(Events.ANNOTATION_DELETED, () => this.render()),
-            eventBus.on(Events.DETECTION_CONFIRM, () => this.render())
+            eventBus.on(Events.DETECTION_CONFIRM, () => this.render()),
         );
     }
 
     render() {
-        if (!this.element) return;
+        if (!this.element) {return;}
         const list = this.element.querySelector('.layer-manager__list');
         list.innerHTML = '';
 
@@ -82,7 +82,7 @@ class LayerManager {
             groups.get(key).count++;
         }
 
-        for (const [key, group] of groups) {
+        for (const group of groups.values()) {
             const item = this._createLayerItem(group);
             list.appendChild(item);
         }
@@ -142,7 +142,7 @@ class LayerManager {
     async _exportGeoJSON() {
         try {
             const geojson = await annotationStore.exportGeoJSON();
-            if (!geojson) return;
+            if (!geojson) {return;}
 
             const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);

@@ -32,7 +32,7 @@ const VIEWER_PRESETS = {
      */
     default: {
         showNavigator: true,
-        emitEvents: true
+        emitEvents: true,
     },
 
     /**
@@ -40,7 +40,7 @@ const VIEWER_PRESETS = {
      */
     minimal: {
         showNavigator: false,
-        emitEvents: true
+        emitEvents: true,
     },
 
     /**
@@ -48,7 +48,7 @@ const VIEWER_PRESETS = {
      */
     compare: {
         showNavigator: true,
-        emitEvents: true
+        emitEvents: true,
     },
 
     /**
@@ -56,7 +56,7 @@ const VIEWER_PRESETS = {
      */
     thumbnail: {
         showNavigator: false,
-        emitEvents: false
+        emitEvents: false,
     },
 
     /**
@@ -64,8 +64,8 @@ const VIEWER_PRESETS = {
      */
     fullscreen: {
         showNavigator: true,
-        emitEvents: true
-    }
+        emitEvents: true,
+    },
 };
 
 /**
@@ -93,7 +93,7 @@ class ViewerFactory {
         const mergedOptions = {
             ...VIEWER_PRESETS.default,
             ...presetOptions,
-            ...options
+            ...options,
         };
 
         // Remove preset key from final options
@@ -105,13 +105,13 @@ class ViewerFactory {
             : container;
 
         if (!containerElement) {
-            throw new Error(`ViewerFactory.create: Container not found`);
+            throw new Error('ViewerFactory.create: Container not found');
         }
 
         // Create and return instance
         const instance = new ViewerInstance(id, containerElement, mergedOptions);
 
-        console.log(`[ViewerFactory] Created viewer "${instance.id}" with options:`, mergedOptions);
+        console.warn(`[ViewerFactory] Created viewer "${instance.id}" with options:`, mergedOptions);
 
         return instance;
     }
@@ -135,7 +135,7 @@ class ViewerFactory {
 
         return ViewerFactory.create(id, container, {
             ...extraOptions,
-            preset: presetName
+            preset: presetName,
         });
     }
 
@@ -162,7 +162,7 @@ class ViewerFactory {
             return ViewerFactory.create(
                 config.id,
                 config.container,
-                config.options || {}
+                config.options || {},
             );
         });
     }
@@ -215,7 +215,7 @@ class ViewerFactory {
         }
 
         VIEWER_PRESETS[name] = { ...VIEWER_PRESETS.default, ...config };
-        console.log(`[ViewerFactory] Registered preset "${name}"`);
+        console.warn(`[ViewerFactory] Registered preset "${name}"`);
     }
 
     /**

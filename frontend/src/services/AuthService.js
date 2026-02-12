@@ -29,7 +29,7 @@ const OIDC_CONFIG = {
 
 class AuthService {
     constructor() {
-        if (instance) return instance;
+        if (instance) {return instance;}
 
         /** @type {string|null} Access token */
         this._accessToken = null;
@@ -67,7 +67,7 @@ class AuthService {
      * @returns {Promise<boolean>} true if auth is enabled
      */
     async init() {
-        if (this._initialized) return this._authEnabled;
+        if (this._initialized) {return this._authEnabled;}
 
         try {
             // Check if we're on the callback page
@@ -247,7 +247,7 @@ class AuthService {
      * Silently refresh the access token using the refresh token.
      */
     async refreshTokenSilently() {
-        if (!this._refreshToken) return false;
+        if (!this._refreshToken) {return false;}
 
         try {
             const discovery = await this._getDiscovery();
@@ -305,26 +305,26 @@ class AuthService {
 
     /** @returns {string} Username */
     get username() {
-        if (!this._claims) return 'anonymous';
+        if (!this._claims) {return 'anonymous';}
         return this._claims.preferred_username || this._claims.username || this._claims.sub || 'unknown';
     }
 
     /** @returns {string[]} User roles */
     get roles() {
-        if (!this._claims) return [];
+        if (!this._claims) {return [];}
         // Support both formats: CurrentUser.roles or JWT realm_access.roles
-        if (Array.isArray(this._claims.roles)) return this._claims.roles;
+        if (Array.isArray(this._claims.roles)) {return this._claims.roles;}
         const realmAccess = this._claims.realm_access;
-        if (realmAccess && Array.isArray(realmAccess.roles)) return realmAccess.roles;
+        if (realmAccess && Array.isArray(realmAccess.roles)) {return realmAccess.roles;}
         return [];
     }
 
     /** @returns {string} Primary role (highest privilege) */
     get primaryRole() {
-        if (this._claims && this._claims.primary_role) return this._claims.primary_role;
+        if (this._claims && this._claims.primary_role) {return this._claims.primary_role;}
         const priority = { ADMIN_TECHNIQUE: 4, MEDECIN: 3, INFIRMIER: 2, LECTURE_SEULE: 1 };
         const roles = this.roles;
-        if (!roles.length) return 'LECTURE_SEULE';
+        if (!roles.length) {return 'LECTURE_SEULE';}
         return roles.reduce((best, r) => (priority[r] || 0) > (priority[best] || 0) ? r : best, roles[0]);
     }
 
@@ -379,7 +379,7 @@ class AuthService {
 
                 // Check expiration
                 if (this._claims.exp && Date.now() / 1000 > this._claims.exp) {
-                    console.info('[AuthService] Stored token expired');
+                    console.warn('[AuthService] Stored token expired');
                     this._accessToken = null;
                     this._claims = null;
                 }
@@ -406,8 +406,8 @@ class AuthService {
     }
 
     _startRefreshTimer() {
-        if (this._refreshTimer) clearTimeout(this._refreshTimer);
-        if (!this._claims || !this._claims.exp) return;
+        if (this._refreshTimer) {clearTimeout(this._refreshTimer);}
+        if (!this._claims || !this._claims.exp) {return;}
 
         // Refresh 60 seconds before expiry
         const expiresIn = (this._claims.exp - Date.now() / 1000 - 60) * 1000;
@@ -422,7 +422,7 @@ class AuthService {
     }
 
     async _getDiscovery() {
-        if (this._discovery) return this._discovery;
+        if (this._discovery) {return this._discovery;}
 
         const url = `${OIDC_CONFIG.issuerUrl}/.well-known/openid-configuration`;
         const response = await fetch(url);

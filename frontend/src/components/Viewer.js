@@ -19,7 +19,6 @@
  * @module components/Viewer
  */
 
-import OpenSeadragon from 'openseadragon';
 import { API_BASE } from '../utils/api.js';
 import { viewerManager } from '../viewers/ViewerManager.js';
 import { ViewerFactory } from '../viewers/ViewerFactory.js';
@@ -57,13 +56,13 @@ export function initViewer(elementId) {
     // Create viewer via new architecture
     legacyViewerInstance = ViewerFactory.create('legacy-viewer', container, {
         showNavigator: true,
-        preset: 'default'
+        preset: 'default',
     });
 
     // Register with manager
     if (!viewerManager.hasViewer(legacyViewerInstance.id)) {
         // The factory already adds to manager, but ensure it's tracked
-        console.log('[Viewer] Legacy viewer created via new architecture');
+        console.warn('[Viewer] Legacy viewer created via new architecture');
     }
 
     // Return the internal OSD viewer for backward compatibility
@@ -99,7 +98,7 @@ export async function loadSlideWithTiles(viewer, slideId) {
 
     try {
         // 1. Fetch DZI metadata
-        console.log(`[Viewer] Loading DZI metadata for slide ${slideId}`);
+        console.warn(`[Viewer] Loading DZI metadata for slide ${slideId}`);
         const response = await fetch(`${API_BASE}/api/slides/${slideId}/dzi.json`);
 
         if (!response.ok) {
@@ -107,7 +106,7 @@ export async function loadSlideWithTiles(viewer, slideId) {
         }
 
         const dziMetadata = await response.json();
-        console.log(`[Viewer] DZI metadata loaded:`, dziMetadata);
+        console.warn('[Viewer] DZI metadata loaded:', dziMetadata);
 
         // 2. Create tile source
         const tileSource = {
@@ -118,39 +117,39 @@ export async function loadSlideWithTiles(viewer, slideId) {
             minLevel: 0,
             maxLevel: dziMetadata.levels - 1,
 
-            getLevelScale: function(level) {
+            getLevelScale: function (level) {
                 const openslideLevel = dziMetadata.levels - 1 - level;
                 const downsample = dziMetadata.level_downsamples[openslideLevel];
                 return 1.0 / downsample;
             },
 
-            getNumTiles: function(level) {
+            getNumTiles: function (level) {
                 const openslideLevel = dziMetadata.levels - 1 - level;
                 const [width, height] = dziMetadata.level_dimensions[openslideLevel];
 
                 return {
                     x: Math.ceil(width / dziMetadata.tile_size),
-                    y: Math.ceil(height / dziMetadata.tile_size)
+                    y: Math.ceil(height / dziMetadata.tile_size),
                 };
             },
 
-            getTileUrl: function(level, x, y) {
+            getTileUrl: function (level, x, y) {
                 const openslideLevel = dziMetadata.levels - 1 - level;
                 return `${API_BASE}/api/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
-            }
+            },
         };
 
-        console.log(`[Viewer] Opening tile source (${dziMetadata.levels} levels)`);
+        console.warn(`[Viewer] Opening tile source (${dziMetadata.levels} levels)`);
 
         // 3. Open in viewer
         viewer.open(tileSource);
 
         viewer.addOnceHandler('open', () => {
-            console.log('[Viewer] Slide opened successfully');
+            console.warn('[Viewer] Slide opened successfully');
         });
 
     } catch (error) {
-        console.error(`[Viewer] Error loading slide with tiles:`, error);
+        console.error('[Viewer] Error loading slide with tiles:', error);
         throw error;
     }
 }
@@ -163,11 +162,11 @@ export async function loadSlideWithTiles(viewer, slideId) {
  * @param {string} overviewUrl - URL vers image overview (JPEG)
  */
 export function loadOverview(viewer, overviewUrl) {
-    console.log('[Viewer] Loading overview (legacy mode)');
+    console.warn('[Viewer] Loading overview (legacy mode)');
 
     const tileSource = {
         type: 'image',
-        url: overviewUrl
+        url: overviewUrl,
     };
 
     viewer.open(tileSource);

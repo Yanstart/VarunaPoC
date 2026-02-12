@@ -88,7 +88,7 @@ class EventBus {
         this._listeners.get(event).add(callback);
 
         if (this._debug) {
-            console.log(`[EventBus] Subscribed to "${event}"`);
+            console.warn(`[EventBus] Subscribed to "${event}"`);
         }
 
         // Return unsubscribe function for convenience
@@ -114,7 +114,7 @@ class EventBus {
         this._onceListeners.get(event).add(callback);
 
         if (this._debug) {
-            console.log(`[EventBus] Subscribed once to "${event}"`);
+            console.warn(`[EventBus] Subscribed once to "${event}"`);
         }
 
         return () => {
@@ -137,7 +137,7 @@ class EventBus {
             const deleted = listeners.delete(callback);
 
             if (this._debug && deleted) {
-                console.log(`[EventBus] Unsubscribed from "${event}"`);
+                console.warn(`[EventBus] Unsubscribed from "${event}"`);
             }
 
             // Clean up empty sets
@@ -166,7 +166,7 @@ class EventBus {
         let invokedCount = 0;
 
         if (this._debug) {
-            console.log(`[EventBus] Emitting "${event}"`, data);
+            console.warn(`[EventBus] Emitting "${event}"`, data);
         }
 
         // Invoke regular listeners
@@ -231,14 +231,14 @@ class EventBus {
             this._onceListeners.delete(event);
 
             if (this._debug) {
-                console.log(`[EventBus] Cleared all listeners for "${event}"`);
+                console.warn(`[EventBus] Cleared all listeners for "${event}"`);
             }
         } else {
             this._listeners.clear();
             this._onceListeners.clear();
 
             if (this._debug) {
-                console.log('[EventBus] Cleared all listeners');
+                console.warn('[EventBus] Cleared all listeners');
             }
         }
     }
@@ -250,7 +250,7 @@ class EventBus {
      */
     setDebug(enabled) {
         this._debug = enabled;
-        console.log(`[EventBus] Debug mode ${enabled ? 'enabled' : 'disabled'}`);
+        console.warn(`[EventBus] Debug mode ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**

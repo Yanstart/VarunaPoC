@@ -70,7 +70,7 @@ class DetectionPanel {
         const labels = annotationStore.labels || [];
         const options = labels.map(l =>
             `<option value="${l.id}" ${this.selectedLabelId === l.id ? 'selected' : ''}>`
-            + `${l.name}</option>`
+            + `${l.name}</option>`,
         ).join('');
 
         return `
@@ -174,7 +174,7 @@ class DetectionPanel {
     // ==========================================
 
     _renderPreview() {
-        if (!this.detectionResult) return;
+        if (!this.detectionResult) {return;}
 
         const features = this.detectionResult.geojson.features;
         const total = features.length;
@@ -287,9 +287,7 @@ class DetectionPanel {
         let high = 0, medium = 0, low = 0;
         for (const f of features) {
             const conf = f.properties?.confidence || 0;
-            if (conf >= 0.8) high++;
-            else if (conf >= 0.5) medium++;
-            else low++;
+            if (conf >= 0.8) {high++;} else if (conf >= 0.5) {medium++;} else {low++;}
         }
         return { high, medium, low };
     }
@@ -332,7 +330,7 @@ class DetectionPanel {
     // ==========================================
 
     async _runDetection() {
-        if (!this.slideId || this.isDetecting) return;
+        if (!this.slideId || this.isDetecting) {return;}
 
         this.isDetecting = true;
         this._renderLoading();
@@ -389,7 +387,7 @@ class DetectionPanel {
     }
 
     async _confirmDetections() {
-        if (!this.detectionResult) return;
+        if (!this.detectionResult) {return;}
 
         const features = this.detectionResult.geojson.features;
 
@@ -403,7 +401,7 @@ class DetectionPanel {
                 .filter(i => !this.rejected.has(i));
         }
 
-        if (indices.length === 0) return;
+        if (indices.length === 0) {return;}
 
         // Store features for confirmation with selected label
         const toConfirm = indices.map(i => features[i]);
@@ -411,7 +409,7 @@ class DetectionPanel {
 
         const result = await annotationStore.confirmDetections(
             toConfirm.map((_, i) => i),
-            this.selectedLabelId
+            this.selectedLabelId,
         );
 
         if (result) {

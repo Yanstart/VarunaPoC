@@ -136,7 +136,7 @@ class MLPanel {
             this.opacityValue.textContent = `${e.target.value}%`;
             eventBus.emit(Events.ML_HEATMAP_OPACITY_CHANGE, {
                 viewerId: this.viewerId,
-                opacity: this.heatmapOpacity
+                opacity: this.heatmapOpacity,
             });
         });
 
@@ -151,7 +151,7 @@ class MLPanel {
                 if (data.viewerId === this.viewerId) {
                     this.setSlide(data.slideId);
                 }
-            })
+            }),
         );
 
         // Listen for slide unloaded
@@ -160,7 +160,7 @@ class MLPanel {
                 if (data.viewerId === this.viewerId) {
                     this.reset();
                 }
-            })
+            }),
         );
     }
 
@@ -212,7 +212,7 @@ class MLPanel {
      * @private
      */
     async _runPrediction() {
-        if (!this.slideId || this.isLoading) return;
+        if (!this.slideId || this.isLoading) {return;}
 
         this.isLoading = true;
         this.predictBtn.disabled = true;
@@ -232,12 +232,12 @@ class MLPanel {
 
         eventBus.emit(Events.ML_PREDICTION_START, {
             viewerId: this.viewerId,
-            slideId: this.slideId
+            slideId: this.slideId,
         });
 
         try {
             const result = await apiService.predict(this.slideId, {
-                numMcSamples: 10
+                numMcSamples: 10,
             });
 
             this.prediction = result;
@@ -249,7 +249,7 @@ class MLPanel {
             eventBus.emit(Events.ML_PREDICTION_COMPLETE, {
                 viewerId: this.viewerId,
                 slideId: this.slideId,
-                prediction: result
+                prediction: result,
             });
 
         } catch (error) {
@@ -259,7 +259,7 @@ class MLPanel {
             eventBus.emit(Events.ML_PREDICTION_ERROR, {
                 viewerId: this.viewerId,
                 slideId: this.slideId,
-                error: error.message
+                error: error.message,
             });
         } finally {
             this.isLoading = false;
@@ -367,8 +367,8 @@ class MLPanel {
      * @private
      */
     _getConfidenceColor(confidence) {
-        if (confidence >= 0.9) return 'var(--color-success)';
-        if (confidence >= 0.7) return 'var(--color-warning)';
+        if (confidence >= 0.9) {return 'var(--color-success)';}
+        if (confidence >= 0.7) {return 'var(--color-warning)';}
         return 'var(--color-error)';
     }
 
@@ -377,7 +377,7 @@ class MLPanel {
      * @private
      */
     async _toggleHeatmap() {
-        if (!this.prediction) return;
+        if (!this.prediction) {return;}
 
         this.heatmapVisible = !this.heatmapVisible;
         this.heatmapBtn.classList.toggle('is-active', this.heatmapVisible);
@@ -413,7 +413,7 @@ class MLPanel {
             slideId: this.slideId,
             visible: this.heatmapVisible,
             predictionClass: this.prediction.prediction_class,
-            opacity: this.heatmapOpacity
+            opacity: this.heatmapOpacity,
         });
     }
 

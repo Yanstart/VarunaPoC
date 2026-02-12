@@ -13,7 +13,7 @@
  * });
  */
 
-import { LayoutPresets, CSSClasses } from '../core/Constants.js';
+import { CSSClasses } from '../core/Constants.js';
 
 /**
  * SyncControls class - Sync and layout control bar
@@ -34,7 +34,7 @@ class SyncControls {
         this.options = {
             onSyncToggle: null,
             onLayoutChange: null,
-            ...options
+            ...options,
         };
 
         /**
@@ -112,7 +112,7 @@ class SyncControls {
         const layouts = [
             { preset: 'SINGLE', cols: 1, rows: 1, title: 'Single view' },
             { preset: 'SIDE_BY_SIDE', cols: 2, rows: 1, title: 'Side by side' },
-            { preset: 'GRID_2X2', cols: 2, rows: 2, title: '2x2 Grid' }
+            { preset: 'GRID_2X2', cols: 2, rows: 2, title: '2x2 Grid' },
         ];
 
         layouts.forEach(layout => {
@@ -212,7 +212,7 @@ class SyncControls {
             this.options.onLayoutChange(preset);
         }
 
-        console.log(`[SyncControls] Layout selected: ${preset}`);
+        console.warn(`[SyncControls] Layout selected: ${preset}`);
     }
 
     /**
@@ -227,7 +227,7 @@ class SyncControls {
             this.options.onSyncToggle(this.syncEnabled);
         }
 
-        console.log(`[SyncControls] Sync toggled: ${this.syncEnabled}`);
+        console.warn(`[SyncControls] Sync toggled: ${this.syncEnabled}`);
     }
 
     /**

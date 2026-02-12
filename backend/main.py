@@ -105,7 +105,7 @@ async def lifespan(_app):
 
         await close_db()
         logger.info("Database connection pool closed")
-    except Exception:
+    except Exception:  # nosec B110 - Best-effort cleanup during shutdown, failure is acceptable
         pass
 
 

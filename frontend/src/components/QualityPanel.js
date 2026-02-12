@@ -84,13 +84,13 @@ class QualityPanel {
             </div>
             <div class="quality-panel__body">
                 ${!hasAnnotators
-                    ? `<div class="quality-panel__empty">
+        ? `<div class="quality-panel__empty">
                         ${this.annotators.length === 0
-                            ? 'No annotators on this slide'
-                            : 'Need at least 2 annotators'}
+        ? 'No annotators on this slide'
+        : 'Need at least 2 annotators'}
                        </div>`
-                    : this._renderContent()
-                }
+        : this._renderContent()
+}
             </div>
         `;
 
@@ -119,7 +119,7 @@ class QualityPanel {
 
     _renderContent() {
         const opts = this.annotators.map(a =>
-            `<option value="${a.username}">${a.username} (${a.annotation_count})</option>`
+            `<option value="${a.username}">${a.username} (${a.annotation_count})</option>`,
         ).join('');
 
         return `
@@ -134,8 +134,8 @@ class QualityPanel {
                     <span class="quality-panel__select-label">B</span>
                     <select class="quality-panel__select" id="qp-annotator-b">
                         ${this.annotators.map((a, i) =>
-                            `<option value="${a.username}" ${i === 1 ? 'selected' : ''}>${a.username} (${a.annotation_count})</option>`
-                        ).join('')}
+        `<option value="${a.username}" ${i === 1 ? 'selected' : ''}>${a.username} (${a.annotation_count})</option>`,
+    ).join('')}
                     </select>
                 </div>
             </div>
@@ -172,7 +172,7 @@ class QualityPanel {
 
     _renderConfusionMatrix() {
         const r = this.confusionResult;
-        if (!r.categories.length) return '';
+        if (!r.categories.length) {return '';}
 
         const headerCells = r.categories.map(c => `<th>${c}</th>`).join('');
         const rows = r.matrix.map((row, i) => {
@@ -196,7 +196,7 @@ class QualityPanel {
 
     _renderF1Metrics() {
         const r = this.f1Result;
-        if (!r.metrics.length) return '';
+        if (!r.metrics.length) {return '';}
 
         const rows = r.metrics.map(m => `
             <div class="quality-panel__f1-row">
@@ -223,7 +223,7 @@ class QualityPanel {
 
     _renderIoUHistogram() {
         const r = this.iouResult;
-        if (!r.histogram || !r.histogram.length) return '';
+        if (!r.histogram || !r.histogram.length) {return '';}
 
         const maxCount = Math.max(...r.histogram.map(b => b.count), 1);
         const bars = r.histogram.map(bin => {
@@ -266,11 +266,11 @@ class QualityPanel {
     // ==========================================
 
     async _compute() {
-        if (!this.slideId || this.isLoading) return;
+        if (!this.slideId || this.isLoading) {return;}
 
         const selectA = this.element.querySelector('#qp-annotator-a');
         const selectB = this.element.querySelector('#qp-annotator-b');
-        if (!selectA || !selectB) return;
+        if (!selectA || !selectB) {return;}
 
         const annotatorA = selectA.value;
         const annotatorB = selectB.value;
@@ -330,7 +330,7 @@ class QualityPanel {
         if (this.showDisagreements && this.slideId) {
             const selectA = this.element.querySelector('#qp-annotator-a');
             const selectB = this.element.querySelector('#qp-annotator-b');
-            if (!selectA || !selectB) return;
+            if (!selectA || !selectB) {return;}
 
             try {
                 const geojson = await apiService.getDisagreements(this.slideId, {

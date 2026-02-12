@@ -24,7 +24,7 @@ export const API_BASE = envApiUrl || 'http://localhost:8000';
  */
 export async function fetchSlides() {
     const res = await fetch(`${API_BASE}/api/slides/`);
-    if (!res.ok) throw new Error('Failed to fetch slides');
+    if (!res.ok) {throw new Error('Failed to fetch slides');}
     return res.json();
 }
 
@@ -41,7 +41,7 @@ export async function fetchSlides() {
  */
 export async function getSlideInfo(slideId) {
     const res = await fetch(`${API_BASE}/api/slides/${slideId}/info`);
-    if (!res.ok) throw new Error('Failed to fetch slide info');
+    if (!res.ok) {throw new Error('Failed to fetch slide info');}
     return res.json();
 }
 

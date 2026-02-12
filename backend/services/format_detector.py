@@ -521,7 +521,7 @@ class FormatDetector:
                         logger.warning(
                             f"CZI detected by signature but OpenSlide cannot open: {czi_file.name}"
                         )
-            except:
+            except:  # nosec B110 - Best-effort format detection, failure to read signature is acceptable
                 pass
 
         if format_str is None and not is_czi_by_signature:

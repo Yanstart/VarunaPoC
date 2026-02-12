@@ -42,13 +42,13 @@
  * // Result: { x: 25000, y: 20000, width: 50000, height: 40000 }
  */
 export function normalizedToAbsolute(normalizedCoords, slideDimensions) {
-    const { width: slideWidth, height: slideHeight } = slideDimensions;
+    const { width: slideWidth } = slideDimensions;
 
     return {
         x: Math.round(normalizedCoords.x * slideWidth),
         y: Math.round(normalizedCoords.y * slideWidth), // Note: OSD uses width for both
         width: Math.round(normalizedCoords.width * slideWidth),
-        height: Math.round(normalizedCoords.height * slideWidth)
+        height: Math.round(normalizedCoords.height * slideWidth),
     };
 }
 
@@ -72,7 +72,7 @@ export function absoluteToNormalized(absoluteCoords, slideDimensions) {
         x: absoluteCoords.x / slideWidth,
         y: absoluteCoords.y / slideWidth,
         width: absoluteCoords.width / slideWidth,
-        height: absoluteCoords.height / slideWidth
+        height: absoluteCoords.height / slideWidth,
     };
 }
 
@@ -105,7 +105,7 @@ export function convertBetweenLevels(coords, sourceDownsample, targetDownsample)
 
     const result = {
         x: Math.round(coords.x * factor),
-        y: Math.round(coords.y * factor)
+        y: Math.round(coords.y * factor),
     };
 
     if (coords.width !== undefined) {
@@ -165,12 +165,12 @@ export function calculateTileRange(viewport, tileSize, levelDimensions) {
 
     const endCol = Math.min(
         Math.ceil(levelDimensions.width / tileSize) - 1,
-        Math.ceil((viewport.x + viewport.width) / tileSize)
+        Math.ceil((viewport.x + viewport.width) / tileSize),
     );
 
     const endRow = Math.min(
         Math.ceil(levelDimensions.height / tileSize) - 1,
-        Math.ceil((viewport.y + viewport.height) / tileSize)
+        Math.ceil((viewport.y + viewport.height) / tileSize),
     );
 
     return {
@@ -178,7 +178,7 @@ export function calculateTileRange(viewport, tileSize, levelDimensions) {
         startRow,
         endCol,
         endRow,
-        tileCount: (endCol - startCol + 1) * (endRow - startRow + 1)
+        tileCount: (endCol - startCol + 1) * (endRow - startRow + 1),
     };
 }
 
@@ -233,7 +233,7 @@ export function normalizeForSync(viewport, slideDimensions) {
         coverage: viewport.width,
 
         // Original aspect ratio for denormalization
-        aspectRatio
+        aspectRatio,
     };
 }
 
@@ -261,7 +261,7 @@ export function denormalizeForSync(syncData, targetDimensions) {
         x,
         y,
         width,
-        height
+        height,
     };
 }
 
@@ -282,7 +282,7 @@ export function clampViewport(viewport, slideDimensions) {
         x: Math.max(0, Math.min(1 - viewport.width, viewport.x)),
         y: Math.max(0, Math.min(maxY - viewport.height, viewport.y)),
         width: Math.min(1, viewport.width),
-        height: Math.min(maxY, viewport.height)
+        height: Math.min(maxY, viewport.height),
     };
 }
 
@@ -337,5 +337,5 @@ export default {
     clampViewport,
     distance,
     micronsToPixels,
-    pixelsToMicrons
+    pixelsToMicrons,
 };

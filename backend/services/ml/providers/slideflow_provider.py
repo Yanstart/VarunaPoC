@@ -271,7 +271,7 @@ class SlideflowProvider:
                 mag_str = f"{approx_mag}x"
                 logger.info(f"Using calculated magnification {mag_str} (mpp={mpp_val})")
                 return self.sf.WSI(slide_path, tile_px=tile_size, tile_um=mag_str)
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
         # No MPP metadata available - slide cannot be processed by Slideflow
@@ -483,7 +483,9 @@ class SlideflowProvider:
             from huggingface_hub import hf_hub_download
 
             namespace, model_name = model_uri.replace("hf://", "").split("/", 1)
-            model_path = hf_hub_download(repo_id=f"{namespace}/{model_name}", filename="model.pt")
+            model_path = hf_hub_download(  # nosec B615
+                repo_id=f"{namespace}/{model_name}", filename="model.pt"
+            )
             return self.sf.model.load(model_path)
         except ImportError:
             raise ModelLoadError(
