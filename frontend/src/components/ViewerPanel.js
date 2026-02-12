@@ -22,6 +22,7 @@ import { DrawingTools } from './DrawingTools.js';
 import { DetectionPanel } from './DetectionPanel.js';
 import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
+import { QualityPanel } from './QualityPanel.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 
 /**
@@ -148,6 +149,12 @@ class ViewerPanel {
          * @type {CountingPanel|null}
          */
         this.countingPanel = null;
+
+        /**
+         * Quality panel component
+         * @type {QualityPanel|null}
+         */
+        this.qualityPanel = null;
 
         // Build the panel
         this._build();
@@ -435,6 +442,12 @@ class ViewerPanel {
         countingContainer.className = 'viewer-panel__counting';
         this.element.appendChild(countingContainer);
         this.countingPanel = new CountingPanel(countingContainer);
+
+        // Quality panel for inter-annotator agreement
+        const qualityContainer = document.createElement('div');
+        qualityContainer.className = 'viewer-panel__quality';
+        this.element.appendChild(qualityContainer);
+        this.qualityPanel = new QualityPanel(qualityContainer);
     }
 
     /**
@@ -474,6 +487,11 @@ class ViewerPanel {
         // Notify detection panel if it exists
         if (this.detectionPanel) {
             this.detectionPanel.setSlide(slideId);
+        }
+
+        // Notify quality panel if it exists
+        if (this.qualityPanel) {
+            this.qualityPanel.setSlide(slideId);
         }
 
         // Note: SLIDE_LOADED event is already emitted by ViewerInstance's OSD 'open' handler.
@@ -600,6 +618,10 @@ class ViewerPanel {
         if (this.countingPanel) {
             this.countingPanel.destroy();
             this.countingPanel = null;
+        }
+        if (this.qualityPanel) {
+            this.qualityPanel.destroy();
+            this.qualityPanel = null;
         }
 
         // Destroy viewer

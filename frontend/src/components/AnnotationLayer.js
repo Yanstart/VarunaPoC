@@ -70,6 +70,11 @@ class AnnotationLayer {
         this.previewGroup.classList.add('previews');
         this.svg.appendChild(this.previewGroup);
 
+        // Disagreement overlay group (quality metrics)
+        this.disagreementGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.disagreementGroup.classList.add('disagreements');
+        this.svg.appendChild(this.disagreementGroup);
+
         // Insert into OSD container
         const container = this.viewer.container;
         container.appendChild(this.svg);
@@ -112,6 +117,11 @@ class AnnotationLayer {
         this._unsubscribers.push(
             eventBus.on(Events.DETECTION_PREVIEW, ({ features }) => {
                 this._renderPreviews(features);
+            })
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.QUALITY_DISAGREEMENT_TOGGLE, ({ visible, features }) => {
+                this._renderDisagreements(visible ? features : []);
             })
         );
     }
@@ -330,6 +340,83 @@ class AnnotationLayer {
     }
 
     // ==========================================
+    // DISAGREEMENT OVERLAY (Quality Metrics)
+    // ==========================================
+
+    _renderDisagreements(features) {
+        while (this.disagreementGroup.firstChild) {
+            this.disagreementGroup.removeChild(this.disagreementGroup.firstChild);
+        }
+
+        if (!features || features.length === 0) return;
+
+        // Add hatched pattern to defs if not already present
+        let defs = this.svg.querySelector('defs');
+        if (!defs.querySelector('#disagreement-hatch')) {
+            const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            pattern.setAttribute('id', 'disagreement-hatch');
+            pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+            const hatchSize = this._getStrokeWidth() * 6;
+            pattern.setAttribute('width', hatchSize);
+            pattern.setAttribute('height', hatchSize);
+            pattern.setAttribute('patternTransform', 'rotate(45)');
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '0');
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', '0');
+            line.setAttribute('y2', hatchSize);
+            line.setAttribute('stroke', 'rgba(244, 67, 54, 0.6)');
+            line.setAttribute('stroke-width', this._getStrokeWidth() * 2);
+            pattern.appendChild(line);
+            defs.appendChild(pattern);
+        }
+
+        for (const feature of features) {
+            const geom = feature.geometry;
+            if (!geom) continue;
+
+            let el = null;
+            if (geom.type === 'Polygon' && geom.coordinates && geom.coordinates[0]) {
+                const points = geom.coordinates[0].map(c => `${c[0]},${c[1]}`).join(' ');
+                el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                el.setAttribute('points', points);
+            } else if (geom.type === 'MultiPolygon' && geom.coordinates) {
+                el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                for (const polyCoords of geom.coordinates) {
+                    if (polyCoords[0]) {
+                        const points = polyCoords[0].map(c => `${c[0]},${c[1]}`).join(' ');
+                        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                        poly.setAttribute('points', points);
+                        poly.setAttribute('fill', 'url(#disagreement-hatch)');
+                        poly.setAttribute('fill-opacity', '0.4');
+                        poly.setAttribute('stroke', '#f44336');
+                        poly.setAttribute('stroke-width', this._getStrokeWidth());
+                        poly.setAttribute('stroke-opacity', '0.8');
+                        el.appendChild(poly);
+                    }
+                }
+            }
+
+            if (el && el.tagName !== 'g') {
+                el.setAttribute('fill', 'url(#disagreement-hatch)');
+                el.setAttribute('fill-opacity', '0.4');
+                el.setAttribute('stroke', '#f44336');
+                el.setAttribute('stroke-width', this._getStrokeWidth());
+                el.setAttribute('stroke-opacity', '0.8');
+            }
+
+            if (el) {
+                el.classList.add('disagreement-region');
+                const props = feature.properties || {};
+                el.dataset.labelA = props.label_a || '';
+                el.dataset.labelB = props.label_b || '';
+                this.disagreementGroup.appendChild(el);
+            }
+        }
+    }
+
+    // ==========================================
     // PUBLIC API FOR DRAWING TOOLS
     // ==========================================
 
@@ -385,6 +472,7 @@ class AnnotationLayer {
         this.svg = null;
         this.annoGroup = null;
         this.previewGroup = null;
+        this.disagreementGroup = null;
     }
 }
 

@@ -107,7 +107,13 @@ export const Events = Object.freeze({
     AUTH_LOGOUT: 'auth:logout',
     AUTH_TOKEN_REFRESHED: 'auth:tokenRefreshed',
     AUTH_ERROR: 'auth:error',
-    AUTH_ROLE_CHANGED: 'auth:roleChanged'
+    AUTH_ROLE_CHANGED: 'auth:roleChanged',
+
+    // Quality metrics events (Phase 4)
+    QUALITY_LOADING: 'quality:loading',
+    QUALITY_READY: 'quality:ready',
+    QUALITY_ERROR: 'quality:error',
+    QUALITY_DISAGREEMENT_TOGGLE: 'quality:disagreementToggle'
 });
 
 /**

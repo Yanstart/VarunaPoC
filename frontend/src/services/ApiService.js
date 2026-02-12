@@ -647,6 +647,81 @@ class ApiService {
     }
 
     // ==========================================
+    // QUALITY METRICS API (Phase 4)
+    // ==========================================
+
+    /**
+     * Get annotators for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Array>} List of annotator info
+     */
+    async getAnnotators(slideId) {
+        return this.get(`/api/quality/${encodeURIComponent(slideId)}/annotators`, {
+            useCache: false,
+        });
+    }
+
+    /**
+     * Compute Cohen's kappa between two annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - {annotator_a, annotator_b, iou_threshold, matching_strategy}
+     * @returns {Promise<Object>} KappaResult
+     */
+    async computeKappa(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/kappa`, params);
+    }
+
+    /**
+     * Compute Fleiss' kappa for multiple annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - {annotators, grid_cell_size}
+     * @returns {Promise<Object>} FleissKappaResult
+     */
+    async computeFleissKappa(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/fleiss`, params);
+    }
+
+    /**
+     * Compute confusion matrix between two annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} ConfusionMatrixResult
+     */
+    async computeConfusionMatrix(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/confusion-matrix`, params);
+    }
+
+    /**
+     * Compute per-label F1/precision/recall
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} PerLabelMetricsResult
+     */
+    async computeF1Metrics(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/f1`, params);
+    }
+
+    /**
+     * Compute IoU distribution between two annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} IoUDistributionResult
+     */
+    async computeIoUDistribution(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/iou-distribution`, params);
+    }
+
+    /**
+     * Get disagreement regions as GeoJSON
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} DisagreementHeatmapResult (GeoJSON FeatureCollection)
+     */
+    async getDisagreements(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/disagreements`, params);
+    }
+
+    // ==========================================
     // HEALTH API
     // ==========================================
 
