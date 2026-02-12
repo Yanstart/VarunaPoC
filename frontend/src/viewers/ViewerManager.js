@@ -84,7 +84,7 @@ class ViewerManager {
         // Listen for viewer events
         this._setupEventListeners();
 
-        console.log('[ViewerManager] Initialized');
+        console.warn('[ViewerManager] Initialized');
     }
 
     /**
@@ -147,10 +147,10 @@ class ViewerManager {
         // Emit event
         eventBus.emit(Events.VIEWER_ADDED, {
             viewerId: viewer.id,
-            viewerCount: this._viewers.size
+            viewerCount: this._viewers.size,
         });
 
-        console.log(`[ViewerManager] Viewer "${viewer.id}" created (${this._viewers.size}/${this._layout.maxViewers})`);
+        console.warn(`[ViewerManager] Viewer "${viewer.id}" created (${this._viewers.size}/${this._layout.maxViewers})`);
 
         return viewer;
     }
@@ -177,10 +177,10 @@ class ViewerManager {
         // Emit event
         eventBus.emit(Events.VIEWER_REMOVED, {
             viewerId,
-            viewerCount: this._viewers.size
+            viewerCount: this._viewers.size,
         });
 
-        console.log(`[ViewerManager] Viewer "${viewerId}" destroyed (${this._viewers.size} remaining)`);
+        console.warn(`[ViewerManager] Viewer "${viewerId}" destroyed (${this._viewers.size} remaining)`);
 
         return true;
     }
@@ -229,7 +229,7 @@ class ViewerManager {
             this.destroyViewer(id);
         });
 
-        console.log('[ViewerManager] All viewers destroyed');
+        console.warn('[ViewerManager] All viewers destroyed');
     }
 
     // ==========================================
@@ -256,7 +256,7 @@ class ViewerManager {
         }
 
         this._activeViewerId = viewerId;
-        console.log(`[ViewerManager] Active viewer: "${viewerId}"`);
+        console.warn(`[ViewerManager] Active viewer: "${viewerId}"`);
 
         return true;
     }
@@ -297,7 +297,7 @@ class ViewerManager {
 
         eventBus.emit(Events.LAYOUT_CHANGED, this._layout);
 
-        console.log(`[ViewerManager] Layout set to ${columns}x${rows} (max ${maxViewers} viewers)`);
+        console.warn(`[ViewerManager] Layout set to ${columns}x${rows} (max ${maxViewers} viewers)`);
     }
 
     /**
@@ -331,7 +331,7 @@ class ViewerManager {
 
         eventBus.emit(Events.LAYOUT_CHANGED, this._layout);
 
-        console.log(`[ViewerManager] Added slot, layout now ${cols}x${rows}`);
+        console.warn(`[ViewerManager] Added slot, layout now ${cols}x${rows}`);
 
         return true;
     }
@@ -402,10 +402,10 @@ class ViewerManager {
         this._syncEnabled = true;
 
         eventBus.emit(Events.SYNC_ENABLED, {
-            viewerIds: viewers.map(v => v.id)
+            viewerIds: viewers.map(v => v.id),
         });
 
-        console.log('[ViewerManager] Sync enabled');
+        console.warn('[ViewerManager] Sync enabled');
     }
 
     /**
@@ -420,7 +420,7 @@ class ViewerManager {
 
         eventBus.emit(Events.SYNC_DISABLED, {});
 
-        console.log('[ViewerManager] Sync disabled');
+        console.warn('[ViewerManager] Sync disabled');
     }
 
     /**
@@ -484,7 +484,7 @@ class ViewerManager {
             activeViewerId: this._activeViewerId,
             layout: this._layout,
             syncEnabled: this._syncEnabled,
-            viewers: this.getAllViewers().map(v => v.getState())
+            viewers: this.getAllViewers().map(v => v.getState()),
         };
     }
 
@@ -501,7 +501,7 @@ class ViewerManager {
             this._syncController.disable();
         }
 
-        console.log('[ViewerManager] Reset to initial state');
+        console.warn('[ViewerManager] Reset to initial state');
     }
 }
 

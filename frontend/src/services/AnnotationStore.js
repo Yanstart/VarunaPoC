@@ -19,7 +19,7 @@ let instance = null;
 
 class AnnotationStore {
     constructor() {
-        if (instance) return instance;
+        if (instance) {return instance;}
 
         /** @type {Map<string, Object>} annotation id → annotation object */
         this.annotations = new Map();
@@ -55,7 +55,7 @@ class AnnotationStore {
     }
 
     static getInstance() {
-        if (!instance) instance = new AnnotationStore();
+        if (!instance) {instance = new AnnotationStore();}
         return instance;
     }
 
@@ -92,7 +92,7 @@ class AnnotationStore {
     // ==========================================
 
     async loadAnnotations() {
-        if (!this.slideId) return;
+        if (!this.slideId) {return;}
 
         try {
             const annotations = await apiService.getAnnotations(this.slideId);
@@ -111,7 +111,7 @@ class AnnotationStore {
     }
 
     async createAnnotation(data) {
-        if (!this.slideId) return null;
+        if (!this.slideId) {return null;}
 
         try {
             const annotation = await apiService.createAnnotation(this.slideId, {
@@ -129,11 +129,11 @@ class AnnotationStore {
     }
 
     async updateAnnotation(annotationId, data) {
-        if (!this.slideId) return null;
+        if (!this.slideId) {return null;}
 
         try {
             const annotation = await apiService.updateAnnotation(
-                this.slideId, annotationId, data
+                this.slideId, annotationId, data,
             );
             this.annotations.set(annotation.id, annotation);
             eventBus.emit(Events.ANNOTATION_UPDATED, { annotation });
@@ -145,7 +145,7 @@ class AnnotationStore {
     }
 
     async deleteAnnotation(annotationId) {
-        if (!this.slideId) return false;
+        if (!this.slideId) {return false;}
 
         try {
             await apiService.deleteAnnotation(this.slideId, annotationId);
@@ -250,7 +250,7 @@ class AnnotationStore {
     }
 
     async confirmDetections(featureIndices = null, labelId = null) {
-        if (!this.slideId || this.detectionPreview.length === 0) return;
+        if (!this.slideId || this.detectionPreview.length === 0) {return;}
 
         const features = featureIndices
             ? featureIndices.map(i => this.detectionPreview[i])
@@ -267,7 +267,7 @@ class AnnotationStore {
 
         try {
             const created = await apiService.batchCreateAnnotations(
-                this.slideId, annotations
+                this.slideId, annotations,
             );
             for (const anno of created) {
                 this.annotations.set(anno.id, anno);
@@ -295,7 +295,7 @@ class AnnotationStore {
      * @returns {Promise<Object|null>}
      */
     async loadStats() {
-        if (!this.slideId) return null;
+        if (!this.slideId) {return null;}
         try {
             this.stats = await apiService.getAnnotationStats(this.slideId);
             eventBus.emit(Events.ANNOTATION_STATS_UPDATED, this.stats);
@@ -332,10 +332,7 @@ class AnnotationStore {
             }
 
             // Confidence
-            if (a.confidence === null || a.confidence === undefined) unscored++;
-            else if (a.confidence >= 0.8) highConf++;
-            else if (a.confidence >= 0.5) medConf++;
-            else lowConf++;
+            if (a.confidence === null || a.confidence === undefined) {unscored++;} else if (a.confidence >= 0.8) {highConf++;} else if (a.confidence >= 0.5) {medConf++;} else {lowConf++;}
         }
 
         return {
@@ -353,7 +350,7 @@ class AnnotationStore {
     // ==========================================
 
     async exportGeoJSON() {
-        if (!this.slideId) return null;
+        if (!this.slideId) {return null;}
         return apiService.exportAnnotations(this.slideId);
     }
 

@@ -89,7 +89,7 @@ const appState = {
 
     /** Phase 3: Auth components */
     loginPage: null,
-    userMenu: null
+    userMenu: null,
 };
 
 // ==========================================
@@ -101,7 +101,7 @@ const appState = {
  */
 async function init() {
     try {
-        console.log('[App] Initializing VarunaPoC...');
+        console.warn('[App] Initializing VarunaPoC...');
 
         // Check backend availability
         const isAvailable = await apiService.isAvailable();
@@ -124,7 +124,7 @@ async function init() {
         // Show home page
         showHomePage();
 
-        console.log('[App] Initialization complete');
+        console.warn('[App] Initialization complete');
 
     } catch (err) {
         console.error('[App] Init failed:', err);
@@ -137,7 +137,7 @@ async function init() {
  */
 function setupEventListeners() {
     // Listen for slide selection in compare mode
-    eventBus.on(Events.SLIDE_SELECTED, ({ panelId, panelIndex }) => {
+    eventBus.on(Events.SLIDE_SELECTED, ({ panelId: _panelId, panelIndex }) => {
         if (appState.currentPage === Pages.COMPARE && appState.compareLayout) {
             // Store pending panel index
             appState.pendingSlideForPanel = panelIndex;
@@ -348,13 +348,13 @@ async function showViewerPage(slide) {
 
 /**
  * Toggle ML Panel visibility
- * @param {Object} slide - Current slide
+ * @param {Object} _slide - Current slide
  */
-function toggleMLPanel(slide) {
-    if (!appState.mlPanel) return;
+function toggleMLPanel(_slide) {
+    if (!appState.mlPanel) {return;}
 
     const mlContainer = document.querySelector('#ml-panel-container');
-    if (!mlContainer) return;
+    if (!mlContainer) {return;}
 
     const isHidden = mlContainer.classList.toggle('is-hidden');
     const mlBtn = document.querySelector('#ml-btn');
@@ -401,7 +401,7 @@ async function showComparePage(initialSlide = null) {
         onSlideSelect: (panel, index) => {
             appState.pendingSlideForPanel = index;
             showSlidePicker();
-        }
+        },
     });
 
     // Load initial slide if provided
@@ -484,7 +484,7 @@ async function loadSlidesInPicker(container) {
                     await appState.compareLayout.loadSlideAt(
                         appState.pendingSlideForPanel,
                         slide.id,
-                        slide.name
+                        slide.name,
                     );
                 }
                 appState.pendingSlideForPanel = null;
@@ -510,7 +510,7 @@ async function loadSlidesInPicker(container) {
  * @param {Object} slide - Selected slide
  */
 function handleSlideSelect(slide) {
-    console.log('[App] Navigating to viewer for:', slide.name);
+    console.warn('[App] Navigating to viewer for:', slide.name);
     showViewerPage(slide);
 }
 
@@ -599,7 +599,7 @@ function _applyRoleVisibility() {
     // Hide ML button for non-physicians
     if (!canML) {
         const mlBtn = document.querySelector('#ml-btn');
-        if (mlBtn) mlBtn.style.display = 'none';
+        if (mlBtn) {mlBtn.style.display = 'none';}
     }
 }
 
@@ -906,5 +906,5 @@ window.__VarunaApp = {
     state: appState,
     eventBus,
     viewerManager,
-    apiService
+    apiService,
 };

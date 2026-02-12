@@ -70,7 +70,7 @@ class HeatmapOverlay {
                         this.hide();
                     }
                 }
-            })
+            }),
         );
 
         // Listen for opacity changes
@@ -79,7 +79,7 @@ class HeatmapOverlay {
                 if (data.viewerId === this.viewerId) {
                     this.setOpacity(data.opacity);
                 }
-            })
+            }),
         );
 
         // Listen for viewport changes to update overlay position
@@ -97,7 +97,7 @@ class HeatmapOverlay {
      * @param {number} [opacity=0.5] - Opacity (0-1)
      */
     async show(slideId, predictionClass, opacity = 0.5) {
-        if (this.isLoading) return;
+        if (this.isLoading) {return;}
 
         this.slideId = slideId;
         this.predictionClass = predictionClass;
@@ -107,7 +107,7 @@ class HeatmapOverlay {
 
         eventBus.emit(Events.ML_HEATMAP_LOADING, {
             viewerId: this.viewerId,
-            slideId
+            slideId,
         });
 
         try {
@@ -115,7 +115,7 @@ class HeatmapOverlay {
             const result = await apiService.generateHeatmap(
                 slideId,
                 predictionClass,
-                { resolutionLevel: 2, colormap: this.colormap }
+                { resolutionLevel: 2, colormap: this.colormap },
             );
 
             this.heatmapData = result;
@@ -138,7 +138,7 @@ class HeatmapOverlay {
 
             eventBus.emit(Events.ML_HEATMAP_READY, {
                 viewerId: this.viewerId,
-                slideId
+                slideId,
             });
 
         } catch (error) {
@@ -147,7 +147,7 @@ class HeatmapOverlay {
             eventBus.emit(Events.ML_HEATMAP_ERROR, {
                 viewerId: this.viewerId,
                 slideId,
-                error: error.message
+                error: error.message,
             });
         } finally {
             this.isLoading = false;
@@ -223,7 +223,7 @@ class HeatmapOverlay {
      * @private
      */
     _resizeCanvas() {
-        if (!this.canvas || !this.viewer) return;
+        if (!this.canvas || !this.viewer) {return;}
 
         const container = this.viewer.container;
         const w = container.clientWidth;
@@ -240,22 +240,22 @@ class HeatmapOverlay {
      * @private
      */
     _renderHeatmap() {
-        if (!this._cachedImage || !this.ctx || !this.viewer || !this.heatmapData) return;
+        if (!this._cachedImage || !this.ctx || !this.viewer || !this.heatmapData) {return;}
 
         // Validate coords BEFORE clearing canvas to avoid blank frame
         const tiledImage = this.viewer.world.getItemAt(0);
-        if (!tiledImage) return;
+        if (!tiledImage) {return;}
 
         const imageBounds = tiledImage.getBounds(true);
 
         const topLeft = this.viewer.viewport.viewportToViewerElementCoordinates(
-            new OpenSeadragon.Point(imageBounds.x, imageBounds.y)
+            new OpenSeadragon.Point(imageBounds.x, imageBounds.y),
         );
         const bottomRight = this.viewer.viewport.viewportToViewerElementCoordinates(
             new OpenSeadragon.Point(
                 imageBounds.x + imageBounds.width,
-                imageBounds.y + imageBounds.height
-            )
+                imageBounds.y + imageBounds.height,
+            ),
         );
 
         const destX = topLeft.x;
@@ -263,7 +263,7 @@ class HeatmapOverlay {
         const destWidth = bottomRight.x - topLeft.x;
         const destHeight = bottomRight.y - topLeft.y;
 
-        if (destWidth <= 0 || destHeight <= 0) return;
+        if (destWidth <= 0 || destHeight <= 0) {return;}
 
         // Only now: clear + draw
         const { canvas, ctx } = this;
@@ -277,7 +277,7 @@ class HeatmapOverlay {
      * @private
      */
     async _loadHeatmapImage() {
-        if (!this.heatmapData) return null;
+        if (!this.heatmapData) {return null;}
 
         // Check if we have base64 image data
         if (this.heatmapData.heatmap_base64) {
@@ -382,8 +382,8 @@ class HeatmapOverlay {
      * @private
      */
     _onViewportChange() {
-        if (!this.isVisible) return;
-        if (this._renderPending) return;
+        if (!this.isVisible) {return;}
+        if (this._renderPending) {return;}
         this._renderPending = true;
         requestAnimationFrame(() => {
             this._renderPending = false;
@@ -396,7 +396,7 @@ class HeatmapOverlay {
      * @private
      */
     _onResize() {
-        if (!this.isVisible) return;
+        if (!this.isVisible) {return;}
         this._resizeCanvas();
         this._renderHeatmap();
     }

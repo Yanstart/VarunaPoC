@@ -14,7 +14,6 @@
  * @module components/DrawingTools
  */
 
-import OpenSeadragon from 'openseadragon';
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { annotationStore } from '../services/AnnotationStore.js';
@@ -22,12 +21,12 @@ import { annotationStore } from '../services/AnnotationStore.js';
 const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle'];
 
 const TOOL_ICONS = {
-    select: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>`,
-    rectangle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
-    polygon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 6-3 10H7L4 8z"/></svg>`,
-    point: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>`,
-    freehand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17c3-3 6-10 9-10s3 4 6 4 3-2 3-2"/></svg>`,
-    circle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>`,
+    select: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>',
+    rectangle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>',
+    polygon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 6-3 10H7L4 8z"/></svg>',
+    point: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>',
+    freehand: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17c3-3 6-10 9-10s3 4 6 4 3-2 3-2"/></svg>',
+    circle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
 };
 
 const TOOL_LABELS = {
@@ -91,7 +90,7 @@ class DrawingTools {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'drawing-tools__btn drawing-tools__btn--danger';
         deleteBtn.title = 'Delete Selected (Del)';
-        deleteBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg>`;
+        deleteBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg>';
         deleteBtn.addEventListener('click', () => this._deleteSelected());
         this.element.appendChild(deleteBtn);
     }
@@ -128,15 +127,15 @@ class DrawingTools {
         // External tool change - Store unsubscribe function
         this._unsubscribers.push(
             eventBus.on(Events.TOOL_CHANGED, ({ tool }) => {
-                if (tool !== this.activeTool) this._setTool(tool);
-            })
+                if (tool !== this.activeTool) {this._setTool(tool);}
+            }),
         );
     }
 
     _setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
             // Only handle if viewer page is active
-            if (!this.element || !this.element.parentNode) return;
+            if (!this.element || !this.element.parentNode) {return;}
 
             switch (e.key) {
                 case 'v': case 'V': this._setTool('select'); break;
@@ -163,7 +162,7 @@ class DrawingTools {
     // ==========================================
 
     _onMouseDown(e) {
-        if (this.activeTool === 'select' || e.button !== 0) return;
+        if (this.activeTool === 'select' || e.button !== 0) {return;}
 
         const slideCoords = this._getSlideCoords(e);
 
@@ -196,7 +195,7 @@ class DrawingTools {
     }
 
     _onMouseMove(e) {
-        if (!this.isDrawing) return;
+        if (!this.isDrawing) {return;}
 
         const slideCoords = this._getSlideCoords(e);
 
@@ -215,7 +214,7 @@ class DrawingTools {
     }
 
     _onMouseUp(e) {
-        if (!this.isDrawing) return;
+        if (!this.isDrawing) {return;}
 
         const slideCoords = this._getSlideCoords(e);
 
@@ -248,7 +247,7 @@ class DrawingTools {
     _updateRectanglePreview(current) {
         this._clearPreview();
         const start = this._drawStartSlide;
-        if (!start) return;
+        if (!start) {return;}
 
         const x = Math.min(start.x, current.x);
         const y = Math.min(start.y, current.y);
@@ -274,7 +273,7 @@ class DrawingTools {
         this._clearPreview();
 
         const start = this._drawStartSlide;
-        if (!start) return;
+        if (!start) {return;}
 
         const x1 = Math.min(start.x, end.x);
         const y1 = Math.min(start.y, end.y);
@@ -282,7 +281,7 @@ class DrawingTools {
         const y2 = Math.max(start.y, end.y);
 
         // Ignore tiny rectangles
-        if (Math.abs(x2 - x1) < 5 || Math.abs(y2 - y1) < 5) return;
+        if (Math.abs(x2 - x1) < 5 || Math.abs(y2 - y1) < 5) {return;}
 
         const coordinates = [[[x1, y1], [x2, y1], [x2, y2], [x1, y2], [x1, y1]]];
 
@@ -301,7 +300,7 @@ class DrawingTools {
 
     _updatePolygonPreview() {
         this._clearPreview();
-        if (this._drawPoints.length < 1) return;
+        if (this._drawPoints.length < 1) {return;}
 
         const points = this._drawPoints.map(p => `${p.x},${p.y}`).join(' ');
         const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
@@ -367,7 +366,7 @@ class DrawingTools {
 
     _updateFreehandPreview() {
         this._clearPreview();
-        if (this._drawPoints.length < 2) return;
+        if (this._drawPoints.length < 2) {return;}
 
         const points = this._drawPoints.map(p => `${p.x},${p.y}`).join(' ');
         const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
@@ -412,7 +411,7 @@ class DrawingTools {
     _updateCirclePreview(current) {
         this._clearPreview();
         const start = this._drawStartSlide;
-        if (!start) return;
+        if (!start) {return;}
 
         const dx = current.x - start.x;
         const dy = current.y - start.y;
@@ -436,13 +435,13 @@ class DrawingTools {
         this._clearPreview();
 
         const start = this._drawStartSlide;
-        if (!start) return;
+        if (!start) {return;}
 
         const dx = end.x - start.x;
         const dy = end.y - start.y;
         const radius = Math.sqrt(dx * dx + dy * dy);
 
-        if (radius < 5) return;
+        if (radius < 5) {return;}
 
         // Approximate circle as polygon (32 segments)
         const segments = 32;
@@ -495,7 +494,7 @@ class DrawingTools {
      * Douglas-Peucker simplification
      */
     _simplifyPath(points, tolerance) {
-        if (points.length <= 2) return points;
+        if (points.length <= 2) {return points;}
 
         let maxDist = 0;
         let maxIdx = 0;
@@ -531,7 +530,7 @@ class DrawingTools {
         }
 
         const num = Math.abs(
-            dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x
+            dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x,
         );
         return num / Math.sqrt(lenSq);
     }

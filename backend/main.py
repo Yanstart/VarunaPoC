@@ -64,6 +64,17 @@ except ImportError:
     fhir_routes = None
     print("[INFO] FHIR module disabled")
 
+# Phase 4: Quality metrics (optional - requires annotations)
+try:
+    from quality import QUALITY_ENABLED
+    from quality import routes as quality_routes
+
+    print(f"[INFO] Quality module loaded (QUALITY_ENABLED={QUALITY_ENABLED})")
+except ImportError:
+    QUALITY_ENABLED = False
+    quality_routes = None
+    print("[INFO] Quality module disabled")
+
 logger = logging.getLogger(__name__)
 
 # Monitoring optionnel (requires prometheus_client)
@@ -94,7 +105,7 @@ async def lifespan(_app):
 
         await close_db()
         logger.info("Database connection pool closed")
-    except Exception:
+    except Exception:  # nosec B110 - Best-effort cleanup during shutdown, failure is acceptable
         pass
 
 
@@ -177,6 +188,10 @@ if auth_routes is not None:
 # Phase 3: FHIR routes
 if fhir_routes is not None and FHIR_ENABLED:
     app.include_router(fhir_routes.router)
+
+# Phase 4: Quality routes (requires annotations)
+if quality_routes is not None and QUALITY_ENABLED and ANNOTATIONS_ENABLED:
+    app.include_router(quality_routes.router)
 
 
 @app.get("/", tags=["health"])

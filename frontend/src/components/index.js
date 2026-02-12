@@ -20,5 +20,5 @@ export {
     loadSlideWithTiles,
     loadOverview,
     getLegacyViewer,
-    destroyLegacyViewer
+    destroyLegacyViewer,
 } from './Viewer.js';

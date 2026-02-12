@@ -22,5 +22,5 @@ export {
     CSSClasses,
     StorageKeys,
     ErrorMessages,
-    SupportedFormats
+    SupportedFormats,
 } from './Constants.js';

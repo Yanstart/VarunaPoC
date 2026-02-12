@@ -1,0 +1,314 @@
+/**
+ * QualityPanel Styles - Inter-annotator agreement metrics
+ * Dark theme matching counting-panel.css
+ */
+
+.quality-panel {
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #333;
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.quality-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: pointer;
+    user-select: none;
+}
+
+.quality-panel__header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.quality-panel__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.quality-panel__toggle {
+    color: #666;
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.quality-panel.is-collapsed .quality-panel__toggle {
+    transform: rotate(-90deg);
+}
+
+.quality-panel__body {
+    padding: 10px 14px;
+}
+
+.quality-panel.is-collapsed .quality-panel__body {
+    display: none;
+}
+
+/* Annotator selectors */
+.quality-panel__selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.quality-panel__select-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quality-panel__select-label {
+    font-size: 10px;
+    color: #888;
+    min-width: 24px;
+    text-transform: uppercase;
+}
+
+.quality-panel__select {
+    flex: 1;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 11px;
+    padding: 4px 6px;
+    outline: none;
+}
+
+.quality-panel__select:focus {
+    border-color: #4a9eff;
+}
+
+/* Compute button */
+.quality-panel__compute-btn {
+    width: 100%;
+    padding: 6px 12px;
+    background: #4a9eff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background 0.2s;
+}
+
+.quality-panel__compute-btn:hover {
+    background: #3a8eef;
+}
+
+.quality-panel__compute-btn:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+/* Loading */
+.quality-panel__loading {
+    padding: 14px;
+    color: #888;
+    text-align: center;
+    font-size: 11px;
+}
+
+/* Empty state */
+.quality-panel__empty {
+    padding: 14px;
+    color: #666;
+    text-align: center;
+    font-size: 12px;
+}
+
+/* Section */
+.quality-panel__section {
+    margin-bottom: 10px;
+}
+
+.quality-panel__section:last-child {
+    margin-bottom: 0;
+}
+
+.quality-panel__section-title {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+/* Kappa badge */
+.quality-panel__kappa {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.quality-panel__kappa-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.quality-panel__kappa-label {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Kappa severity colors */
+.quality-panel__kappa--poor {
+    background: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+}
+
+.quality-panel__kappa--slight {
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
+}
+
+.quality-panel__kappa--fair {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+}
+
+.quality-panel__kappa--moderate {
+    background: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+}
+
+.quality-panel__kappa--substantial {
+    background: rgba(139, 195, 74, 0.15);
+    color: #8bc34a;
+}
+
+.quality-panel__kappa--almost-perfect {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+}
+
+/* Confusion matrix table */
+.quality-panel__matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-bottom: 6px;
+}
+
+.quality-panel__matrix th,
+.quality-panel__matrix td {
+    padding: 3px 5px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.quality-panel__matrix th {
+    background: #222;
+    color: #aaa;
+    font-weight: 600;
+}
+
+.quality-panel__matrix td {
+    color: #ccc;
+    font-variant-numeric: tabular-nums;
+}
+
+.quality-panel__matrix td.diagonal {
+    background: rgba(74, 158, 255, 0.1);
+    font-weight: 600;
+    color: #4a9eff;
+}
+
+/* F1 metrics table */
+.quality-panel__f1-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 11px;
+}
+
+.quality-panel__f1-label {
+    flex: 1;
+    color: #ccc;
+}
+
+.quality-panel__f1-value {
+    font-variant-numeric: tabular-nums;
+    color: #aaa;
+    min-width: 36px;
+    text-align: right;
+}
+
+/* IoU histogram (CSS bars) */
+.quality-panel__histogram {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 40px;
+    margin-bottom: 4px;
+}
+
+.quality-panel__hist-bar {
+    flex: 1;
+    background: #4a9eff;
+    border-radius: 2px 2px 0 0;
+    min-height: 1px;
+    transition: height 0.3s;
+}
+
+.quality-panel__hist-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #555;
+}
+
+.quality-panel__iou-stats {
+    display: flex;
+    gap: 10px;
+    font-size: 10px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.quality-panel__iou-stat-value {
+    font-weight: 600;
+    color: #aaa;
+}
+
+/* Disagreement toggle */
+.quality-panel__disagree-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 11px;
+    color: #ccc;
+}
+
+.quality-panel__disagree-toggle input[type="checkbox"] {
+    accent-color: #f44336;
+}
+
+/* Match info */
+.quality-panel__match-info {
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.quality-panel__match-info span {
+    color: #aaa;
+    font-weight: 600;
+}

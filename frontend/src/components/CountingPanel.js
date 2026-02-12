@@ -41,19 +41,19 @@ class CountingPanel {
     _setupEventListeners() {
         // Refresh on any annotation change
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATION_STATS_UPDATED, () => this._render())
+            eventBus.on(Events.ANNOTATION_STATS_UPDATED, () => this._render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATIONS_LOADED, () => this._render())
+            eventBus.on(Events.ANNOTATIONS_LOADED, () => this._render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATION_CREATED, () => this._render())
+            eventBus.on(Events.ANNOTATION_CREATED, () => this._render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATION_DELETED, () => this._render())
+            eventBus.on(Events.ANNOTATION_DELETED, () => this._render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.DETECTION_CONFIRM, () => this._render())
+            eventBus.on(Events.DETECTION_CONFIRM, () => this._render()),
         );
     }
 

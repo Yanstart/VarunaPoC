@@ -40,7 +40,7 @@ class CompareLayout {
             initialLayout: 'SINGLE',
             showSyncControls: true,
             onSlideSelect: null,
-            ...options
+            ...options,
         };
 
         /**
@@ -114,7 +114,7 @@ class CompareLayout {
         // Setup event listeners
         this._setupEventListeners();
 
-        console.log(`[CompareLayout] Created with ${this.layout.maxViewers} panels`);
+        console.warn(`[CompareLayout] Created with ${this.layout.maxViewers} panels`);
     }
 
     /**
@@ -125,7 +125,7 @@ class CompareLayout {
         // Remove old layout classes
         this.element.classList.remove(
             'layout-1x1', 'layout-2x1', 'layout-1x2',
-            'layout-2x2', 'layout-3x2', 'layout-3x3'
+            'layout-2x2', 'layout-3x2', 'layout-3x3',
         );
 
         // Add current layout class
@@ -165,8 +165,8 @@ class CompareLayout {
                 showHeader: true,
                 showClose: this.layout.maxViewers > 1,
                 onSlideSelect: (p) => this._handleSlideSelect(p, index),
-                onClose: (p) => this._handlePanelClose(p, index)
-            }
+                onClose: (p) => this._handlePanelClose(p, index),
+            },
         );
 
         this.panels.push(panel);
@@ -184,7 +184,7 @@ class CompareLayout {
     _createSyncControls() {
         this.syncControls = new SyncControls(this.container, {
             onLayoutChange: (preset) => this.applyLayoutPreset(preset),
-            onSyncToggle: (enabled) => this._handleSyncToggle(enabled)
+            onSyncToggle: (enabled) => this._handleSyncToggle(enabled),
         });
     }
 
@@ -214,7 +214,7 @@ class CompareLayout {
         } else {
             eventBus.emit(Events.SLIDE_SELECTED, {
                 panelId: panel.id,
-                panelIndex: index
+                panelIndex: index,
             });
         }
     }
@@ -228,7 +228,7 @@ class CompareLayout {
     _handlePanelClose(panel, index) {
         // Don't close if only one panel
         if (this.panels.length <= 1) {
-            console.log('[CompareLayout] Cannot close last panel');
+            console.warn('[CompareLayout] Cannot close last panel');
             return;
         }
 
@@ -247,7 +247,7 @@ class CompareLayout {
         // Update manager
         viewerManager.setLayout(cols, rows);
 
-        console.log(`[CompareLayout] Panel closed, ${remaining} remaining`);
+        console.warn(`[CompareLayout] Panel closed, ${remaining} remaining`);
     }
 
     /**
@@ -293,9 +293,8 @@ class CompareLayout {
             for (let i = currentCount; i < newMax; i++) {
                 this._createPanel(i);
             }
-        }
-        // Remove panels if needed
-        else if (newMax < currentCount) {
+        } else if (newMax < currentCount) {
+            // Remove panels if needed
             for (let i = currentCount - 1; i >= newMax; i--) {
                 const panel = this.panels.pop();
                 panel.destroy();
@@ -310,7 +309,7 @@ class CompareLayout {
             this.syncControls.updateLayout(columns, rows);
         }
 
-        console.log(`[CompareLayout] Layout set to ${columns}x${rows}`);
+        console.warn(`[CompareLayout] Layout set to ${columns}x${rows}`);
     }
 
     /**
@@ -484,7 +483,7 @@ class CompareLayout {
             activePanelIndex: this.activePanelIndex,
             panelCount: this.panels.length,
             syncEnabled: viewerManager.isSyncEnabled(),
-            panels: this.panels.map(p => p.getState())
+            panels: this.panels.map(p => p.getState()),
         };
     }
 
@@ -502,7 +501,7 @@ class CompareLayout {
      * Destroy the layout
      */
     destroy() {
-        console.log('[CompareLayout] Destroying');
+        console.warn('[CompareLayout] Destroying');
 
         // Destroy sync controls
         if (this.syncControls) {

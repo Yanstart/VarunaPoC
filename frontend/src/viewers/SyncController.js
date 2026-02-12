@@ -97,13 +97,13 @@ class SyncController {
          */
         this._debouncedSync = debounce(
             this._handleViewportChange.bind(this),
-            SyncConfig.DEBOUNCE_MS
+            SyncConfig.DEBOUNCE_MS,
         );
 
         // Setup event listeners
         this._setupEventListeners();
 
-        console.log('[SyncController] Initialized');
+        console.warn('[SyncController] Initialized');
     }
 
     /**
@@ -146,7 +146,7 @@ class SyncController {
         }
 
         this._viewers.set(viewer.id, viewer);
-        console.log(`[SyncController] Registered viewer "${viewer.id}"`);
+        console.warn(`[SyncController] Registered viewer "${viewer.id}"`);
     }
 
     /**
@@ -156,7 +156,7 @@ class SyncController {
     unregisterViewer(viewerId) {
         this._viewers.delete(viewerId);
         this.syncedViewerIds.delete(viewerId);
-        console.log(`[SyncController] Unregistered viewer "${viewerId}"`);
+        console.warn(`[SyncController] Unregistered viewer "${viewerId}"`);
     }
 
     /**
@@ -181,10 +181,10 @@ class SyncController {
         this.enabled = true;
 
         eventBus.emit(Events.SYNC_ENABLED, {
-            viewerIds: Array.from(this.syncedViewerIds)
+            viewerIds: Array.from(this.syncedViewerIds),
         });
 
-        console.log(`[SyncController] Sync enabled for ${this.syncedViewerIds.size} viewers`);
+        console.warn(`[SyncController] Sync enabled for ${this.syncedViewerIds.size} viewers`);
     }
 
     /**
@@ -197,7 +197,7 @@ class SyncController {
 
         eventBus.emit(Events.SYNC_DISABLED, {});
 
-        console.log('[SyncController] Sync disabled');
+        console.warn('[SyncController] Sync disabled');
     }
 
     /**
@@ -228,7 +228,7 @@ class SyncController {
     setMode(mode) {
         if (Object.values(SyncConfig.MODES).includes(mode)) {
             this.mode = mode;
-            console.log(`[SyncController] Mode set to: ${mode}`);
+            console.warn(`[SyncController] Mode set to: ${mode}`);
         } else {
             console.warn(`[SyncController] Unknown mode: ${mode}`);
         }
@@ -265,10 +265,10 @@ class SyncController {
 
             // Broadcast to other synced viewers
             this.syncedViewerIds.forEach(targetId => {
-                if (targetId === viewerId) return;
+                if (targetId === viewerId) {return;}
 
                 const targetViewer = this._viewers.get(targetId);
-                if (!targetViewer || !targetViewer.isReady()) return;
+                if (!targetViewer || !targetViewer.isReady()) {return;}
 
                 // Denormalize for target slide dimensions
                 const targetViewport = this._denormalizeViewport(normalizedViewport, targetViewer);
@@ -297,7 +297,7 @@ class SyncController {
      * @returns {Object} Normalized viewport
      * @private
      */
-    _normalizeViewport(viewport, sourceViewer) {
+    _normalizeViewport(viewport, _sourceViewer) {
         // OSD viewport is already normalized with width = 1.0
         // Just pass through the values
         return {
@@ -305,7 +305,7 @@ class SyncController {
             y: viewport.y,
             width: viewport.width,
             height: viewport.height,
-            zoom: viewport.zoom
+            zoom: viewport.zoom,
         };
     }
 
@@ -317,14 +317,14 @@ class SyncController {
      * @returns {Object} Denormalized viewport for target
      * @private
      */
-    _denormalizeViewport(normalizedViewport, targetViewer) {
+    _denormalizeViewport(normalizedViewport, _targetViewer) {
         // For OSD, viewports are already in compatible normalized space
         // Just pass through the values
         return {
             x: normalizedViewport.x,
             y: normalizedViewport.y,
             width: normalizedViewport.width,
-            height: normalizedViewport.height
+            height: normalizedViewport.height,
         };
     }
 
@@ -343,10 +343,10 @@ class SyncController {
 
         this._handleViewportChange({
             viewerId: sourceViewerId,
-            viewport
+            viewport,
         });
 
-        console.log(`[SyncController] Synced all viewers to "${sourceViewerId}"`);
+        console.warn(`[SyncController] Synced all viewers to "${sourceViewerId}"`);
     }
 
     /**
@@ -359,7 +359,7 @@ class SyncController {
             mode: this.mode,
             syncedViewerIds: Array.from(this.syncedViewerIds),
             registeredViewerCount: this._viewers.size,
-            sourceViewerId: this._sourceViewerId
+            sourceViewerId: this._sourceViewerId,
         };
     }
 
@@ -377,7 +377,7 @@ class SyncController {
         // Clear viewers
         this._viewers.clear();
 
-        console.log('[SyncController] Destroyed');
+        console.warn('[SyncController] Destroyed');
     }
 }
 

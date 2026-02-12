@@ -70,6 +70,11 @@ class AnnotationLayer {
         this.previewGroup.classList.add('previews');
         this.svg.appendChild(this.previewGroup);
 
+        // Disagreement overlay group (quality metrics)
+        this.disagreementGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.disagreementGroup.classList.add('disagreements');
+        this.svg.appendChild(this.disagreementGroup);
+
         // Insert into OSD container
         const container = this.viewer.container;
         container.appendChild(this.svg);
@@ -87,32 +92,37 @@ class AnnotationLayer {
 
         // Annotation store events - Store unsubscribe functions
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render())
+            eventBus.on(Events.ANNOTATIONS_LOADED, () => this.render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATION_CREATED, () => this.render())
+            eventBus.on(Events.ANNOTATION_CREATED, () => this.render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATION_UPDATED, () => this.render())
+            eventBus.on(Events.ANNOTATION_UPDATED, () => this.render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.ANNOTATION_DELETED, () => this.render())
+            eventBus.on(Events.ANNOTATION_DELETED, () => this.render()),
         );
         this._unsubscribers.push(
             eventBus.on(Events.ANNOTATION_SELECTED, ({ annotationId }) => {
                 this._highlightSelected(annotationId);
-            })
+            }),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.LAYER_VISIBILITY_CHANGED, () => this.render())
+            eventBus.on(Events.LAYER_VISIBILITY_CHANGED, () => this.render()),
         );
         this._unsubscribers.push(
-            eventBus.on(Events.LAYER_OPACITY_CHANGED, () => this.render())
+            eventBus.on(Events.LAYER_OPACITY_CHANGED, () => this.render()),
         );
         this._unsubscribers.push(
             eventBus.on(Events.DETECTION_PREVIEW, ({ features }) => {
                 this._renderPreviews(features);
-            })
+            }),
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.QUALITY_DISAGREEMENT_TOGGLE, ({ visible, features }) => {
+                this._renderDisagreements(visible ? features : []);
+            }),
         );
     }
 
@@ -133,18 +143,18 @@ class AnnotationLayer {
     // ==========================================
 
     _updateViewBox() {
-        if (!this.svg || !this.viewer || !this.slideDimensions) return;
+        if (!this.svg || !this.viewer || !this.slideDimensions) {return;}
 
         const viewport = this.viewer.viewport;
         const bounds = viewport.getBounds(true);
         const tiledImage = this.viewer.world.getItemAt(0);
-        if (!tiledImage) return;
+        if (!tiledImage) {return;}
 
         // Convert viewport bounds to image pixel coordinates
         const topLeft = tiledImage.viewportToImageCoordinates(bounds.x, bounds.y);
         const bottomRight = tiledImage.viewportToImageCoordinates(
             bounds.x + bounds.width,
-            bounds.y + bounds.height
+            bounds.y + bounds.height,
         );
 
         const x = topLeft.x;
@@ -160,7 +170,7 @@ class AnnotationLayer {
     // ==========================================
 
     render() {
-        if (!this.annoGroup) return;
+        if (!this.annoGroup) {return;}
 
         // Clear existing
         while (this.annoGroup.firstChild) {
@@ -172,7 +182,7 @@ class AnnotationLayer {
         for (const anno of annotations) {
             // Check layer visibility
             const layerKey = anno.label_id || anno.annotation_type;
-            if (!annotationStore.isLayerVisible(layerKey)) continue;
+            if (!annotationStore.isLayerVisible(layerKey)) {continue;}
 
             const el = this._createAnnotationElement(anno);
             if (el) {
@@ -187,7 +197,7 @@ class AnnotationLayer {
         const isSelected = anno.id === annotationStore.selectedId;
 
         const geom = anno.geometry;
-        if (!geom) return null;
+        if (!geom) {return null;}
 
         let el = null;
 
@@ -225,7 +235,7 @@ class AnnotationLayer {
     }
 
     _createPolygon(coordinates, color, opacity) {
-        if (!coordinates || !coordinates[0]) return null;
+        if (!coordinates || !coordinates[0]) {return null;}
 
         const ring = coordinates[0];
         const points = ring.map(c => `${c[0]},${c[1]}`).join(' ');
@@ -246,7 +256,7 @@ class AnnotationLayer {
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         for (const polygonCoords of coordinates) {
             const el = this._createPolygon(polygonCoords, color, opacity);
-            if (el) g.appendChild(el);
+            if (el) {g.appendChild(el);}
         }
         return g;
     }
@@ -270,12 +280,12 @@ class AnnotationLayer {
 
     _getStrokeWidth() {
         // Scale stroke width with zoom so it stays visible
-        if (!this.slideDimensions) return 3;
+        if (!this.slideDimensions) {return 3;}
         return Math.max(1, this.slideDimensions.width / 5000);
     }
 
     _getPointRadius() {
-        if (!this.slideDimensions) return 10;
+        if (!this.slideDimensions) {return 10;}
         return Math.max(5, this.slideDimensions.width / 2000);
     }
 
@@ -286,11 +296,11 @@ class AnnotationLayer {
     _highlightSelected(annotationId) {
         // Remove previous selection highlight
         const prev = this.svg.querySelector('.annotation--selected');
-        if (prev) prev.classList.remove('annotation--selected');
+        if (prev) {prev.classList.remove('annotation--selected');}
 
         if (annotationId) {
             const el = this.svg.querySelector(`[data-annotation-id="${annotationId}"]`);
-            if (el) el.classList.add('annotation--selected');
+            if (el) {el.classList.add('annotation--selected');}
         }
     }
 
@@ -303,11 +313,11 @@ class AnnotationLayer {
             this.previewGroup.removeChild(this.previewGroup.firstChild);
         }
 
-        if (!features || features.length === 0) return;
+        if (!features || features.length === 0) {return;}
 
         for (let i = 0; i < features.length; i++) {
             const f = features[i];
-            if (f.geometry.type !== 'Polygon') continue;
+            if (f.geometry.type !== 'Polygon') {continue;}
 
             const ring = f.geometry.coordinates[0];
             const points = ring.map(c => `${c[0]},${c[1]}`).join(' ');
@@ -326,6 +336,83 @@ class AnnotationLayer {
             polygon.style.cursor = 'pointer';
 
             this.previewGroup.appendChild(polygon);
+        }
+    }
+
+    // ==========================================
+    // DISAGREEMENT OVERLAY (Quality Metrics)
+    // ==========================================
+
+    _renderDisagreements(features) {
+        while (this.disagreementGroup.firstChild) {
+            this.disagreementGroup.removeChild(this.disagreementGroup.firstChild);
+        }
+
+        if (!features || features.length === 0) {return;}
+
+        // Add hatched pattern to defs if not already present
+        const defs = this.svg.querySelector('defs');
+        if (!defs.querySelector('#disagreement-hatch')) {
+            const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            pattern.setAttribute('id', 'disagreement-hatch');
+            pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+            const hatchSize = this._getStrokeWidth() * 6;
+            pattern.setAttribute('width', hatchSize);
+            pattern.setAttribute('height', hatchSize);
+            pattern.setAttribute('patternTransform', 'rotate(45)');
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '0');
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', '0');
+            line.setAttribute('y2', hatchSize);
+            line.setAttribute('stroke', 'rgba(244, 67, 54, 0.6)');
+            line.setAttribute('stroke-width', this._getStrokeWidth() * 2);
+            pattern.appendChild(line);
+            defs.appendChild(pattern);
+        }
+
+        for (const feature of features) {
+            const geom = feature.geometry;
+            if (!geom) {continue;}
+
+            let el = null;
+            if (geom.type === 'Polygon' && geom.coordinates && geom.coordinates[0]) {
+                const points = geom.coordinates[0].map(c => `${c[0]},${c[1]}`).join(' ');
+                el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                el.setAttribute('points', points);
+            } else if (geom.type === 'MultiPolygon' && geom.coordinates) {
+                el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                for (const polyCoords of geom.coordinates) {
+                    if (polyCoords[0]) {
+                        const points = polyCoords[0].map(c => `${c[0]},${c[1]}`).join(' ');
+                        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                        poly.setAttribute('points', points);
+                        poly.setAttribute('fill', 'url(#disagreement-hatch)');
+                        poly.setAttribute('fill-opacity', '0.4');
+                        poly.setAttribute('stroke', '#f44336');
+                        poly.setAttribute('stroke-width', this._getStrokeWidth());
+                        poly.setAttribute('stroke-opacity', '0.8');
+                        el.appendChild(poly);
+                    }
+                }
+            }
+
+            if (el && el.tagName !== 'g') {
+                el.setAttribute('fill', 'url(#disagreement-hatch)');
+                el.setAttribute('fill-opacity', '0.4');
+                el.setAttribute('stroke', '#f44336');
+                el.setAttribute('stroke-width', this._getStrokeWidth());
+                el.setAttribute('stroke-opacity', '0.8');
+            }
+
+            if (el) {
+                el.classList.add('disagreement-region');
+                const props = feature.properties || {};
+                el.dataset.labelA = props.label_a || '';
+                el.dataset.labelB = props.label_b || '';
+                this.disagreementGroup.appendChild(el);
+            }
         }
     }
 
@@ -355,10 +442,10 @@ class AnnotationLayer {
      */
     screenToSlide(screenX, screenY) {
         const point = this.viewer.viewport.pointFromPixel(
-            new OpenSeadragon.Point(screenX, screenY)
+            new OpenSeadragon.Point(screenX, screenY),
         );
         const tiledImage = this.viewer.world.getItemAt(0);
-        if (!tiledImage) return { x: screenX, y: screenY };
+        if (!tiledImage) {return { x: screenX, y: screenY };}
 
         const imagePoint = tiledImage.viewportToImageCoordinates(point);
         return { x: imagePoint.x, y: imagePoint.y };
@@ -385,6 +472,7 @@ class AnnotationLayer {
         this.svg = null;
         this.annoGroup = null;
         this.previewGroup = null;
+        this.disagreementGroup = null;
     }
 }
 

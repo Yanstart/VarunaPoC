@@ -11,7 +11,6 @@
  * await panel.loadSlide('abc123');
  */
 
-import { ViewerFactory } from '../viewers/ViewerFactory.js';
 import { viewerManager } from '../viewers/ViewerManager.js';
 import { eventBus } from '../core/EventBus.js';
 import { Events, CSSClasses, ViewerStates } from '../core/Constants.js';
@@ -22,6 +21,7 @@ import { DrawingTools } from './DrawingTools.js';
 import { DetectionPanel } from './DetectionPanel.js';
 import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
+import { QualityPanel } from './QualityPanel.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 
 /**
@@ -56,7 +56,7 @@ class ViewerPanel {
             showClose: true,
             onSlideSelect: null,
             onClose: null,
-            ...options
+            ...options,
         };
 
         /**
@@ -149,6 +149,12 @@ class ViewerPanel {
          */
         this.countingPanel = null;
 
+        /**
+         * Quality panel component
+         * @type {QualityPanel|null}
+         */
+        this.qualityPanel = null;
+
         // Build the panel
         this._build();
     }
@@ -180,7 +186,7 @@ class ViewerPanel {
         // Setup event listeners
         this._setupEventListeners();
 
-        console.log(`[ViewerPanel] Created panel "${this.id}"`);
+        console.warn(`[ViewerPanel] Created panel "${this.id}"`);
     }
 
     /**
@@ -277,7 +283,7 @@ class ViewerPanel {
         this.viewer = viewerManager.createViewer(
             `viewer-${this.id}`,
             this.viewerContainer,
-            { showNavigator: true }
+            { showNavigator: true },
         );
 
         // Handle case where viewer creation failed (max viewers reached)
@@ -348,7 +354,7 @@ class ViewerPanel {
         if (this.options.onSlideSelect) {
             this.options.onSlideSelect(this);
         } else {
-            console.log(`[ViewerPanel] Slide select requested for panel "${this.id}"`);
+            console.warn(`[ViewerPanel] Slide select requested for panel "${this.id}"`);
             // Emit event for external handling
             eventBus.emit(Events.SLIDE_SELECTED, { panelId: this.id });
         }
@@ -374,7 +380,7 @@ class ViewerPanel {
         // Create ML panel if not exists
         if (!this.mlPanel) {
             this.mlPanel = new MLPanel(this.viewerContainer, {
-                viewerId: this.viewer ? this.viewer.id : this.id
+                viewerId: this.viewer ? this.viewer.id : this.id,
             });
 
             // Set current slide if loaded
@@ -386,7 +392,7 @@ class ViewerPanel {
         // Create detection panel if not exists
         if (!this.detectionPanel) {
             this.detectionPanel = new DetectionPanel(this.viewerContainer, {
-                slideId: this.slideId
+                slideId: this.slideId,
             });
         }
 
@@ -410,7 +416,7 @@ class ViewerPanel {
     _initHeatmapOverlay() {
         if (this.viewer && !this.heatmapOverlay) {
             this.heatmapOverlay = new HeatmapOverlay(this.viewer, {
-                opacity: 0.5
+                opacity: 0.5,
             });
         }
     }
@@ -420,7 +426,7 @@ class ViewerPanel {
      * @private
      */
     _initAnnotationComponents() {
-        if (this.annotationLayer) return;
+        if (this.annotationLayer) {return;}
 
         this.annotationLayer = new AnnotationLayer(this.viewer);
         this.drawingTools = new DrawingTools(this.viewer, this.annotationLayer);
@@ -435,6 +441,12 @@ class ViewerPanel {
         countingContainer.className = 'viewer-panel__counting';
         this.element.appendChild(countingContainer);
         this.countingPanel = new CountingPanel(countingContainer);
+
+        // Quality panel for inter-annotator agreement
+        const qualityContainer = document.createElement('div');
+        qualityContainer.className = 'viewer-panel__quality';
+        this.element.appendChild(qualityContainer);
+        this.qualityPanel = new QualityPanel(qualityContainer);
     }
 
     /**
@@ -476,11 +488,16 @@ class ViewerPanel {
             this.detectionPanel.setSlide(slideId);
         }
 
+        // Notify quality panel if it exists
+        if (this.qualityPanel) {
+            this.qualityPanel.setSlide(slideId);
+        }
+
         // Note: SLIDE_LOADED event is already emitted by ViewerInstance's OSD 'open' handler.
         // Do NOT emit it again here - double emission causes MLPanel.setSlide() to be called
         // twice, resetting prediction state and making heatmap non-reactivable.
 
-        console.log(`[ViewerPanel] Loaded slide "${slideId}" in panel "${this.id}"`);
+        console.warn(`[ViewerPanel] Loaded slide "${slideId}" in panel "${this.id}"`);
     }
 
     /**
@@ -558,7 +575,7 @@ class ViewerPanel {
             slideName: this.slideName,
             isActive: this.isActive,
             isSynced: this.isSynced,
-            viewerState: this.viewer ? this.viewer.getState() : null
+            viewerState: this.viewer ? this.viewer.getState() : null,
         };
     }
 
@@ -566,7 +583,7 @@ class ViewerPanel {
      * Destroy the panel
      */
     destroy() {
-        console.log(`[ViewerPanel] Destroying panel "${this.id}"`);
+        console.warn(`[ViewerPanel] Destroying panel "${this.id}"`);
 
         // Destroy ML panel
         if (this.mlPanel) {
@@ -600,6 +617,10 @@ class ViewerPanel {
         if (this.countingPanel) {
             this.countingPanel.destroy();
             this.countingPanel = null;
+        }
+        if (this.qualityPanel) {
+            this.qualityPanel.destroy();
+            this.qualityPanel = null;
         }
 
         // Destroy viewer

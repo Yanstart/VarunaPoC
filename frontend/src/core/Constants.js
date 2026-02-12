@@ -24,7 +24,7 @@ export const ViewerStates = Object.freeze({
     /** Error occurred during loading or operation */
     ERROR: 'error',
     /** Viewer is being destroyed */
-    DESTROYING: 'destroying'
+    DESTROYING: 'destroying',
 });
 
 /**
@@ -107,7 +107,13 @@ export const Events = Object.freeze({
     AUTH_LOGOUT: 'auth:logout',
     AUTH_TOKEN_REFRESHED: 'auth:tokenRefreshed',
     AUTH_ERROR: 'auth:error',
-    AUTH_ROLE_CHANGED: 'auth:roleChanged'
+    AUTH_ROLE_CHANGED: 'auth:roleChanged',
+
+    // Quality metrics events (Phase 4)
+    QUALITY_LOADING: 'quality:loading',
+    QUALITY_READY: 'quality:ready',
+    QUALITY_ERROR: 'quality:error',
+    QUALITY_DISAGREEMENT_TOGGLE: 'quality:disagreementToggle',
 });
 
 /**
@@ -122,8 +128,8 @@ export const API = Object.freeze({
         BROWSE: '/api/slides/browse',
         SLIDE_INFO: (id) => `/api/slides/${id}/info`,
         SLIDE_OVERVIEW: (id) => `/api/slides/${id}/overview`,
-        TILE: (id, level, x, y, w, h) => `/api/slides/${id}/tile/${level}/${x}/${y}/${w}/${h}`
-    }
+        TILE: (id, level, x, y, w, h) => `/api/slides/${id}/tile/${level}/${x}/${y}/${w}/${h}`,
+    },
 });
 
 /**
@@ -160,8 +166,8 @@ export const OSD_CONFIG = Object.freeze({
         clickToZoom: false,
         dblClickToZoom: true,
         flickEnabled: true,
-        pinchToZoom: true
-    }
+        pinchToZoom: true,
+    },
 });
 
 /**
@@ -174,7 +180,7 @@ export const LayoutPresets = Object.freeze({
     STACKED: { columns: 1, rows: 2, maxViewers: 2 },
     GRID_2X2: { columns: 2, rows: 2, maxViewers: 4 },
     GRID_3X2: { columns: 3, rows: 2, maxViewers: 6 },
-    GRID_3X3: { columns: 3, rows: 3, maxViewers: 9 }
+    GRID_3X3: { columns: 3, rows: 3, maxViewers: 9 },
 });
 
 /**
@@ -201,8 +207,8 @@ export const SyncConfig = Object.freeze({
         /** Sync only pan movements */
         PAN_ONLY: 'panOnly',
         /** Sync only zoom level */
-        ZOOM_ONLY: 'zoomOnly'
-    }
+        ZOOM_ONLY: 'zoomOnly',
+    },
 });
 
 /**
@@ -215,7 +221,7 @@ export const Pages = Object.freeze({
     VIEWER: 'viewer',
     COMPARE: 'compare',
     LOGIN: 'login',
-    CALLBACK: 'callback'
+    CALLBACK: 'callback',
 });
 
 /**
@@ -241,7 +247,7 @@ export const CSSClasses = Object.freeze({
     SLIDE_CARD: 'slide-card',
     FOLDER_ITEM: 'folder-item',
     SYNC_BUTTON: 'sync-button',
-    SYNC_ENABLED: 'sync-enabled'
+    SYNC_ENABLED: 'sync-enabled',
 });
 
 /**
@@ -252,7 +258,7 @@ export const StorageKeys = Object.freeze({
     LAST_PATH: 'varuna_lastPath',
     PREFERRED_LAYOUT: 'varuna_preferredLayout',
     SYNC_ENABLED: 'varuna_syncEnabled',
-    DEBUG_MODE: 'varuna_debugMode'
+    DEBUG_MODE: 'varuna_debugMode',
 });
 
 /**
@@ -265,7 +271,7 @@ export const ErrorMessages = Object.freeze({
     VIEWER_NOT_FOUND: 'Viewer not found',
     INVALID_COORDINATES: 'Invalid coordinates',
     API_ERROR: 'API request failed',
-    SYNC_ERROR: 'Synchronization error'
+    SYNC_ERROR: 'Synchronization error',
 });
 
 /**
@@ -279,7 +285,7 @@ export const SupportedFormats = Object.freeze({
     TIF: { extension: '.tif', vendor: 'Generic', name: 'TIFF/BigTIFF' },
     SVS: { extension: '.svs', vendor: 'Aperio', name: 'ScanScope Virtual Slide' },
     NDPI: { extension: '.ndpi', vendor: 'Hamamatsu', name: 'NanoZoomer' },
-    SCN: { extension: '.scn', vendor: 'Leica', name: 'Leica SCN' }
+    SCN: { extension: '.scn', vendor: 'Leica', name: 'Leica SCN' },
 });
 
 // Export all constants as default object for convenience
@@ -295,5 +301,5 @@ export default {
     CSSClasses,
     StorageKeys,
     ErrorMessages,
-    SupportedFormats
+    SupportedFormats,
 };

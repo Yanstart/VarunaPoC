@@ -158,7 +158,7 @@ class ApiService {
                 if (refreshed) {
                     this._injectAuthHeader(headers);
                     const retryResponse = await fetch(url, { method: 'GET', headers });
-                    if (retryResponse.ok) return retryResponse.json();
+                    if (retryResponse.ok) {return retryResponse.json();}
                 }
                 // Redirect to login
                 if (authService.authEnabled) {
@@ -184,7 +184,7 @@ class ApiService {
             throw new ApiError(
                 `Network error: ${error.message}`,
                 0,
-                { originalError: error }
+                { originalError: error },
             );
         }
     }
@@ -201,14 +201,14 @@ class ApiService {
         try {
             const headers = {
                 'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             };
             this._injectAuthHeader(headers);
 
             const response = await fetch(url, {
                 method,
                 headers,
-                body: JSON.stringify(body)
+                body: JSON.stringify(body),
             });
 
             if (response.status === 401) {
@@ -216,9 +216,9 @@ class ApiService {
                 if (refreshed) {
                     this._injectAuthHeader(headers);
                     const retryResponse = await fetch(url, {
-                        method, headers, body: JSON.stringify(body)
+                        method, headers, body: JSON.stringify(body),
                     });
-                    if (retryResponse.ok) return retryResponse.json();
+                    if (retryResponse.ok) {return retryResponse.json();}
                 }
                 if (authService.authEnabled) {
                     authService.login();
@@ -242,7 +242,7 @@ class ApiService {
             throw new ApiError(
                 `Network error: ${error.message}`,
                 0,
-                { originalError: error }
+                { originalError: error },
             );
         }
     }
@@ -293,7 +293,7 @@ class ApiService {
     _setCache(key, data) {
         this._cache.set(key, {
             data,
-            timestamp: Date.now()
+            timestamp: Date.now(),
         });
     }
 
@@ -380,7 +380,7 @@ class ApiService {
      */
     async browse(path = '/') {
         return this.get('/api/slides/browse', {
-            params: { path }
+            params: { path },
         });
     }
 
@@ -413,7 +413,7 @@ class ApiService {
     async loadModel(modelId, config = {}) {
         return this.post('/api/ml/models/reload', {
             model_id: modelId,
-            ...config
+            ...config,
         });
     }
 
@@ -453,7 +453,7 @@ class ApiService {
         const params = new URLSearchParams({
             prediction_class: predictionClass,
             resolution_level: options.resolutionLevel || 2,
-            colormap: options.colormap || 'jet'
+            colormap: options.colormap || 'jet',
         });
         return this.get(`/api/ml/heatmap/${encodeURIComponent(slideId)}?${params}`);
     }
@@ -467,7 +467,7 @@ class ApiService {
     async extractFeatures(slideId, options = {}) {
         return this.post(`/api/ml/features/${encodeURIComponent(slideId)}`, {
             tile_size: options.tileSize || 224,
-            overlap: options.overlap || 0
+            overlap: options.overlap || 0,
         });
     }
 
@@ -593,11 +593,11 @@ class ApiService {
      */
     async detect(slideId, params = {}) {
         const queryParams = new URLSearchParams();
-        if (params.threshold !== undefined) queryParams.set('threshold', params.threshold);
-        if (params.min_area !== undefined) queryParams.set('min_area', params.min_area);
-        if (params.simplify_tolerance !== undefined) queryParams.set('simplify_tolerance', params.simplify_tolerance);
-        if (params.resolution_level !== undefined) queryParams.set('resolution_level', params.resolution_level);
-        if (params.prediction_class) queryParams.set('prediction_class', params.prediction_class);
+        if (params.threshold !== undefined) {queryParams.set('threshold', params.threshold);}
+        if (params.min_area !== undefined) {queryParams.set('min_area', params.min_area);}
+        if (params.simplify_tolerance !== undefined) {queryParams.set('simplify_tolerance', params.simplify_tolerance);}
+        if (params.resolution_level !== undefined) {queryParams.set('resolution_level', params.resolution_level);}
+        if (params.prediction_class) {queryParams.set('prediction_class', params.prediction_class);}
 
         const qs = queryParams.toString();
         const url = `/api/ml/detect/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`;
@@ -644,6 +644,81 @@ class ApiService {
      */
     async loadSessionState() {
         return this.get('/api/auth/session', { useCache: false });
+    }
+
+    // ==========================================
+    // QUALITY METRICS API (Phase 4)
+    // ==========================================
+
+    /**
+     * Get annotators for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Array>} List of annotator info
+     */
+    async getAnnotators(slideId) {
+        return this.get(`/api/quality/${encodeURIComponent(slideId)}/annotators`, {
+            useCache: false,
+        });
+    }
+
+    /**
+     * Compute Cohen's kappa between two annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - {annotator_a, annotator_b, iou_threshold, matching_strategy}
+     * @returns {Promise<Object>} KappaResult
+     */
+    async computeKappa(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/kappa`, params);
+    }
+
+    /**
+     * Compute Fleiss' kappa for multiple annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - {annotators, grid_cell_size}
+     * @returns {Promise<Object>} FleissKappaResult
+     */
+    async computeFleissKappa(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/fleiss`, params);
+    }
+
+    /**
+     * Compute confusion matrix between two annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} ConfusionMatrixResult
+     */
+    async computeConfusionMatrix(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/confusion-matrix`, params);
+    }
+
+    /**
+     * Compute per-label F1/precision/recall
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} PerLabelMetricsResult
+     */
+    async computeF1Metrics(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/f1`, params);
+    }
+
+    /**
+     * Compute IoU distribution between two annotators
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} IoUDistributionResult
+     */
+    async computeIoUDistribution(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/iou-distribution`, params);
+    }
+
+    /**
+     * Get disagreement regions as GeoJSON
+     * @param {string} slideId - Slide ID
+     * @param {Object} params - PairwiseRequest
+     * @returns {Promise<Object>} DisagreementHeatmapResult (GeoJSON FeatureCollection)
+     */
+    async getDisagreements(slideId, params) {
+        return this.post(`/api/quality/${encodeURIComponent(slideId)}/disagreements`, params);
     }
 
     // ==========================================
