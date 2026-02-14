@@ -30,23 +30,36 @@ RESET = "\033[0m"
 def parse_args():
     parser = argparse.ArgumentParser(description="VarunaPoC Load Test Runner")
     parser.add_argument(
-        "--users", "-u", type=int, default=10,
+        "--users",
+        "-u",
+        type=int,
+        default=10,
         help="Number of concurrent users (default: 10)",
     )
     parser.add_argument(
-        "--spawn-rate", "-r", type=float, default=2,
+        "--spawn-rate",
+        "-r",
+        type=float,
+        default=2,
         help="Users spawned per second (default: 2)",
     )
     parser.add_argument(
-        "--duration", "-t", type=int, default=120,
+        "--duration",
+        "-t",
+        type=int,
+        default=120,
         help="Test duration in seconds (default: 120)",
     )
     parser.add_argument(
-        "--host", type=str, default="http://localhost:8000",
+        "--host",
+        type=str,
+        default="http://localhost:8000",
         help="Target host URL (default: http://localhost:8000)",
     )
     parser.add_argument(
-        "--error-threshold", type=float, default=10.0,
+        "--error-threshold",
+        type=float,
+        default=10.0,
         help="Max error rate %% before failing (default: 10.0)",
     )
     return parser.parse_args()
@@ -69,14 +82,22 @@ def run_locust(args, csv_prefix):
     locustfile = Path(__file__).parent / "locustfile.py"
 
     cmd = [
-        sys.executable, "-m", "locust",
-        "-f", str(locustfile),
+        sys.executable,
+        "-m",
+        "locust",
+        "-f",
+        str(locustfile),
         "--headless",
-        "-u", str(args.users),
-        "-r", str(args.spawn_rate),
-        "-t", f"{args.duration}s",
-        "--host", args.host,
-        "--csv", csv_prefix,
+        "-u",
+        str(args.users),
+        "-r",
+        str(args.spawn_rate),
+        "-t",
+        f"{args.duration}s",
+        "--host",
+        args.host,
+        "--csv",
+        csv_prefix,
         "--csv-full-history",
     ]
 
@@ -117,24 +138,24 @@ def parse_results(csv_prefix):
             if name == "Aggregated":
                 results["total_requests"] = req_count
                 results["total_failures"] = fail_count
-                results["error_rate"] = (
-                    (fail_count / req_count * 100) if req_count > 0 else 0.0
-                )
+                results["error_rate"] = (fail_count / req_count * 100) if req_count > 0 else 0.0
                 results["avg_response"] = float(row.get("Average Response Time", 0))
                 results["p50"] = float(row.get("50%", 0))
                 results["p95"] = float(row.get("95%", 0))
                 results["p99"] = float(row.get("99%", 0))
                 results["rps"] = float(row.get("Requests/s", 0))
             else:
-                results["endpoints"].append({
-                    "name": name,
-                    "method": row.get("Type", ""),
-                    "requests": req_count,
-                    "failures": fail_count,
-                    "avg_ms": float(row.get("Average Response Time", 0)),
-                    "p95_ms": float(row.get("95%", 0)),
-                    "p99_ms": float(row.get("99%", 0)),
-                })
+                results["endpoints"].append(
+                    {
+                        "name": name,
+                        "method": row.get("Type", ""),
+                        "requests": req_count,
+                        "failures": fail_count,
+                        "avg_ms": float(row.get("Average Response Time", 0)),
+                        "p95_ms": float(row.get("95%", 0)),
+                        "p99_ms": float(row.get("99%", 0)),
+                    }
+                )
 
     return results
 
@@ -146,7 +167,9 @@ def print_results(results, threshold):
     print(f"{BOLD}{BLUE}{'=' * 60}{RESET}\n")
 
     # Per-endpoint table
-    print(f"  {BOLD}{'Endpoint':<45} {'Reqs':>6} {'Fail':>6} {'Avg':>7} {'P95':>7} {'P99':>7}{RESET}")
+    print(
+        f"  {BOLD}{'Endpoint':<45} {'Reqs':>6} {'Fail':>6} {'Avg':>7} {'P95':>7} {'P99':>7}{RESET}"
+    )
     print(f"  {'─' * 78}")
     for ep in results["endpoints"]:
         fail_color = RED if ep["failures"] > 0 else GREEN
@@ -175,10 +198,14 @@ def print_results(results, threshold):
     # Pass/Fail
     error_rate = results["error_rate"]
     if error_rate <= threshold:
-        print(f"\n  {GREEN}{BOLD}PASS{RESET} — Error rate: {error_rate:.1f}% (threshold: {threshold}%)")
+        print(
+            f"\n  {GREEN}{BOLD}PASS{RESET} — Error rate: {error_rate:.1f}% (threshold: {threshold}%)"
+        )
         return True
     else:
-        print(f"\n  {RED}{BOLD}FAIL{RESET} — Error rate: {error_rate:.1f}% (threshold: {threshold}%)")
+        print(
+            f"\n  {RED}{BOLD}FAIL{RESET} — Error rate: {error_rate:.1f}% (threshold: {threshold}%)"
+        )
         return False
 
 

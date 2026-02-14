@@ -71,6 +71,8 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning:scipy",
     "ignore:A NumPy version:UserWarning",
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
 
 [tool.coverage.run]

@@ -21,7 +21,8 @@ export const test = base.extend({
     },
 
     /** Deterministic mock slide data */
-    mockSlideData: async ({/* no deps */}, use) => {
+    // eslint-disable-next-line no-empty-pattern
+    mockSlideData: async ({}, use) => {
         const data = {
             slide: {
                 id: 'test-slide-001',

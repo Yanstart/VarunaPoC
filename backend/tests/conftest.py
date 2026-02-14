@@ -48,9 +48,7 @@ def db_cleanup_annotations():
                 timeout=2,
             )
             try:
-                await conn.execute(
-                    "DELETE FROM annotations WHERE slide_id LIKE 'test_%'"
-                )
+                await conn.execute("DELETE FROM annotations WHERE slide_id LIKE 'test_%'")
                 await conn.execute(
                     "DELETE FROM annotation_labels WHERE name LIKE 'Test%' OR name LIKE 'test_%'"
                 )
