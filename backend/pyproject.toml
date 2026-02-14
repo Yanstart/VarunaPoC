@@ -45,6 +45,7 @@ skip_glob = ["venv/*", ".venv/*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
+asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -64,6 +65,7 @@ markers = [
     "annotation: Annotation CRUD and schema tests",
     "db: Tests requiring PostgreSQL database",
     "e2e: End-to-end browser tests",
+    "load: Load/performance tests",
 ]
 filterwarnings = [
     "error",

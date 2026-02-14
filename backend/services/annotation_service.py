@@ -145,7 +145,7 @@ async def get_annotations(
     if min_confidence is not None:
         stmt = stmt.where(Annotation.confidence >= min_confidence)
     if bbox and len(bbox) == 4:
-        envelope = ST_MakeEnvelope(bbox[0], bbox[1], bbox[2], bbox[3], 0)
+        envelope = ST_MakeEnvelope(bbox[0], bbox[1], bbox[2], bbox[3], 4326)
         stmt = stmt.where(ST_Intersects(Annotation.geometry, envelope))
 
     stmt = stmt.order_by(Annotation.created_at)
