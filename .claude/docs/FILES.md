@@ -1,6 +1,6 @@
 # Reference Rapide des Fichiers
 
-**Derniere mise a jour:** 2026-02-08
+**Derniere mise a jour:** 2026-02-12
 
 ---
 
@@ -38,13 +38,17 @@ frontend/src/
 │   ├── CountingPanel.js         ★ PHASE 2 - Stats temps reel par label/type
 │   ├── HeatmapOverlay.js        ★ PHASE 2 - Canvas overlay ML (cached image, coordinate mapping)
 │   ├── MLPanel.js               ★ PHASE 2 - Panel analyse ML (predict, heatmap trigger)
+│   ├── QualityPanel.js           ★ PHASE 3.2 - Quality metrics panel (kappa, confusion, F1, IoU)
+│   ├── LoginPage.js             ★ PHASE 3.1 - OIDC login page
+│   ├── UserMenu.js              ★ PHASE 3.1 - User info, role display, logout
 │   ├── Home.js                  (legacy, peu utilise)
 │   └── Viewer.js                ★ LEGACY WRAPPER - backward compat
 │
 ├── services/                    ★ API LAYER
 │   ├── index.js                 Exports centralises
-│   ├── ApiService.js            Client API singleton avec cache
-│   └── AnnotationStore.js       ★ PHASE 2 - Etat annotations (CRUD, loadStats, computeLocalStats)
+│   ├── ApiService.js            Client API singleton avec cache + quality methods
+│   ├── AnnotationStore.js       ★ PHASE 2 - Etat annotations (CRUD, loadStats, computeLocalStats)
+│   └── AuthService.js           ★ PHASE 3.1 - OIDC PKCE client (login, logout, refresh)
 │
 ├── utils/                       ★ UTILITIES
 │   ├── api.js                   (legacy) - fonctions fetch simples
@@ -57,6 +61,9 @@ frontend/src/
     ├── slide-tiles.css          Tuiles de lames
     ├── viewer.css               Page viewer single
     ├── openseadragon.css        Overrides OSD
+    ├── login.css                ★ PHASE 3.1 - Login page styles
+    ├── user-menu.css            ★ PHASE 3.1 - User menu styles
+    ├── quality-panel.css        ★ PHASE 3.2 - Quality panel styles
     └── layouts/
         └── compare-layout.css   Grille multi-viewers, sync controls
 ```
@@ -67,7 +74,7 @@ frontend/src/
 
 ```
 backend/
-├── main.py                      ★ ENTRY POINT - FastAPI app v1.7.0, CORS, lifespan DB
+├── main.py                      ★ ENTRY POINT - FastAPI app v2.0.0, CORS, lifespan DB
 ├── config_openslide.py          Configuration DLL OpenSlide (Windows)
 │
 ├── routes/
@@ -107,9 +114,38 @@ backend/
 │       ├── tag_extractor.py     Extraction tags organe/stain depuis metadata
 │       └── tag_router.py        Routage ML par tags (config YAML)
 │
-├── models/                      ★ PHASE 2 - ORM SQLAlchemy
+├── auth/                        ★ PHASE 3.1 - Auth OIDC
+│   ├── __init__.py              AUTH_ENABLED flag
+│   ├── config.py                OIDC configuration
+│   ├── oidc.py                  OIDC PKCE flow
+│   ├── jwt_validator.py         JWT RS256/ES256 validation, JWKS cache
+│   ├── dependencies.py          FastAPI auth dependencies (require_role)
+│   ├── audit.py                 Audit trail (DB + JSON logging)
+│   ├── models.py                User/Session ORM models
+│   ├── schemas.py               Auth Pydantic schemas
+│   ├── routes.py                Auth API endpoints
+│   ├── rbac.py                  Role-based access control
+│   └── break_glass.py           Emergency access (30min sessions)
+│
+├── fhir/                        ★ PHASE 3.1 - FHIR R4 Stub
+│   ├── __init__.py              FHIR_ENABLED flag
+│   ├── resources.py             DiagnosticReport builder
+│   ├── routes.py                FHIR endpoints
+│   └── patient_context.py       Patient context resolution
+│
+├── quality/                     ★ PHASE 3.2 - Quality Metrics
+│   ├── __init__.py              QUALITY_ENABLED flag
+│   ├── config.py                Thresholds, Landis-Koch scale, cache TTL
+│   ├── metrics.py               Cohen/Fleiss kappa, F1, confusion matrix (pure functions)
+│   ├── schemas.py               Pydantic models for all metric results
+│   ├── matching.py              IoU spatial matching (PostGIS) + grid matching
+│   ├── services.py              Orchestration (matching + metrics + cache)
+│   └── routes.py                7 API endpoints /api/quality/{slide_id}/...
+│
+├── models/                      ★ PHASE 2+ - ORM SQLAlchemy
 │   ├── __init__.py
-│   └── annotation.py            Annotation + AnnotationLabel (PostGIS Geometry)
+│   ├── annotation.py            Annotation + AnnotationLabel (PostGIS Geometry)
+│   └── quality_report.py        ★ PHASE 3.2 - Quality cache table (JSONB, TTL)
 │
 ├── schemas/                     ★ PHASE 2 - Pydantic validation
 │   ├── __init__.py
@@ -121,22 +157,29 @@ backend/
 │   ├── __init__.py
 │   └── database.py              SQLAlchemy async engine + PostGIS (port 5433)
 │
-├── alembic/                     ★ PHASE 2 - Migrations DB
+├── alembic/                     ★ PHASE 2+ - Migrations DB
 │   ├── env.py                   Config Alembic (load_dotenv!)
 │   ├── versions/
-│   │   └── 001_create_annotations.py  Tables annotations + labels
+│   │   ├── 001_create_annotations.py  Tables annotations + labels
+│   │   ├── 002_auth_audit.py          ★ PHASE 3.1 - Auth + audit tables
+│   │   └── 003_quality_reports.py     ★ PHASE 3.2 - Quality cache table
 │   └── alembic.ini              (dans backend/)
 │
 ├── monitoring.py                Prometheus metrics (optionnel)
 │
-├── tests/                       ★ 94 tests pytest
+├── tests/                       ★ 156 tests pytest
 │   ├── conftest.py              Fixtures pytest
 │   ├── test_format_detector.py  Tests 10+ formats (94 lames)
 │   ├── test_tile_server.py      Tests tile serving
 │   ├── test_slide_scanner.py    Tests scan
 │   ├── test_folder_browser.py   Tests navigation
 │   ├── test_detection.py        Tests pipeline detection
-│   └── test_annotations.py      Tests CRUD annotations
+│   ├── test_annotations.py      Tests CRUD annotations
+│   ├── test_auth_dependencies.py ★ PHASE 3.1 - Tests auth dependencies
+│   ├── test_auth_jwt.py          ★ PHASE 3.1 - Tests JWT validation
+│   ├── test_audit.py             ★ PHASE 3.1 - Tests audit trail
+│   ├── test_quality_metrics.py   ★ PHASE 3.2 - 31 tests quality metrics
+│   └── test_quality_api.py       ★ PHASE 3.2 - 7 integration tests
 │
 └── requirements.txt             Dependencies Python
 ```
@@ -188,6 +231,22 @@ backend/
 
 ### Ajouter un format de slide
 - `backend/services/format_detector.py` → Patterns detection + _try_open_slide
+
+### Travailler avec l'authentification
+- `backend/auth/config.py` → Configuration OIDC (issuer, client_id, etc.)
+- `backend/auth/dependencies.py` → `require_role()` FastAPI dependency
+- `backend/auth/audit.py` → Audit trail (log_audit_event)
+- `frontend/src/services/AuthService.js` → PKCE flow, token management
+- `frontend/src/components/LoginPage.js` → Login UI
+- `frontend/src/components/UserMenu.js` → User info, role display
+
+### Travailler avec les quality metrics
+- `backend/quality/metrics.py` → Pure functions (kappa, F1, confusion matrix)
+- `backend/quality/matching.py` → Spatial matching (PostGIS IoU, grid)
+- `backend/quality/services.py` → Orchestration (matching + metrics + cache)
+- `backend/quality/routes.py` → 7 API endpoints
+- `frontend/src/components/QualityPanel.js` → Quality metrics UI
+- `frontend/src/services/ApiService.js` → Quality API methods
 
 ### Modifier la base de donnees
 - `backend/models/annotation.py` → ORM models

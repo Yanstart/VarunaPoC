@@ -253,6 +253,66 @@ destroy() {
 
 ---
 
+## 2026-02-11 - OIDC PKCE Flow Complexity
+
+**Contexte:** Implementation auth OIDC avec Keycloak
+**Probleme:** Le flow PKCE necessite gestion de code_verifier, code_challenge, state, nonce, et redirection
+**Solution:** AuthService.js encapsule tout le flow: generate PKCE pair, store in sessionStorage, handle callback, token refresh
+**A Retenir:** OIDC PKCE est le standard mais la complexite est significative. Toujours utiliser un IdP (Keycloak, Azure AD) plutot que reinventer JWT custom.
+**Fichiers:** `frontend/src/services/AuthService.js`, `backend/auth/oidc.py`, `backend/auth/jwt_validator.py`
+
+---
+
+## 2026-02-11 - Backward Compatibility AUTH_ENABLED=false
+
+**Contexte:** L'auth ne doit pas bloquer le dev quand pas de Keycloak
+**Probleme:** Si Keycloak down ou absent, impossible de travailler
+**Solution:** `AUTH_ENABLED=false` (default) → anonymous ADMIN_TECHNIQUE, toutes les features disponibles. L'auth s'active uniquement via variable d'environnement.
+**A Retenir:** Toujours prevoir un mode "sans auth" pour le dev. Les modules optionnels doivent etre opt-in, pas opt-out.
+**Fichiers:** `backend/auth/__init__.py`, `backend/auth/dependencies.py`
+
+---
+
+## 2026-02-12 - Cohen's Kappa avec IoU Spatial Matching
+
+**Contexte:** Calcul d'accord inter-annotateur pour annotations spatiales
+**Probleme:** Les annotations sont des geometries (polygones, points, cercles), pas des labels simples. Comment associer les annotations de deux annotateurs?
+**Solution:** IoU spatial matching via PostGIS: cross-join filtre par ST_Intersects (utilise GIST index), calcul IoU = ST_Area(ST_Intersection)/ST_Area(ST_Union), greedy best-match assignment
+**A Retenir:** Pour kappa sur annotations spatiales, il faut d'abord "matcher" les annotations avant de comparer les labels. Le matching est le probleme difficile, pas le kappa.
+**Fichiers:** `backend/quality/matching.py`, `backend/quality/metrics.py`
+
+---
+
+## 2026-02-12 - Fleiss' Kappa Uniform Matrix = -0.2
+
+**Contexte:** Test unitaire Fleiss' kappa avec matrice uniforme [2,2,2]
+**Probleme:** Attendait kappa=0 (pas d'accord) mais obtient kappa=-0.2
+**Solution:** Mathematiquement correct: quand tous les annotateurs se repartissent uniformement entre N categories, c'est pire que le hasard dans le framework de Fleiss (systematic disagreement)
+**A Retenir:** Kappa negatif = disagreement systematique, pas une erreur. Kappa=0 = hasard pur. Kappa=-1/(N-1) minimum theorique.
+**Fichiers:** `backend/quality/metrics.py`, `backend/tests/test_quality_metrics.py`
+
+---
+
+## 2026-02-12 - Ruff per-file-ignores Glob Doesn't Match Deep Paths
+
+**Contexte:** Ruff B008/ARG001 ignores pour routes FastAPI
+**Probleme:** `"routes/**/*.py" = ["B008"]` dans ruff.toml ne couvre PAS `quality/routes.py` ni `auth/routes.py`
+**Solution:** Ajouter chaque fichier route explicitement: `"quality/routes.py" = ["B008", "ARG001"]`
+**A Retenir:** Les glob patterns ruff.toml sont relatifs au repertoire du fichier toml. `routes/**` ne couvre que le sous-dossier routes/, pas les modules au meme niveau.
+**Fichiers:** `backend/ruff.toml`
+
+---
+
+## 2026-02-12 - Pre-commit ruff-format vs Black Formatter Conflict
+
+**Contexte:** Long `# nosec B311 - Mock provider for testing` comments
+**Probleme:** ruff-format et Black se battent sur le line-wrapping de ces longues lignes, creant un cycle infini de reformattage
+**Solution:** Utiliser des commentaires nosec courts: `# nosec B311` (sans explication). Pour B615, pre-formater le line break manuellement.
+**A Retenir:** Les commentaires nosec/noqa doivent etre courts. Si explication necessaire, la mettre sur la ligne precedente en commentaire separe.
+**Fichiers:** `backend/services/ml/providers/mock_provider.py`, `backend/services/ml/providers/slideflow_provider.py`
+
+---
+
 ## Template pour Nouvelles Entrees
 
 ```markdown
@@ -267,4 +327,4 @@ destroy() {
 
 ---
 
-**Derniere mise a jour:** 2026-02-08
+**Derniere mise a jour:** 2026-02-12

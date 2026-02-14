@@ -198,23 +198,33 @@
 
 ---
 
-## ADR-011: Securite - RBAC + JWT (Phase 3)
+## ADR-011: Securite - OIDC PKCE + RBAC (Phase 3.1)
 
-**Date:** 2026-01-29 (Planifie), MAJ 2026-02-08
-**Statut:** Propose
+**Date:** 2026-01-29 (Planifie), MAJ 2026-02-11 (Implemente)
+**Statut:** Accepte et Implemente
 **Contexte:** Score securite 0/10, API completement ouverte, non conforme RGPD
-**Decision:** Implementer RBAC + JWT comme solution auth Phase 3 (semaines 10-13)
+**Decision:** Implementer OIDC PKCE + RBAC claims-based (pas JWT custom)
+**Implementation:**
+- OIDC PKCE flow (Keycloak dev, Azure AD prod-ready)
+- 4 roles claims-based: LECTURE_SEULE, INFIRMIER, MEDECIN, ADMIN_TECHNIQUE
+- JWT validation RS256/ES256, JWKS cache TTL 1h
+- Backward compatible: AUTH_ENABLED=false → anonymous ADMIN_TECHNIQUE
+- Audit trail dual DB+JSON (INFO/WARNING/CRITICAL)
+- Break-glass emergency sessions 30min
+- Session roaming cross-workstation (PostgreSQL)
 **Consequences:**
-- (+) Controle d'acces granulaire (Viewer, Annotator, Admin, SuperAdmin)
-- (+) Tokens stateless, scalable
-- (+) Compatible SSO futur (SAML 2.0/OAuth 2.0)
-- (-) Complexite token refresh/revocation
-- (-) Necessite HTTPS obligatoire
+- (+) Controle d'acces granulaire (4 roles hospital-aligned)
+- (+) Standard OIDC, compatible tout IdP (Keycloak, Azure AD, Okta)
+- (+) Backward compatible (mode sans auth pour dev)
+- (+) Audit trail immutable pour conformite
+- (-) Complexite OIDC (JWKS, token refresh, PKCE)
+- (-) Necessite IdP externe en production
 **Alternatives Rejetees:**
 - HTTP Basic Auth: Trop basique, pas de roles
 - Session cookies: Stateful, problemes scaling
-- OAuth2 direct: Necessite IdP externe, trop pour Phase 3
-**Validation Admin:** En attente
+- JWT custom (sans IdP): Pas standard, maintenance lourde
+**Fichiers:** `backend/auth/` (11 fichiers), `frontend/src/services/AuthService.js`
+**Validation Admin:** Oui (session 2026-02-11)
 
 ---
 
@@ -403,6 +413,36 @@
 
 ---
 
+## ADR-021: Quality Metrics - PostGIS Spatial Matching (Phase 3.2)
+
+**Date:** 2026-02-12
+**Statut:** Accepte et Implemente
+**Contexte:** Besoin de metriques inter-annotateur (kappa) pour le differenciateur Quality-First
+**Decision:** Cohen/Fleiss kappa avec IoU spatial matching via PostGIS + grid-based matching pour Fleiss
+**Implementation:**
+- Cohen's kappa: pairwise agreement via IoU spatial matching (PostGIS ST_Intersection/ST_Union)
+- Fleiss' kappa: multi-rater via grid-based matching (cells 256px, majority vote)
+- Points buffered to circles (ST_Buffer 50px) for IoU computation
+- Confusion matrix, F1/P/R per label, IoU distribution stats
+- Disagreement heatmap (GeoJSON overlay)
+- Cache table `quality_reports` (JSONB, TTL 5min)
+- Pure functions in metrics.py (unit-testable), PostGIS in matching.py
+**Consequences:**
+- (+) Mathematically rigorous spatial matching
+- (+) Handles multi-rater scenarios (Fleiss for N annotators)
+- (+) Cache avoids expensive recomputation
+- (+) 31 unit tests + 7 integration tests
+- (-) Requires PostGIS (not SQLite-compatible)
+- (-) Grid-based matching loses geometric precision
+**Alternatives Rejetees:**
+- Centroid-only matching: Loses shape information
+- Client-side computation: Too slow for large annotation sets
+- Pixel-based overlap: Memory-intensive for gigapixel slides
+**Fichiers:** `backend/quality/` (7 fichiers), `frontend/src/components/QualityPanel.js`
+**Validation Admin:** Oui (session 2026-02-12)
+
+---
+
 ## Index des Decisions par Domaine
 
 ### Architecture Frontend
@@ -425,7 +465,10 @@
 - ADR-020: Slideflow + Phikon-v2 pour ML
 
 ### Securite
-- ADR-011: Securite RBAC + JWT (Phase 3)
+- ADR-011: Securite OIDC PKCE + RBAC (Phase 3.1) - IMPLEMENTE
+
+### Quality Metrics
+- ADR-021: PostGIS Spatial Matching pour kappa (Phase 3.2) - IMPLEMENTE
 
 ### MLOps
 - ADR-012: MLOps Tag-Based Routing
@@ -439,5 +482,5 @@
 
 ---
 
-**Derniere mise a jour:** 2026-02-08
-**Nombre total d'ADR:** 20
+**Derniere mise a jour:** 2026-02-12
+**Nombre total d'ADR:** 21

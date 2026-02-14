@@ -39,7 +39,9 @@ Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 |-------|-----|----------|--------|----------|
 | **1** | Initialisation | 1-3 | TERMINE | 100% |
 | **2** | Core | 4-9 | TERMINE | 100% |
-| **3** | Enrichissement | 10-13 | A VENIR | 0% |
+| **3.1** | Auth OIDC + RBAC + Audit | 10-11 | TERMINE | 100% |
+| **3.2** | Quality Metrics (kappa) | 11-12 | TERMINE | 100% |
+| **3.3** | Integration PACS Telemis | 12-13 | EN COURS | 0% |
 | **4** | Finalisation | 14-15 | A VENIR | 0% |
 
 ### Direction Strategique
@@ -55,10 +57,14 @@ Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 - [x] CI/CD (GitHub Actions: lint, tests, Docker, security scans)
 - [x] 94 tests automatises
 
-**Ce qui doit EVOLUER (Phase 3+):**
-- [ ] Auth RBAC + JWT + audit trail
+**Ce qui est FAIT (Phase 3):**
+- [x] Auth OIDC PKCE + RBAC 4 roles + JWT RS256/ES256 + audit trail
+- [x] Quality metrics annotations (Cohen/Fleiss kappa, F1, confusion matrix, IoU, disagreement heatmap)
+- [x] FHIR R4 stub (DiagnosticReport)
+- [x] CI/CD all green (156 tests, 8/8 CI jobs)
+
+**Ce qui doit EVOLUER (Phase 3.3+):**
 - [ ] Integration PACS (Telemis command plugin)
-- [ ] Quality metrics annotations (kappa inter-annotateur)
 - [ ] Tests E2E
 - [ ] Documentation formation
 
@@ -66,9 +72,9 @@ Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
 
 | Angle Mort | Description | Statut |
 |------------|-------------|--------|
-| **Quality-First Annotations** | Metriques IAA, detection outliers, versioning Git-like | PARTIEL (CRUD + stats fait, kappa Phase 3) |
+| **Quality-First Annotations** | Metriques IAA, detection outliers, versioning Git-like | AVANCE (CRUD + stats + kappa + F1 + confusion + IoU + disagreement FAIT, outliers/adjudication Post-MVP) |
 | **Continuous Learning MLOps** | Drift monitoring, feedback loops, CI/CD modeles | PARTIEL (inference fait, monitoring Post-MVP) |
-| **Radical Simplicity** | Zero-config, onboarding 3 min, <100ms latence | PARTIEL (tiles <15ms, auth manquant) |
+| **Radical Simplicity** | Zero-config, onboarding 3 min, <100ms latence | AVANCE (tiles <15ms, auth OIDC, PACS en cours) |
 
 ---
 
@@ -93,9 +99,9 @@ gantt
     Compare mode + detection          :done, p2e, 2026-02-05, 2026-02-08
 
     section Phase 3 - Enrichissement
-    Auth RBAC + audit trail           :p3a, 2026-02-10, 2026-03-07
-    Quality metrics (kappa)           :p3b, 2026-03-07, 2026-03-21
-    Integration PACS Telemis          :p3c, 2026-03-21, 2026-04-04
+    Auth OIDC + RBAC + Audit          :done, p3a, 2026-02-10, 2026-02-11
+    Quality Metrics (kappa)           :done, p3b, 2026-02-11, 2026-02-12
+    Integration PACS Telemis          :active, p3c, 2026-02-12, 2026-02-20
 
     section Phase 4 - Finalisation
     Tests E2E + charge                :p4a, 2026-04-04, 2026-04-14
@@ -199,33 +205,61 @@ gantt
 
 ---
 
-## Phase 3 - Enrichissement (A VENIR)
+## Phase 3.1 - Auth OIDC + RBAC + Audit (TERMINE)
 
-**Objectif:** Auth, audit trail, quality metrics, PACS
-**Semaines:** 10-13
+**Objectif:** Authentification, audit trail, securite runtime
+**Date:** 2026-02-11
+**Progress:** `[####################] 100%`
+
+- [x] **P3-A01** OIDC PKCE authentication (Keycloak dev, Azure AD prod-ready)
+- [x] **P3-A02** 4 roles claims-based (LECTURE_SEULE, INFIRMIER, MEDECIN, ADMIN_TECHNIQUE)
+- [x] **P3-A03** JWT validation RS256/ES256 avec JWKS cache TTL 1h
+- [x] **P3-A04** `require_role()` FastAPI dependency + backward compatible (AUTH_ENABLED=false)
+- [x] **P3-A05** Frontend AuthService PKCE, LoginPage, UserMenu, role-based UI
+- [x] **P3-A06** Audit trail dual DB+JSON (INFO/WARNING/CRITICAL)
+- [x] **P3-A07** Break-glass emergency sessions (30min, CRITICAL audit)
+- [x] **P3-A08** Session roaming cross-workstation (PostgreSQL)
+- [x] **P3-A09** FHIR R4 stub (DiagnosticReport builder)
+- [x] **P3-A10** Alembic migration 002 (auth + audit tables)
+
+### Commits
+- `56cb8a7` feat(phase3): Add OIDC PKCE auth, RBAC, audit trail, and system patterns doc
+
+---
+
+## Phase 3.2 - Quality Metrics (TERMINE)
+
+**Objectif:** Metriques qualite inter-annotateur (kappa)
+**Date:** 2026-02-12
+**Progress:** `[####################] 100%`
+
+- [x] **P3-Q01** Cohen's kappa pairwise agreement (IoU spatial matching PostGIS)
+- [x] **P3-Q02** Fleiss' kappa multi-rater agreement (grid-based matching)
+- [x] **P3-Q03** Confusion matrix, F1/Precision/Recall per label
+- [x] **P3-Q04** IoU distribution statistics
+- [x] **P3-Q05** Disagreement heatmap (GeoJSON overlay)
+- [x] **P3-Q06** QualityPanel frontend (annotator selector, kappa badge, confusion matrix, F1 table, IoU histogram)
+- [x] **P3-Q07** Cache table `quality_reports` (JSONB, TTL 5min)
+- [x] **P3-Q08** 7 API endpoints `/api/quality/{slide_id}/...`
+- [x] **P3-Q09** 31 unit tests + 7 integration tests
+- [x] **P3-Q10** Alembic migration 003 (quality_reports table)
+
+### Commits
+- `ec3303a` feat(quality): Add inter-annotator agreement metrics (Phase 4)
+- `52a293f` fix(lint): Resolve all ESLint errors and Bandit false positives
+
+---
+
+## Phase 3.3 - Integration PACS Telemis (EN COURS)
+
+**Objectif:** Lancement viewer depuis PACS via command plugin
 **Progress:** `[....................] 0%`
 
-### 3.1 Auth RBAC + Audit Trail (PRIORITE CRITIQUE)
-
-- [ ] **P3-A01** OAuth2 + JWT implementation (backend/core/auth.py)
-- [ ] **P3-A02** User model + roles table
-- [ ] **P3-A03** `require_role()` FastAPI dependency
-- [ ] **P3-A04** Login UI frontend
-- [ ] **P3-A05** Audit trail table (who, what, when, where, patient)
-- [ ] **P3-A06** Structured logging (structlog)
-- [ ] **P3-A07** Integrate audit in all routes
-
-### 3.2 Quality Metrics (Angle Mort #1)
-
-- [ ] **P3-Q01** Inter-Annotator Agreement (kappa calculation)
-- [ ] **P3-Q02** Dashboard qualite annotations
-- [ ] **P3-Q03** Metriques temps annotation
-
-### 3.3 Integration PACS Telemis
-
-- [ ] **P3-P01** Command plugin config (lancement viewer depuis PACS)
-- [ ] **P3-P02** Contexte patient automatique (slide_id -> patient context)
-- [ ] **P3-P03** Tests avec environnement Telemis
+- [ ] **P3-P01** Backend: endpoint `/api/slides/by-accession/{accession_id}` (resolution accession -> slide)
+- [ ] **P3-P02** Frontend: route `/slide/{id}` avec extraction ID depuis URL
+- [ ] **P3-P03** Backend: contexte patient automatique (slide_id -> patient context)
+- [ ] **P3-P04** Plugin config `.cfg` template dans le repo
+- [ ] **P3-P05** Tests avec environnement Telemis
 
 ---
 
@@ -297,10 +331,13 @@ flowchart TD
         P2_CI["CI/CD + 94 tests"]
     end
 
-    subgraph P3["Phase 3 - NEXT"]
-        P3_AUTH["Auth RBAC + JWT<br/>CRITIQUE"]
-        P3_AUDIT["Audit Trail"]
-        P3_QUAL["Quality Metrics<br/>(kappa)"]
+    subgraph P3_DONE["Phase 3.1+3.2 - TERMINE"]
+        P3_AUTH["Auth OIDC PKCE<br/>RBAC 4 roles"]
+        P3_AUDIT["Audit Trail<br/>DB+JSON"]
+        P3_QUAL["Quality Metrics<br/>kappa + F1 + IoU"]
+    end
+
+    subgraph P3_NEXT["Phase 3.3 - NEXT"]
         P3_PACS["PACS Telemis<br/>(command plugin)"]
     end
 
@@ -332,13 +369,11 @@ flowchart TD
     P3_PACS --> POST_PACS2
 
     style P2_DONE fill:#c8e6c9,stroke:#388E3C
-    style P3_AUTH fill:#ff6b6b,color:#fff
-    style P3_AUDIT fill:#ff6b6b,color:#fff
-    style P3_QUAL fill:#f7b731
+    style P3_DONE fill:#c8e6c9,stroke:#388E3C
     style P3_PACS fill:#f7b731
 ```
 
-**Chemin critique:** Auth RBAC -> Audit Trail -> Tests E2E -> Production
+**Chemin critique:** ~~Auth RBAC~~ FAIT -> ~~Audit Trail~~ FAIT -> PACS Telemis -> Tests E2E -> Production
 
 ---
 
@@ -346,10 +381,10 @@ flowchart TD
 
 | ID | Risque | Impact | Prob. | Mitigation | Statut |
 |----|--------|--------|-------|------------|--------|
-| R1 | Auth non deployee | CRITIQUE | HIGH | Priorite Phase 3 Sprint 1 | ACTIF |
-| R2 | Bus factor = 1 | CRITIQUE | HIGH | Open source, 94 tests, CI/CD, stack standard | ATTENUATION |
+| R1 | ~~Auth non deployee~~ | ~~CRITIQUE~~ | ~~HIGH~~ | OIDC PKCE + RBAC + audit trail | RESOLU (Phase 3.1) |
+| R2 | Bus factor = 1 | CRITIQUE | HIGH | Open source, 156 tests, CI/CD, stack standard | ATTENUATION |
 | R3 | Adoption limitee | CRITIQUE | MOYEN | Co-conception pathologistes, Radical Simplicity | ATTENUATION |
-| R4 | Compliance RGPD | ELEVE | MOYEN | Auth + audit + de-identification Phase 3 | PLANIFIE |
+| R4 | Compliance RGPD | ELEVE | MOYEN | Auth + audit FAIT, de-identification Post-MVP | PARTIEL |
 | R5 | Performance annotations | MOYEN | FAIBLE | PostgreSQL PostGIS indices | OK |
 | R6 | Incompatibilite PACS | MOYEN | MOYEN | Mode fallback (repertoire partage) | NON TESTE |
 | R7 | ML drift post-deploiement | MOYEN | MOYEN | Monitoring Post-MVP Cercle 2 | PLANIFIE |
@@ -366,7 +401,7 @@ flowchart TD
 | 28 tiles premier chargement | ~2.1s | Tests reels |
 | Formats supportes | 10 | FormatDetector |
 | Lames testees | 94 | test_format_detector.py |
-| Tests backend | 94 pass, 3 skip | pytest |
+| Tests backend | 156 pass, 21 skip | pytest |
 | ML heatmap | ~2.5 min (CUDA) | Slideflow Phikon-v2 |
 | Detection regions | 3 (72-88% conf.) | threshold=0.3 |
 
@@ -374,15 +409,23 @@ flowchart TD
 
 | Metrique | Cible | Actuel |
 |----------|-------|--------|
-| Auth implementation | 100% | 0% |
-| Audit trail coverage | 100% routes | 0% |
-| Test coverage backend | > 80% | ~70% (94 tests) |
+| Auth implementation | 100% | 100% (OIDC PKCE, RBAC 4 roles) |
+| Audit trail coverage | 100% routes | 80% (auth + annotation routes) |
+| Test coverage backend | > 80% | ~80% (156 tests) |
 | Tests E2E | > 0 | 0 |
 | Security score CI/CD | Pass | Pass (Trivy, Bandit, CodeQL) |
 
 ---
 
 ## Changelog
+
+### v4.0 (2026-02-12)
+- Phase 3.1 (Auth OIDC + RBAC + Audit): marque 100% TERMINE
+- Phase 3.2 (Quality Metrics): marque 100% TERMINE
+- Phase 3.3 (PACS Telemis): EN COURS
+- Mise a jour dependency graph, Gantt, KPIs, risques
+- Tests backend: 156 pass, 21 skip (up from 94 pass, 3 skip)
+- CI/CD: 8/8 jobs all green
 
 ### v3.0 (2026-02-08)
 - **Realignement complet** avec PROPOSAL_VARUNA_v2.md (plan 15 semaines)
@@ -423,6 +466,6 @@ flowchart TD
 
 ---
 
-**Derniere mise a jour:** 2026-02-08
-**Prochaine review:** Debut Phase 3
+**Derniere mise a jour:** 2026-02-12
+**Prochaine review:** Fin Phase 3.3 (PACS)
 **Responsable:** Admin
