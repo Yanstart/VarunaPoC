@@ -5,7 +5,7 @@
  * annotation list display, and label colors.
  */
 import { test, expect } from '../fixtures/base.js';
-import { setupFullMocks, mockAnnotations } from '../helpers/api-mock.js';
+import { setupFullMocks } from '../helpers/api-mock.js';
 
 test.describe('Annotations', () => {
     test.beforeEach(async ({ page, mockSlideData }) => {

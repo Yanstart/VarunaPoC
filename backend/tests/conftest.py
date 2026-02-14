@@ -60,7 +60,6 @@ def db_cleanup_annotations():
             pass  # DB not available — nothing to clean
 
     _run_async(_cleanup())
-    return
 
 
 @pytest.fixture

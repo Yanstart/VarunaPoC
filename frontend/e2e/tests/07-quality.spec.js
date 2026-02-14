@@ -25,8 +25,6 @@ test.describe('Quality Panel', () => {
         const infoPanel = page.locator('#info');
         await expect(infoPanel).toBeVisible({ timeout: 10_000 });
 
-        // Quality panel or its container should exist in the DOM
-        const qualityEl = page.locator('.quality-panel');
         // Panel might be lazily initialized; check that the info panel loaded first
         await expect(infoPanel).toContainText('Information', { timeout: 10_000 });
     });

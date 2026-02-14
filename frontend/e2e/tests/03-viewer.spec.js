@@ -69,9 +69,9 @@ test.describe('Slide Viewer', () => {
 
         // Mock the slides list for compare picker
         await page.route('**/api/slides', (route) => {
-            if (route.request().url().includes('/browse')) return route.fallback();
-            if (route.request().url().includes('/by-name')) return route.fallback();
-            if (route.request().url().match(/\/api\/slides\/[^/]+\//)) return route.fallback();
+            if (route.request().url().includes('/browse')) { return route.fallback(); }
+            if (route.request().url().includes('/by-name')) { return route.fallback(); }
+            if (route.request().url().match(/\/api\/slides\/[^/]+\//)) { return route.fallback(); }
             return route.fulfill({
                 status: 200,
                 contentType: 'application/json',

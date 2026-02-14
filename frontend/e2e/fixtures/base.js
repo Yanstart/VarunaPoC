@@ -21,7 +21,7 @@ export const test = base.extend({
     },
 
     /** Deterministic mock slide data */
-    mockSlideData: async ({}, use) => {
+    mockSlideData: async ({/* no deps */}, use) => {
         const data = {
             slide: {
                 id: 'test-slide-001',
