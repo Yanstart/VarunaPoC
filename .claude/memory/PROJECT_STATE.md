@@ -1,6 +1,6 @@
 # Etat du Projet - VarunaPoC
 
-**Derniere mise a jour:** 2026-02-08
+**Derniere mise a jour:** 2026-02-12
 **Mis a jour par:** Cerveau d'Orchestration
 
 ---
@@ -8,22 +8,24 @@
 ## Snapshot Actuel
 
 ### Version & Phase
-- **Version:** 1.7.0
-- **Phase:** 2 complete, Phase 3 a venir (Auth, PACS, Quality Metrics)
-- **Branche Git:** `feature/slideflow-integration` (ahead of origin)
+- **Version:** 2.0.0
+- **Phase:** Phase 3.1 (Auth) COMPLETE, Phase 4 (Quality) COMPLETE
+- **Branche Git:** `main` (commit 1b867c5, merge PR #55)
 - **Plan:** MVP 15 semaines (cf. PROPOSAL_VARUNA_v2.md)
+- **Prochaine etape:** Phase 3.3 Integration PACS Telemis
 
 ### Sante du Projet
 
 | Aspect | Score | Commentaire |
 |--------|-------|-------------|
-| Fonctionnalite | 9/10 | Viewer, annotations, ML, compare mode, detection, counting |
-| Architecture | 8/10 | Patterns solides (Factory, Singleton, Observer, Mediator) |
-| Securite | 3/10 | CI/CD security (Trivy, Bandit, CodeQL, Gitleaks), pas d'auth runtime |
-| Tests | 7/10 | 94 tests backend (pytest), 3 skipped. Pas de tests E2E frontend |
+| Fonctionnalite | 9/10 | Viewer, annotations, ML, compare mode, detection, counting, quality metrics |
+| Architecture | 9/10 | Patterns solides (Factory, Singleton, Observer, Mediator), modules isoles |
+| Securite | 7/10 | OIDC PKCE, RBAC 4 roles, JWT RS256/ES256, audit trail, break-glass |
+| Tests | 8/10 | 156 tests backend (pytest), 21 skipped. Pas de tests E2E frontend |
 | Documentation | 9/10 | Proposal v2, hospital evaluation, architecture, manuel, API docs |
 | MLOps | 5/10 | Slideflow + Phikon-v2 integre, pas de monitoring/drift/feedback loop |
 | Performance | 8/10 | Tiles < 15ms keep-alive, 94 lames 10 formats |
+| CI/CD | 9/10 | 8/8 CI jobs pass, security scans, CD pipeline, all green |
 
 ---
 
@@ -45,6 +47,19 @@
 - [x] ML predict `/api/ml/predict/{slide_id}` (classification + uncertainty)
 - [x] DB lifespan graceful (async context manager)
 - [x] Routes synchrones (def, pas async def) pour OpenSlide threadpool
+- [x] **Auth OIDC PKCE** (Keycloak dev, Azure AD prod-ready)
+- [x] **RBAC 4 roles claims-based** (LECTURE_SEULE, INFIRMIER, MEDECIN, ADMIN_TECHNIQUE)
+- [x] **JWT validation RS256/ES256** avec JWKS cache TTL 1h
+- [x] **Audit trail** dual DB+JSON (INFO/WARNING/CRITICAL)
+- [x] **Break-glass** emergency sessions 30min
+- [x] **Session roaming** cross-workstation (PostgreSQL)
+- [x] **FHIR R4 stub** DiagnosticReport builder
+- [x] **Quality metrics** `/api/quality/{slide_id}/...` (7 endpoints)
+- [x] **Cohen's kappa** pairwise + IoU spatial matching (PostGIS)
+- [x] **Fleiss' kappa** multi-rater + grid-based matching
+- [x] **Confusion matrix, F1/P/R per label, IoU distribution**
+- [x] **Disagreement heatmap** GeoJSON overlay
+- [x] **Quality cache table** `quality_reports` (JSONB, TTL 5min)
 
 ### Frontend (port 5173)
 - [x] Page Home avec FolderBrowser
@@ -63,6 +78,11 @@
 - [x] HeatmapOverlay (canvas overlay, cached image, coordinate mapping)
 - [x] MLPanel (predict, heatmap trigger)
 - [x] AnnotationStore (CRUD client, loadStats, computeLocalStats)
+- [x] **AuthService PKCE** (login/logout, token refresh)
+- [x] **LoginPage** + **UserMenu** (role display, session info)
+- [x] **Role-based UI** (component visibility per role)
+- [x] **QualityPanel** (annotator selector, kappa badge, confusion matrix, F1 table, IoU histogram)
+- [x] **Disagreement overlay** (hatched SVG polygons)
 
 ### 10 Formats Supportes (94 lames testees)
 - [x] Aperio SVS (.svs, .tif)
@@ -87,31 +107,23 @@
 
 ## Ce Qui Ne Fonctionne Pas / Manque
 
-### Critique (Bloquant pour deploiement hospitalier)
-- [ ] **Authentification RBAC** - API completement ouverte
-- [ ] **Audit trail** - Aucune trace des acces
-- [ ] **HTTPS/TLS** - Depends on nginx config, non verifie
-- [ ] **De-identification PHI** - Pas de separation donnees patient
+### Prochaine Etape (Phase 3.3)
+- [ ] **Integration PACS Telemis** - Command plugin (lancement viewer depuis PACS)
+- [ ] **Endpoint by-accession** - Resolution accession number -> slide
+- [ ] **Contexte patient automatique** - slide_id -> patient context
 
-### Phase 3 (MVP semaines 10-13)
-- [ ] **Auth RBAC + JWT** - Module interface defini (core/auth.py), pas implemente
-- [ ] **Audit trail** - Table + structured logging
-- [ ] **Quality metrics** - Calcul kappa inter-annotateur
-- [ ] **Integration PACS** - Command plugin Telemis (architecture definie)
-
-### Phase 4 (MVP semaines 14-15)
+### Phase 4 Finalisation (Semaines 14-15)
 - [ ] **Tests E2E** - Playwright/Selenium
 - [ ] **Tests charge** - 10 utilisateurs simultanes
 - [ ] **Documentation formation** - Sessions utilisateurs
 
 ### Post-MVP
-- [ ] **SSO institutionnel** (SAML 2.0/OAuth 2.0)
+- [ ] **SSO institutionnel** (SAML 2.0/OAuth 2.0 complet)
 - [ ] **Collaboration temps reel** (WebSocket)
 - [ ] **Quality-First complet** (outlier detection, adjudication, versioning Git-like)
 - [ ] **MLOps complet** (drift monitoring, feedback loops, CI/CD modeles)
 - [ ] **Chiffrement au repos**
 - [ ] **Redis cache** tuiles
-- [ ] **HL7 FHIR** integration
 - [ ] **DICOM export** (Supplement 145)
 
 ---
@@ -121,7 +133,7 @@
 ### Backend
 ```
 backend/
-├── main.py                          # Entry point FastAPI v1.7.0
+├── main.py                          # Entry point FastAPI v2.0.0
 ├── config_openslide.py              # DLL config Windows
 ├── routes/
 │   ├── slides.py                    # API slides (6 routes, sync def)
@@ -139,16 +151,42 @@ backend/
 │       ├── tag_extractor.py         # Extraction tags organe/stain
 │       ├── tag_router.py            # Routage ML par tags
 │       └── slideflow_service.py     # Integration Slideflow + Phikon-v2
+├── auth/                            # Phase 3.1 - Auth OIDC
+│   ├── __init__.py                  # AUTH_ENABLED flag
+│   ├── config.py                    # OIDC configuration
+│   ├── oidc.py                      # OIDC PKCE flow
+│   ├── jwt_validator.py             # JWT RS256/ES256 validation
+│   ├── dependencies.py              # FastAPI auth dependencies
+│   ├── audit.py                     # Audit trail (DB + JSON)
+│   ├── models.py                    # User/Session ORM
+│   ├── schemas.py                   # Auth Pydantic schemas
+│   ├── routes.py                    # Auth endpoints
+│   ├── rbac.py                      # Role-based access control
+│   └── break_glass.py               # Emergency access
+├── fhir/                            # Phase 3.1 - FHIR R4
+│   ├── __init__.py                  # FHIR_ENABLED flag
+│   ├── resources.py                 # DiagnosticReport builder
+│   ├── routes.py                    # FHIR endpoints
+│   └── patient_context.py           # Patient context
+├── quality/                         # Phase 4 - Quality Metrics
+│   ├── __init__.py                  # QUALITY_ENABLED flag
+│   ├── config.py                    # Thresholds, Landis-Koch scale
+│   ├── metrics.py                   # Cohen/Fleiss kappa, F1, confusion matrix
+│   ├── schemas.py                   # Pydantic models
+│   ├── matching.py                  # IoU spatial + grid matching (PostGIS)
+│   ├── services.py                  # Orchestration layer
+│   └── routes.py                    # 7 API endpoints
 ├── models/
 │   ├── annotation.py                # ORM Annotation + AnnotationLabel
+│   ├── quality_report.py            # ORM cache table (JSONB)
 │   └── __init__.py
 ├── schemas/
 │   ├── annotation.py                # Pydantic schemas
 │   ├── geojson.py                   # GeoJSON models
 │   └── detection.py                 # Detection schemas
 ├── core/database.py                 # SQLAlchemy async + PostGIS
-├── alembic/                         # Migrations DB
-├── tests/                           # 94 tests pytest
+├── alembic/                         # Migrations DB (001, 002, 003)
+├── tests/                           # 156 tests pytest
 ├── monitoring.py                    # Prometheus metrics
 └── requirements.txt
 ```
@@ -167,21 +205,29 @@ frontend/src/
 │   ├── ViewerState.js               # State machine
 │   └── SyncController.js            # Mediator sync
 ├── components/
-│   ├── AnnotationLayer.js           # SVG overlay annotations
+│   ├── AnnotationLayer.js           # SVG overlay annotations + disagreement
 │   ├── DrawingTools.js              # 5 outils dessin
 │   ├── LayerManager.js              # Visibilite/opacite
 │   ├── DetectionPanel.js            # Auto-detect workflow
 │   ├── CountingPanel.js             # Stats temps reel
 │   ├── HeatmapOverlay.js            # Canvas overlay ML
 │   ├── MLPanel.js                   # Panel analyse ML
+│   ├── QualityPanel.js              # Phase 4 - Quality metrics panel
 │   ├── CompareLayout.js             # Grid multi-viewer
-│   ├── ViewerPanel.js               # Panel individuel (full components)
+│   ├── ViewerPanel.js               # Panel individuel
 │   ├── FolderBrowser.js             # Explorateur dossiers
-│   └── SyncControls.js              # UI sync
+│   ├── SyncControls.js              # UI sync
+│   ├── LoginPage.js                 # Phase 3.1 - Login
+│   └── UserMenu.js                  # Phase 3.1 - User info
 ├── services/
-│   ├── ApiService.js                # Client API singleton
-│   └── AnnotationStore.js           # Etat annotations (CRUD, stats)
-└── css/                             # Styles
+│   ├── ApiService.js                # Client API singleton + quality methods
+│   ├── AnnotationStore.js           # Etat annotations (CRUD, stats)
+│   └── AuthService.js               # Phase 3.1 - OIDC PKCE client
+├── css/
+│   ├── login.css                    # Phase 3.1
+│   ├── user-menu.css                # Phase 3.1
+│   └── quality-panel.css            # Phase 4
+└── ...
 ```
 
 ### Documentation strategique
@@ -192,7 +238,11 @@ docs/
 ├── ML_INTEGRATION.md                # Integration Slideflow
 ├── FORMATS_SUPPORTED.md             # Formats supportes
 ├── Manuel/                          # Documentation utilisateur
-└── Deployment/                      # Guides deploiement
+├── Deployment/
+│   ├── TELEMIS_INTEGRATION_GUIDE.md # Guide integration PACS Telemis
+│   └── ...                          # Network, monitoring guides
+└── architecture/
+    └── SYSTEM_PATTERNS.md           # Phase 3.1 patterns doc
 
 HOSPITAL_DEPLOYMENT_EVALUATION.md    # Evaluation deploiement hospitalier (racine)
 ```
@@ -207,25 +257,25 @@ HOSPITAL_DEPLOYMENT_EVALUATION.md    # Evaluation deploiement hospitalier (racin
 | 28 tiles (premier chargement) | ~2.1s | Tests Phase 2 |
 | ML heatmap (Phikon-v2, CUDA) | ~2.5 min | Tests Phase 2 |
 | Formats supportes | 10 | 94 lames testees |
-| Tests backend | 94 pass, 3 skip | pytest |
+| Tests backend | 156 pass, 21 skip | pytest |
 | Detection regions | 3 regions (72-88% confidence) | threshold=0.3 |
 
 ---
 
-## Git Status (2026-02-08)
+## Git Status (2026-02-12)
 
 ### Branches
-- `main` - Production stable
-- `feature/slideflow-integration` - Developpement actif (Phase 2)
+- `main` - Production stable (commit 1b867c5)
+- `feature/slideflow-integration` - Merged to main
 
 ### Commits Recents
 ```
-7639d4c docs: Add hospital deployment evaluation and project proposal v2
-9affcb7 fix(ci): Resolve all CI and security workflow failures
-23b0650 fix(ci): Add least-privilege permissions to all GitHub Actions workflows
-bb7464c feat(phase2): Add counting, classification, compare mode components, and heatmap fix
-a050df1 fix(perf): Resolve tile loading timeout and event listener leaks
-b2b62b6 feat(phase2): Add annotations, detection pipeline, and DB infrastructure
+1b867c5 Merge pull request #55 from Yanstart/feature/slideflow-integration
+52a293f fix(lint): Resolve all ESLint errors and Bandit false positives
+ec3303a feat(quality): Add inter-annotator agreement metrics (Phase 4)
+4667955 chore: Update deployment manifest to main-1492935
+1492935 fix(ci): Resolve remaining CI failures
+56cb8a7 feat(phase3): Add OIDC PKCE auth, RBAC, audit trail, and system patterns doc
 ```
 
 ---
@@ -238,16 +288,16 @@ b2b62b6 feat(phase2): Add annotations, detection pipeline, and DB infrastructure
 - **Option long terme** : certification IVDR Classe C / FDA 510(k) si validation clinique
 
 ### 3 Differenciateurs (cf. PROPOSAL_VARUNA_v2.md)
-1. **Quality-First Annotations** - Metriques IAA, detection outliers, versioning
+1. **Quality-First Annotations** - Metriques IAA (kappa FAIT), detection outliers, versioning
 2. **Continuous Learning MLOps** - Drift monitoring, feedback loops, CI/CD modeles
 3. **Radical Simplicity** - Zero-config, onboarding 3 min, < 100ms latence
 
 ### Gaps Critiques pour Deploiement Hospitalier (cf. HOSPITAL_DEPLOYMENT_EVALUATION.md)
-1. Authentification (RBAC + JWT)
-2. Audit trail (structured logging + table)
-3. Integration PACS (pynetdicom)
-4. Protection PHI (de-identification)
-5. HTTPS/TLS
+1. ~~Authentification (RBAC + JWT)~~ FAIT (Phase 3.1)
+2. ~~Audit trail (structured logging + table)~~ FAIT (Phase 3.1)
+3. Integration PACS (command plugin Telemis) - PROCHAIN
+4. Protection PHI (de-identification) - Post-MVP
+5. HTTPS/TLS - Depends on nginx config
 
 ---
 

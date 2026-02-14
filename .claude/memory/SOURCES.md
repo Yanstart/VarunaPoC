@@ -230,6 +230,25 @@
 
 ---
 
+## Phase 3.1 - Authentification
+
+### Keycloak (Identity Provider)
+- **Site:** https://www.keycloak.org/
+- **Documentation:** https://www.keycloak.org/documentation
+- **Admin REST API:** https://www.keycloak.org/docs-api/latest/rest-api/
+- **Usage:** IdP OIDC pour developpement et tests. 4 test users (dr.martin, nurse.dupont, admin, viewer), port 8180
+
+### OIDC (OpenID Connect)
+- **Specification:** https://openid.net/specs/openid-connect-core-1_0.html
+- **PKCE:** https://datatracker.ietf.org/doc/html/rfc7636
+- **Usage:** Protocol d'authentification standard pour le flow PKCE frontend
+
+### PyJWT
+- **Documentation:** https://pyjwt.readthedocs.io/
+- **Usage:** Validation JWT RS256/ES256 avec JWKS
+
+---
+
 ## Outils PACS (Phase 3)
 
 ### Orthanc
@@ -270,4 +289,4 @@ Toute proposition importante devrait etre verifiable par:
 
 ---
 
-**Derniere mise a jour:** 2026-02-08
+**Derniere mise a jour:** 2026-02-12
