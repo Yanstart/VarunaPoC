@@ -58,6 +58,11 @@ venv/
 # Note: .claude/BRAIN.md and .claude/memory/ are now TRACKED
 
 # =========================
+# Production environment (secrets)
+# =========================
+.env.production
+
+# =========================
 # Security - Never commit secrets
 # =========================
 *.pem
@@ -316,3 +321,7 @@ __marimo__/
 
 # Audit logs (Phase 3: Auth)
 backend/logs/
+
+# Playwright
+frontend/e2e/test-results/
+frontend/e2e/playwright-report/
