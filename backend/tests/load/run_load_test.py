@@ -13,7 +13,6 @@ Usage:
 
 import argparse
 import csv
-import os
 import subprocess
 import sys
 import tempfile
@@ -86,6 +85,7 @@ def run_locust(args, csv_prefix):
     result = subprocess.run(
         cmd,
         capture_output=False,
+        check=False,
         timeout=args.duration + 60,  # grace period
     )
     return result.returncode
@@ -95,7 +95,8 @@ def parse_results(csv_prefix):
     """Parse Locust CSV output and return summary dict."""
     stats_file = f"{csv_prefix}_stats.csv"
 
-    if not os.path.exists(stats_file):
+    stats_path = Path(stats_file)
+    if not stats_path.exists():
         print(f"{RED}Error: Stats file not found: {stats_file}{RESET}")
         return None
 
@@ -106,7 +107,7 @@ def parse_results(csv_prefix):
         "error_rate": 0.0,
     }
 
-    with open(stats_file) as f:
+    with stats_path.open() as f:
         reader = csv.DictReader(f)
         for row in reader:
             name = row.get("Name", "")
@@ -186,7 +187,7 @@ def main():
     print_header(args)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        csv_prefix = os.path.join(tmpdir, "varuna_load")
+        csv_prefix = str(Path(tmpdir) / "varuna_load")
 
         exit_code = run_locust(args, csv_prefix)
 
