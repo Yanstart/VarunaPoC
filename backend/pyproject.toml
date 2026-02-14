@@ -63,6 +63,7 @@ markers = [
     "detection: Detection pipeline tests",
     "annotation: Annotation CRUD and schema tests",
     "db: Tests requiring PostgreSQL database",
+    "e2e: End-to-end browser tests",
 ]
 filterwarnings = [
     "error",
