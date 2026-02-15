@@ -106,7 +106,7 @@ export async function mockSlideOverview(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockTiles(page) {
-    await page.route('**/api/slides/*/tile/**', (route) =>
+    await page.route('**/api/slides/*/tiles/**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'image/jpeg',
@@ -126,15 +126,25 @@ export async function mockTiles(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockDzi(page) {
-    await page.route('**/api/slides/*/dzi', (route) =>
+    await page.route('**/api/slides/*/dzi**', (route) =>
         route.fulfill({
             status: 200,
-            contentType: 'application/xml',
-            body: `<?xml version="1.0" encoding="UTF-8"?>
-<Image xmlns="http://schemas.microsoft.com/deepzoom/2008"
-       Format="jpeg" Overlap="0" TileSize="256">
-    <Size Height="40000" Width="50000"/>
-</Image>`,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                width: 50000,
+                height: 40000,
+                tile_size: 256,
+                overlap: 0,
+                levels: 5,
+                level_dimensions: [
+                    [50000, 40000],
+                    [25000, 20000],
+                    [12500, 10000],
+                    [6250, 5000],
+                    [3125, 2500],
+                ],
+                level_downsamples: [1, 2, 4, 8, 16],
+            }),
         }),
     );
 }

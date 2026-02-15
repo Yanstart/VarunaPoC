@@ -28,7 +28,7 @@ test.describe('Compare Mode', () => {
 
         // Should have a compare container with viewer panels
         await expect(page.locator('#compare-container')).toBeVisible();
-        await expect(page.locator('.compare-layout, .viewer-panel')).toBeVisible({ timeout: 5_000 });
+        await expect(page.locator('.compare-layout')).toBeVisible({ timeout: 5_000 });
     });
 
     test('sync controls are visible', async ({ page }) => {
