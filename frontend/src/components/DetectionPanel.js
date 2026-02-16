@@ -292,6 +292,25 @@ class DetectionPanel {
         return { high, medium, low };
     }
 
+    /**
+     * Create a confidence badge element
+     * @param {number|null|undefined} confidence - Confidence value (0-1)
+     * @returns {string} HTML string for the badge
+     * @private
+     */
+    _getConfidenceBadge(confidence) {
+        if (confidence == null) {
+            return `<span class="detection-badge detection-badge--unknown" title="Confiance inconnue">?</span>`;
+        }
+        if (confidence >= 0.8) {
+            return `<span class="detection-badge detection-badge--high" title="Confiance élevée">${Math.round(confidence * 100)}%</span>`;
+        }
+        if (confidence >= 0.5) {
+            return `<span class="detection-badge detection-badge--medium" title="Confiance moyenne">${Math.round(confidence * 100)}%</span>`;
+        }
+        return `<span class="detection-badge detection-badge--low" title="Confiance faible">${Math.round(confidence * 100)}%</span>`;
+    }
+
     _renderDetectionItem(feature, index) {
         const confidence = (feature.properties?.confidence || 0).toFixed(2);
         const area = Math.round(feature.properties?.area_px || 0);
@@ -303,7 +322,7 @@ class DetectionPanel {
         return `
             <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''}">
                 <div class="detection-item__info">
-                    <span class="detection-item__label">Region ${index + 1}</span>
+                    <span class="detection-item__label">Region ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}</span>
                     <span class="detection-item__meta">
                         <span class="detection-item__conf detection-item__conf--${confLevel}">${confidence}</span>
                          | ${area} px
