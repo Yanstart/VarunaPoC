@@ -38,6 +38,7 @@ import { createCaseBrowser } from './components/CaseBrowser.js';
 import { CompareLayout } from './components/CompareLayout.js';
 import { MLPanel } from './components/MLPanel.js';
 import { HeatmapOverlay } from './components/HeatmapOverlay.js';
+import { CaseSidebar } from './components/CaseSidebar.js';
 
 // Phase 2: Annotations
 import { AnnotationLayer } from './components/AnnotationLayer.js';
@@ -91,6 +92,10 @@ const appState = {
     /** Phase 3: Auth components */
     loginPage: null,
     userMenu: null,
+
+    /** Wave 3: Case navigation */
+    caseSidebar: null,
+    currentCase: null,
 };
 
 // ==========================================
@@ -437,7 +442,70 @@ async function showViewerPage(slide) {
     // Phase 3: Role-based UI visibility
     _applyRoleVisibility();
 
+    // Wave 3: Case Sidebar — show sibling slides from same case
+    await _initCaseSidebar(slide);
+
     eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
+}
+
+/**
+ * Initialize the case sidebar in the viewer.
+ * Wraps the viewer-main in a flex container and adds the sidebar.
+ *
+ * @param {Object} slide - Current slide
+ */
+async function _initCaseSidebar(slide) {
+    const viewerMain = document.querySelector('.viewer-main');
+    if (!viewerMain) { return; }
+
+    // Wrap viewer-main content in a viewer-body flex container
+    const viewerBody = document.createElement('div');
+    viewerBody.className = 'viewer-body';
+
+    // Move existing viewer-main children into viewer-body
+    while (viewerMain.firstChild) {
+        viewerBody.appendChild(viewerMain.firstChild);
+    }
+    viewerMain.appendChild(viewerBody);
+
+    // Create sidebar container
+    const sidebarContainer = document.createElement('div');
+    sidebarContainer.id = 'case-sidebar-container';
+    viewerBody.appendChild(sidebarContainer);
+
+    // Determine case data: from case browser navigation or from slide info
+    let casePath = null;
+    let caseSlides = [];
+
+    if (appState.currentCase && appState.currentCase.slides) {
+        // Navigated from CaseBrowser — case data already available
+        casePath = appState.currentCase.path;
+        caseSlides = appState.currentCase.slides;
+    } else {
+        // Navigated from FolderBrowser or deep link — try to extract parent path
+        try {
+            const slideId = slide.id || '';
+            // slide.id often encodes the relative path; extract parent folder
+            const lastSlash = slideId.lastIndexOf('/');
+            if (lastSlash > 0) {
+                const parentPath = '/' + slideId.substring(0, lastSlash);
+                const folderData = await apiService.browse(parentPath);
+                casePath = parentPath;
+                caseSlides = folderData.slides || [];
+            }
+        } catch (err) {
+            console.warn('[App] Could not load sibling slides for sidebar:', err);
+        }
+    }
+
+    if (caseSlides.length > 0) {
+        appState.caseSidebar = new CaseSidebar(sidebarContainer, {
+            onSlideSwitch: (newSlide) => {
+                handleSlideSwitch(newSlide);
+            },
+        });
+        appState.caseSidebar.setCase(casePath, caseSlides, slide.id);
+    }
 }
 
 /**
@@ -625,6 +693,19 @@ function handleCaseSelect(caseData) {
 }
 
 /**
+ * Handle intra-case slide switching (Wave 3 - Task A4).
+ * Reloads viewer without navigating back to home.
+ *
+ * @param {Object} newSlide - Slide to switch to
+ */
+function handleSlideSwitch(newSlide) {
+    // Stub — fully implemented in Task A4
+    console.warn('[App] Slide switch to:', newSlide.name);
+    appState.selectedSlide = newSlide;
+    showViewerPage(newSlide);
+}
+
+/**
  * Load slide in single viewer mode
  * @param {Object} slide - Slide to load
  */
@@ -755,6 +836,12 @@ function cleanup() {
         appState.compareLayout = null;
     }
 
+    // Wave 3: Case sidebar
+    if (appState.caseSidebar) {
+        appState.caseSidebar.destroy();
+        appState.caseSidebar = null;
+    }
+
     // Reset viewer manager
     viewerManager.destroyAll();
 
@@ -775,6 +862,7 @@ function cleanup() {
     appState.viewer = null;
     appState.folderBrowser = null;
     appState.selectedSlide = null;
+    // Note: currentCase intentionally preserved across viewer reloads
 }
 
 /**

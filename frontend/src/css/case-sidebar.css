@@ -1,0 +1,119 @@
+/**
+ * Case Sidebar CSS - Right sidebar in viewer showing sibling slides
+ *
+ * Dark theme, 220px width, collapsible.
+ */
+
+.case-sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: #111;
+    border-left: 1px solid #333;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.case-sidebar__header {
+    padding: 14px 12px 10px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.case-sidebar__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin: 0 0 4px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.case-sidebar__count {
+    font-size: 12px;
+    color: #888;
+    margin: 0;
+}
+
+.case-sidebar__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+
+.case-sidebar__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-left: 3px solid transparent;
+}
+
+.case-sidebar__item:hover {
+    background: #1a1a1a;
+}
+
+.case-sidebar__item.is-active {
+    border-left-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.08);
+}
+
+.case-sidebar__dot {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    box-sizing: border-box;
+}
+
+.case-sidebar__item.is-active .case-sidebar__dot {
+    background: #4a9eff;
+    border-color: #4a9eff;
+}
+
+.case-sidebar__item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.case-sidebar__name {
+    font-size: 12px;
+    color: #ccc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.case-sidebar__item.is-active .case-sidebar__name {
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.case-sidebar__stain {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #aaa;
+    background: #222;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Viewer layout adjustment for sidebar */
+.viewer-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.viewer-body .viewer-main {
+    flex: 1;
+    min-width: 0;
+}
