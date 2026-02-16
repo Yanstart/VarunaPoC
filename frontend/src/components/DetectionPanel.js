@@ -37,6 +37,7 @@ class DetectionPanel {
         this.minArea = 100;
         this.predictionClass = 'tissue';
         this.detectionResult = null;
+        this.measurementResult = null;
 
         /** @type {string|null} Selected label ID for classification */
         this.selectedLabelId = null;
@@ -346,10 +347,15 @@ class DetectionPanel {
         const confLevel = feature.properties?.confidence >= 0.8 ? 'high'
             : feature.properties?.confidence >= 0.5 ? 'medium' : 'low';
 
+        const measurement = this.measurementResult?.measurements?.[index];
+        const dimensionHtml = measurement
+            ? `<span class="detection-item__dimension">${measurement.feret_diameter_mm} mm</span>`
+            : '';
+
         return `
             <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''}">
                 <div class="detection-item__info">
-                    <span class="detection-item__label">Region ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}</span>
+                    <span class="detection-item__label">Region ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}${dimensionHtml}</span>
                     <span class="detection-item__meta">
                         <span class="detection-item__conf detection-item__conf--${confLevel}">${confidence}</span>
                          | ${area} px
@@ -396,6 +402,16 @@ class DetectionPanel {
             // All pending by default (not accepted, not rejected)
             this.accepted.clear();
             this.rejected.clear();
+
+            // Fetch measurements for dimension display
+            try {
+                this.measurementResult = await apiService.getMeasurement(this.slideId, {
+                    threshold: this.threshold,
+                });
+            } catch (e) {
+                console.warn('[DetectionPanel] Measurement fetch failed:', e);
+                this.measurementResult = null;
+            }
 
             this._renderPreview();
             eventBus.emit(Events.DETECTION_COMPLETE, {
@@ -482,6 +498,7 @@ class DetectionPanel {
 
     _resetState() {
         this.detectionResult = null;
+        this.measurementResult = null;
         this.accepted.clear();
         this.rejected.clear();
         annotationStore.clearDetectionPreview();
