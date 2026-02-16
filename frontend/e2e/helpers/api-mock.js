@@ -350,6 +350,106 @@ export async function mockQualityMetrics(page) {
 }
 
 /**
+ * Mock ML focus zones endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLFocusZones(page) {
+    await page.route('**/api/ml/focus/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                slide_id: 'test-slide-001',
+                zones: [
+                    { rank: 1, score: 0.95, centroid: [25000, 20000], bbox: [24000, 19000, 26000, 21000], area_px: 4000000 },
+                    { rank: 2, score: 0.82, centroid: [35000, 15000], bbox: [34000, 14000, 36000, 16000], area_px: 2000000 },
+                    { rank: 3, score: 0.67, centroid: [10000, 30000], bbox: [9000, 29000, 11000, 31000], area_px: 1500000 },
+                ],
+                model_id: 'ctranspath',
+                total_zones_above_threshold: 3,
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML measurement endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLMeasurement(page) {
+    await page.route('**/api/ml/measure/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                slide_id: 'test-slide-001',
+                measurements: [
+                    { region_id: 0, label: 'Tumeur', feret_diameter_mm: 12.4, area_mm2: 45.2, perimeter_mm: 28.1, bbox_mm: [6.0, 4.75, 6.5, 5.25] },
+                    { region_id: 1, label: 'Tumeur', feret_diameter_mm: 8.7, area_mm2: 22.8, perimeter_mm: 19.4, bbox_mm: [8.5, 3.5, 9.0, 4.0] },
+                ],
+                mpp: 0.25,
+                unit: 'mm',
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML feedback endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLFeedback(page) {
+    await page.route('**/api/ml/feedback/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                correction_id: 'corr-001',
+                status: 'recorded',
+                stats: { confirmed: 1, rejected: 0, refined: 0, relabeled: 0 },
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML tags endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLTags(page) {
+    await page.route('**/api/ml/tags/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                slide_id: 'test-slide-001',
+                tags: { organ: 'Prostate', stain: 'H&E', pathology: null },
+                source: 'filename',
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML models list endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLModels(page) {
+    await page.route('**/api/ml/models', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [
+                    { model_id: 'ctranspath', model_name: 'CTransPath', status: 'loaded' },
+                    { model_id: 'phikon-v2', model_name: 'Phikon v2', status: 'available' },
+                ],
+            }),
+        }),
+    );
+}
+
+/**
  * Setup all common mocks for a standard test scenario.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
@@ -363,4 +463,9 @@ export async function setupFullMocks(page, mockData) {
     await mockDzi(page);
     await mockTiles(page);
     await mockAnnotations(page, mockData);
+    await mockMLTags(page);
+    await mockMLFocusZones(page);
+    await mockMLMeasurement(page);
+    await mockMLFeedback(page);
+    await mockMLModels(page);
 }

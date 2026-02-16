@@ -39,6 +39,9 @@ class DetectionPanel {
         this.detectionResult = null;
         this.measurementResult = null;
 
+        /** @type {Map<number, string>} Feedback status per detection index */
+        this.feedbackStatus = new Map();
+
         /** @type {string|null} Selected label ID for classification */
         this.selectedLabelId = null;
 
@@ -286,6 +289,15 @@ class DetectionPanel {
             });
         });
 
+        // Feedback buttons (confirm/reject ML prediction)
+        this.element.querySelectorAll('.feedback-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.feedbackIndex);
+                const type = btn.dataset.feedbackType;
+                this._submitFeedback(idx, type);
+            });
+        });
+
         // Action buttons
         this.element.querySelector('.detection-panel__btn--confirm').addEventListener('click', () => {
             this._confirmDetections();
@@ -327,7 +339,7 @@ class DetectionPanel {
      * @private
      */
     _getConfidenceBadge(confidence) {
-        if (confidence == null) {
+        if (confidence === null || confidence === undefined) {
             return `<span class="detection-badge detection-badge--unknown" title="Confiance inconnue">?</span>`;
         }
         if (confidence >= 0.8) {
@@ -372,6 +384,12 @@ class DetectionPanel {
                             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                         </svg>
                     </button>
+                </div>
+                <div class="detection-item__feedback">
+                    ${this.feedbackStatus.has(index)
+        ? `<span class="feedback-badge feedback-badge--${this.feedbackStatus.get(index)}">${this.feedbackStatus.get(index) === 'confirmed' ? 'Confirm\u00e9' : 'Rejet\u00e9'}</span>`
+        : `<button class="feedback-btn feedback-btn--confirm" data-feedback-index="${index}" data-feedback-type="confirmed" title="Confirmer la pr\u00e9diction">Confirmer</button>
+           <button class="feedback-btn feedback-btn--reject" data-feedback-index="${index}" data-feedback-type="rejected" title="Rejeter la pr\u00e9diction">Rejeter</button>`}
                 </div>
             </div>
         `;
@@ -496,9 +514,48 @@ class DetectionPanel {
         });
     }
 
+    /**
+     * Submit pathologist feedback for a detection
+     * @param {number} index - Detection index
+     * @param {string} correctionType - 'confirmed' or 'rejected'
+     * @private
+     */
+    async _submitFeedback(index, correctionType) {
+        if (!this.detectionResult || this.feedbackStatus.has(index)) return;
+
+        const features = this.detectionResult.geojson?.features || [];
+        const feature = features[index];
+        if (!feature) return;
+
+        const annotationId = feature.properties?.annotation_id || feature.properties?.id;
+        if (!annotationId) {
+            console.warn('[DetectionPanel] No annotation ID for feedback at index', index);
+            // Still mark locally for UX
+            this.feedbackStatus.set(index, correctionType);
+            this._renderPreview();
+            return;
+        }
+
+        try {
+            await apiService.submitFeedback(this.slideId, {
+                original_annotation_id: annotationId,
+                correction_type: correctionType,
+                notes: null,
+            });
+            this.feedbackStatus.set(index, correctionType);
+        } catch (e) {
+            console.warn('[DetectionPanel] Feedback submission failed:', e);
+            // Mark locally anyway for UX feedback
+            this.feedbackStatus.set(index, correctionType);
+        }
+
+        this._renderPreview();
+    }
+
     _resetState() {
         this.detectionResult = null;
         this.measurementResult = null;
+        this.feedbackStatus = new Map();
         this.accepted.clear();
         this.rejected.clear();
         annotationStore.clearDetectionPreview();
