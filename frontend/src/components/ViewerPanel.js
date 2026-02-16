@@ -51,7 +51,7 @@ class ViewerPanel {
          * @type {Object}
          */
         this.options = {
-            title: 'Slide Viewer',
+            title: 'Visualiseur de lame',
             showHeader: true,
             showClose: true,
             onSlideSelect: null,
@@ -155,6 +155,15 @@ class ViewerPanel {
          */
         this.qualityPanel = null;
 
+        /**
+         * Magnification bar element
+         * @type {HTMLElement|null}
+         */
+        this.magBar = null;
+
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
+
         // Build the panel
         this._build();
     }
@@ -210,21 +219,21 @@ class ViewerPanel {
         // Select slide button
         const selectBtn = document.createElement('button');
         selectBtn.className = 'viewer-panel-action';
-        selectBtn.title = 'Select slide';
+        selectBtn.title = 'Sélectionner une lame';
         selectBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
         selectBtn.addEventListener('click', () => this._onSelectSlide());
 
         // Reset view button
         const resetBtn = document.createElement('button');
         resetBtn.className = 'viewer-panel-action';
-        resetBtn.title = 'Reset view';
+        resetBtn.title = 'Réinitialiser la vue';
         resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
         resetBtn.addEventListener('click', () => this.resetView());
 
         // ML Analysis button
         const mlBtn = document.createElement('button');
         mlBtn.className = 'viewer-panel-action viewer-panel-action--ml';
-        mlBtn.title = 'ML Analysis';
+        mlBtn.title = 'Analyse IA';
         mlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
         mlBtn.addEventListener('click', () => this._toggleMLPanel());
 
@@ -236,7 +245,7 @@ class ViewerPanel {
         if (this.options.showClose) {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'viewer-panel-action';
-            closeBtn.title = 'Close panel';
+            closeBtn.title = 'Fermer le panneau';
             closeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
             closeBtn.addEventListener('click', () => this._onClose());
             actions.appendChild(closeBtn);
@@ -261,8 +270,8 @@ class ViewerPanel {
         emptyState.className = 'viewer-empty-state';
         emptyState.innerHTML = `
             <div class="viewer-empty-icon">+</div>
-            <div class="viewer-empty-text">No slide loaded</div>
-            <button class="viewer-empty-action">Select Slide</button>
+            <div class="viewer-empty-text">Aucune lame chargée</div>
+            <button class="viewer-empty-action">Sélectionner une lame</button>
         `;
 
         const selectBtn = emptyState.querySelector('.viewer-empty-action');
@@ -270,6 +279,12 @@ class ViewerPanel {
 
         this.viewerContainer.appendChild(emptyState);
         this.viewerContainer.classList.add('is-empty');
+
+        // Magnification bar
+        this.magBar = document.createElement('div');
+        this.magBar.className = 'magnification-bar';
+        this.magBar.textContent = '\u00d71';
+        this.viewerContainer.appendChild(this.magBar);
 
         this.element.appendChild(this.viewerContainer);
     }
@@ -344,6 +359,26 @@ class ViewerPanel {
         eventBus.on(Events.SYNC_DISABLED, () => {
             this.setSynced(false);
         });
+
+        // Magnification bar updates on viewport change
+        this._unsubscribers.push(
+            eventBus.on(Events.VIEWER_VIEWPORT_CHANGE, (data) => {
+                if (data.viewerId === this.viewer?.id) {
+                    this._updateMagnification();
+                }
+            })
+        );
+    }
+
+    /**
+     * Update magnification bar display
+     * @private
+     */
+    _updateMagnification() {
+        if (!this.viewer || !this.magBar) return;
+        const mag = this.viewer.getOpticalMagnification();
+        this.magBar.textContent = '\u00d7' + mag;
+        this.magBar.classList.toggle('magnification-bar--diagnostic', mag >= 10);
     }
 
     /**
@@ -584,6 +619,10 @@ class ViewerPanel {
      */
     destroy() {
         console.warn(`[ViewerPanel] Destroying panel "${this.id}"`);
+
+        // Unsubscribe from event listeners
+        this._unsubscribers.forEach(unsubscribe => unsubscribe());
+        this._unsubscribers = [];
 
         // Destroy ML panel
         if (this.mlPanel) {
