@@ -23,6 +23,7 @@ import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
 import { QualityPanel } from './QualityPanel.js';
 import { FocusAssistPanel } from './FocusAssistPanel.js';
+import { SimilarityPanel } from './SimilarityPanel.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { apiService } from '../services/ApiService.js';
 
@@ -144,6 +145,12 @@ class ViewerPanel {
          * @type {FocusAssistPanel|null}
          */
         this.focusAssistPanel = null;
+
+        /**
+         * Similarity panel component
+         * @type {SimilarityPanel|null}
+         */
+        this.similarityPanel = null;
 
         /**
          * Layer manager component
@@ -446,6 +453,13 @@ class ViewerPanel {
             });
         }
 
+        // Create similarity panel if not exists
+        if (!this.similarityPanel) {
+            this.similarityPanel = new SimilarityPanel(this.viewerContainer, {
+                slideId: this.slideId,
+            });
+        }
+
         // Toggle visibility (all ML panels share the same toggle)
         this.mlPanel.element.classList.toggle('is-hidden');
         if (this.detectionPanel.element) {
@@ -453,6 +467,9 @@ class ViewerPanel {
         }
         if (this.focusAssistPanel.element) {
             this.focusAssistPanel.element.classList.toggle('is-hidden');
+        }
+        if (this.similarityPanel.element) {
+            this.similarityPanel.element.classList.toggle('is-hidden');
         }
 
         // Update button state
@@ -544,6 +561,11 @@ class ViewerPanel {
         // Notify focus assist panel if it exists
         if (this.focusAssistPanel) {
             this.focusAssistPanel.setSlide(slideId);
+        }
+
+        // Notify similarity panel if it exists
+        if (this.similarityPanel) {
+            this.similarityPanel.setSlide(slideId);
         }
 
         // Notify quality panel if it exists
@@ -715,6 +737,10 @@ class ViewerPanel {
         if (this.focusAssistPanel) {
             this.focusAssistPanel.destroy();
             this.focusAssistPanel = null;
+        }
+        if (this.similarityPanel) {
+            this.similarityPanel.destroy();
+            this.similarityPanel = null;
         }
         if (this.layerManager) {
             this.layerManager.destroy();

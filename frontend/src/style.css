@@ -41,3 +41,6 @@
 
 /* 9. Case Sidebar styles (Wave 3) */
 @import './css/case-sidebar.css';
+
+/* 10. Similarity Panel styles (Wave 3) */
+@import './css/similarity-panel.css';

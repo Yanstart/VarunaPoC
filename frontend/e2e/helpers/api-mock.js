@@ -450,6 +450,27 @@ export async function mockMLModels(page) {
 }
 
 /**
+ * Mock ML similarity search endpoint (Wave 3)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLSimilarity(page) {
+    await page.route('**/api/ml/similar/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                query_slide_id: 'test-slide-001',
+                results: [
+                    { slide_id: 'slide-002', score: 0.94, name: 'Case_B_HE.svs', overview_url: '/api/slides/slide-002/overview' },
+                    { slide_id: 'slide-003', score: 0.87, name: 'Case_C_HE.svs', overview_url: '/api/slides/slide-003/overview' },
+                ],
+                index_size: 50,
+            }),
+        }),
+    );
+}
+
+/**
  * Setup all common mocks for a standard test scenario.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
@@ -468,4 +489,5 @@ export async function setupFullMocks(page, mockData) {
     await mockMLMeasurement(page);
     await mockMLFeedback(page);
     await mockMLModels(page);
+    await mockMLSimilarity(page);
 }
