@@ -35,3 +35,6 @@
 
 /* 7. Focus Assist styles */
 @import './css/focus-assist.css';
+
+/* 8. Case Browser styles (Wave 3) */
+@import './css/case-browser.css';

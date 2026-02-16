@@ -109,6 +109,10 @@ export const Events = Object.freeze({
     AUTH_ERROR: 'auth:error',
     AUTH_ROLE_CHANGED: 'auth:roleChanged',
 
+    // Case navigation events (Wave 3)
+    CASE_SELECTED: 'ui:caseSelected',
+    CASE_SLIDE_SWITCH: 'case:slideSwitch',
+
     // Quality metrics events (Phase 4)
     QUALITY_LOADING: 'quality:loading',
     QUALITY_READY: 'quality:ready',
