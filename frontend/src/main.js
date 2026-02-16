@@ -695,14 +695,49 @@ function handleCaseSelect(caseData) {
 /**
  * Handle intra-case slide switching (Wave 3 - Task A4).
  * Reloads viewer without navigating back to home.
+ * Updates title, reloads tile source, resets annotations and ML panels.
  *
  * @param {Object} newSlide - Slide to switch to
  */
-function handleSlideSwitch(newSlide) {
-    // Stub — fully implemented in Task A4
-    console.warn('[App] Slide switch to:', newSlide.name);
+async function handleSlideSwitch(newSlide) {
+    console.warn('[App] Rapid slide switch to:', newSlide.name);
+
+    // 1. Update app state
     appState.selectedSlide = newSlide;
-    showViewerPage(newSlide);
+
+    // 2. Update viewer header title
+    const titleH1 = document.querySelector('.viewer-title h1');
+    if (titleH1) { titleH1.textContent = newSlide.name; }
+
+    const slideInfo = document.querySelector('.viewer-title .slide-info');
+    if (slideInfo) {
+        slideInfo.textContent = `${newSlide.format || ''} | ${newSlide.structure_type || ''}`;
+    }
+
+    // 3. Close old tile source and reload new slide
+    if (appState.viewer) {
+        appState.viewer.close();
+    }
+    await loadSlide(newSlide);
+
+    // 4. Update sidebar active indicator
+    if (appState.caseSidebar) {
+        appState.caseSidebar.setActiveSlide(newSlide.id);
+    }
+
+    // 5. Reload annotations for new slide
+    annotationStore.clear();
+    annotationStore.setSlide(newSlide.id);
+
+    // 6. Reset ML panel for new slide
+    if (appState.mlPanel) {
+        appState.mlPanel.setSlide(newSlide.id);
+    }
+
+    // 7. Reset detection panel for new slide
+    if (appState.detectionPanel && appState.detectionPanel.setSlide) {
+        appState.detectionPanel.setSlide(newSlide.id);
+    }
 }
 
 /**
