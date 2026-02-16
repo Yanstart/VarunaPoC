@@ -30,12 +30,12 @@ const TOOL_ICONS = {
 };
 
 const TOOL_LABELS = {
-    select: 'Select (V)',
+    select: 'Sélection (V)',
     rectangle: 'Rectangle (R)',
-    polygon: 'Polygon (P)',
+    polygon: 'Polygone (P)',
     point: 'Point (M)',
-    freehand: 'Freehand (F)',
-    circle: 'Circle (C)',
+    freehand: 'Main levée (F)',
+    circle: 'Cercle (C)',
 };
 
 class DrawingTools {
@@ -50,6 +50,8 @@ class DrawingTools {
 
         this.activeTool = 'select';
         this.isDrawing = false;
+        this.primaryTools = ['select', 'rectangle'];
+        this.overflowOpen = false;
 
         // Drawing state
         this._drawPoints = [];
@@ -58,6 +60,7 @@ class DrawingTools {
 
         // DOM
         this.element = null;
+        this.overflowMenu = null;
 
         /** @type {Array<Function>} Unsubscribe functions for event listeners */
         this._unsubscribers = [];
@@ -74,22 +77,64 @@ class DrawingTools {
     _createToolbar() {
         this.element = document.createElement('div');
         this.element.className = 'drawing-tools';
+        this._renderToolbar();
+    }
 
-        for (const tool of TOOLS) {
+    /**
+     * Render toolbar content (primary tools + more button + overflow).
+     * Uses static TOOL_ICONS constant (no user input) for SVG rendering.
+     * @private
+     */
+    _renderToolbar() {
+        // Clear existing content
+        while (this.element.firstChild) {
+            this.element.removeChild(this.element.firstChild);
+        }
+
+        // Primary tool buttons
+        for (const tool of this.primaryTools) {
             const btn = document.createElement('button');
             btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
             btn.dataset.tool = tool;
             btn.title = TOOL_LABELS[tool];
+            // TOOL_ICONS is a static constant defined in this module, not user input
             btn.innerHTML = TOOL_ICONS[tool];
-
             btn.addEventListener('click', () => this._setTool(tool));
             this.element.appendChild(btn);
         }
 
+        // "More" button
+        const moreBtn = document.createElement('button');
+        moreBtn.className = 'drawing-tools__btn drawing-tools__btn--more';
+        moreBtn.title = 'Plus d\'outils';
+        moreBtn.textContent = '\u22EF';
+        moreBtn.addEventListener('click', () => this._toggleOverflow());
+        this.element.appendChild(moreBtn);
+
+        // Overflow container with remaining tools
+        const overflowTools = TOOLS.filter(t => !this.primaryTools.includes(t));
+        this.overflowMenu = document.createElement('div');
+        this.overflowMenu.className = 'drawing-tools__overflow';
+        this.overflowMenu.style.display = 'none';
+
+        for (const tool of overflowTools) {
+            const btn = document.createElement('button');
+            btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
+            btn.dataset.tool = tool;
+            btn.title = TOOL_LABELS[tool];
+            // TOOL_ICONS is a static constant defined in this module, not user input
+            btn.innerHTML = TOOL_ICONS[tool];
+            btn.addEventListener('click', () => this._setTool(tool));
+            this.overflowMenu.appendChild(btn);
+        }
+
+        this.element.appendChild(this.overflowMenu);
+
         // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'drawing-tools__btn drawing-tools__btn--danger';
-        deleteBtn.title = 'Delete Selected (Del)';
+        deleteBtn.title = 'Supprimer la sélection (Del)';
+        // Static SVG icon, not user input
         deleteBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg>';
         deleteBtn.addEventListener('click', () => this._deleteSelected());
         this.element.appendChild(deleteBtn);
@@ -99,10 +144,22 @@ class DrawingTools {
         this.activeTool = toolName;
         annotationStore.setTool(toolName);
 
-        // Update toolbar UI
-        this.element.querySelectorAll('.drawing-tools__btn').forEach(btn => {
-            btn.classList.toggle('is-active', btn.dataset.tool === toolName);
-        });
+        // If a tool from overflow is selected, promote it to primary slot
+        if (toolName !== 'select' && !this.primaryTools.includes(toolName)) {
+            this.primaryTools[1] = toolName;
+            this._rebuild();
+        } else {
+            // Update toolbar UI
+            this.element.querySelectorAll('.drawing-tools__btn').forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.tool === toolName);
+            });
+        }
+
+        // Close overflow menu after selection
+        this.overflowOpen = false;
+        if (this.overflowMenu) {
+            this.overflowMenu.style.display = 'none';
+        }
 
         // Toggle OSD mouse navigation
         const isDrawTool = toolName !== 'select';
@@ -110,6 +167,25 @@ class DrawingTools {
 
         // Cancel current drawing
         this._cancelDrawing();
+    }
+
+    /**
+     * Toggle overflow menu visibility
+     * @private
+     */
+    _toggleOverflow() {
+        this.overflowOpen = !this.overflowOpen;
+        if (this.overflowMenu) {
+            this.overflowMenu.style.display = this.overflowOpen ? 'flex' : 'none';
+        }
+    }
+
+    /**
+     * Rebuild the toolbar (after primary tool change)
+     * @private
+     */
+    _rebuild() {
+        this._renderToolbar();
     }
 
     // ==========================================
