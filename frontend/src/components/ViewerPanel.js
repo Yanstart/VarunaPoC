@@ -22,6 +22,7 @@ import { DetectionPanel } from './DetectionPanel.js';
 import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
 import { QualityPanel } from './QualityPanel.js';
+import { FocusAssistPanel } from './FocusAssistPanel.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { apiService } from '../services/ApiService.js';
 
@@ -137,6 +138,12 @@ class ViewerPanel {
          * @type {DetectionPanel|null}
          */
         this.detectionPanel = null;
+
+        /**
+         * Focus Assist panel component
+         * @type {FocusAssistPanel|null}
+         */
+        this.focusAssistPanel = null;
 
         /**
          * Layer manager component
@@ -432,10 +439,20 @@ class ViewerPanel {
             });
         }
 
-        // Toggle visibility (both panels share the same toggle)
+        // Create focus assist panel if not exists
+        if (!this.focusAssistPanel) {
+            this.focusAssistPanel = new FocusAssistPanel(this.viewerContainer, {
+                slideId: this.slideId,
+            });
+        }
+
+        // Toggle visibility (all ML panels share the same toggle)
         this.mlPanel.element.classList.toggle('is-hidden');
         if (this.detectionPanel.element) {
             this.detectionPanel.element.classList.toggle('is-hidden');
+        }
+        if (this.focusAssistPanel.element) {
+            this.focusAssistPanel.element.classList.toggle('is-hidden');
         }
 
         // Update button state
@@ -522,6 +539,11 @@ class ViewerPanel {
         // Notify detection panel if it exists
         if (this.detectionPanel) {
             this.detectionPanel.setSlide(slideId);
+        }
+
+        // Notify focus assist panel if it exists
+        if (this.focusAssistPanel) {
+            this.focusAssistPanel.setSlide(slideId);
         }
 
         // Notify quality panel if it exists
@@ -689,6 +711,10 @@ class ViewerPanel {
         if (this.detectionPanel) {
             this.detectionPanel.destroy();
             this.detectionPanel = null;
+        }
+        if (this.focusAssistPanel) {
+            this.focusAssistPanel.destroy();
+            this.focusAssistPanel = null;
         }
         if (this.layerManager) {
             this.layerManager.destroy();

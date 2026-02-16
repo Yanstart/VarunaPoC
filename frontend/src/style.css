@@ -32,3 +32,6 @@
 
 /* 6. Auto-tag styles */
 @import './css/auto-tag.css';
+
+/* 7. Focus Assist styles */
+@import './css/focus-assist.css';

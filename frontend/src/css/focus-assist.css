@@ -1,0 +1,261 @@
+/**
+ * FocusAssistPanel Styles
+ *
+ * Follows detection-panel pattern with accordion, zone list,
+ * and score badges.
+ */
+
+.focus-assist-panel {
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #333;
+    border-radius: 8px;
+    width: 280px;
+    backdrop-filter: blur(8px);
+    margin-top: 6px;
+}
+
+/* Header / Accordion */
+
+.focus-assist-panel__header {
+    padding: 10px 14px;
+    border-bottom: 1px solid #333;
+}
+
+.focus-assist-panel__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.focus-assist-panel__header--collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.focus-assist-panel__chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    color: var(--text-secondary, #999);
+}
+
+/* Body */
+
+.focus-assist-panel__section {
+    padding: 14px;
+}
+
+.focus-assist-panel__desc {
+    font-size: 12px;
+    color: #888;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+/* Buttons */
+
+.focus-assist-panel__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid #444;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.focus-assist-panel__btn:last-child {
+    margin-bottom: 0;
+}
+
+.focus-assist-panel__btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.focus-assist-panel__btn--primary {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: white;
+}
+
+.focus-assist-panel__btn--primary:hover:not(:disabled) {
+    background: #6bb0ff;
+}
+
+.focus-assist-panel__btn--secondary {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.focus-assist-panel__btn--secondary:hover {
+    border-color: #4a9eff;
+    color: #4a9eff;
+}
+
+/* Loading */
+
+.focus-assist-panel__loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.focus-assist-panel__spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #333;
+    border-top-color: #4a9eff;
+    border-radius: 50%;
+    animation: focus-spin 0.8s linear infinite;
+}
+
+@keyframes focus-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Summary */
+
+.focus-assist-panel__summary {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.focus-assist-panel__count {
+    font-size: 24px;
+    font-weight: 700;
+    color: #4a9eff;
+    line-height: 1;
+}
+
+.focus-assist-panel__count-label {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Zone list */
+
+.focus-assist-panel__list {
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+}
+
+.focus-assist-panel__zone-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.focus-assist-panel__zone-item:last-child {
+    border-bottom: none;
+}
+
+.focus-assist-panel__zone-item:hover {
+    background: #222;
+}
+
+.focus-assist-panel__zone-item.is-active {
+    background: rgba(74, 158, 255, 0.12);
+    border-left: 3px solid #4a9eff;
+}
+
+.focus-assist-panel__zone-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.focus-assist-panel__zone-label {
+    font-size: 13px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+/* Navigate button */
+
+.focus-assist-panel__zone-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s ease;
+}
+
+.focus-assist-panel__zone-nav:hover {
+    color: #4a9eff;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+}
+
+/* Score badges */
+
+.focus-assist-panel__score-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.focus-assist-panel__score-badge--high {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.focus-assist-panel__score-badge--medium {
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.focus-assist-panel__score-badge--low {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Error */
+
+.focus-assist-panel__error {
+    padding: 12px 0;
+    color: #ff6b6b;
+    font-size: 13px;
+}
+
+.focus-assist-panel__error p {
+    margin: 0 0 10px 0;
+}
