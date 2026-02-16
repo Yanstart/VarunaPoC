@@ -431,3 +431,18 @@
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* Accordion collapse */
+.ml-panel__header--collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ml-panel__chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    color: var(--text-secondary, #999);
+}

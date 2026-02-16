@@ -28,8 +28,8 @@ class LayerManager {
         this.element.className = 'layer-manager';
         this.element.innerHTML = `
             <div class="layer-manager__header">
-                <h3>Layers</h3>
-                <button class="layer-manager__export" title="Export GeoJSON">
+                <h3>Couches</h3>
+                <button class="layer-manager__export" title="Exporter GeoJSON">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>
@@ -63,7 +63,7 @@ class LayerManager {
 
         const annotations = annotationStore.getAll();
         if (annotations.length === 0) {
-            list.innerHTML = '<div class="layer-manager__empty">No annotations yet</div>';
+            list.innerHTML = '<div class="layer-manager__empty">Aucune annotation</div>';
             return;
         }
 
@@ -111,7 +111,7 @@ class LayerManager {
                 class="layer-item__opacity"
                 min="0" max="1" step="0.05"
                 value="${opacity}"
-                title="Opacity: ${Math.round(opacity * 100)}%"
+                title="Opacité : ${Math.round(opacity * 100)}%"
             >
         `;
 

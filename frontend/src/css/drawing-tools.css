@@ -56,3 +56,24 @@
     border-color: #ff6b6b;
     background: rgba(255, 107, 107, 0.1);
 }
+
+/* Overflow menu */
+.drawing-tools__btn--more {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    color: var(--text-secondary, #999);
+}
+
+.drawing-tools__overflow {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--bg-secondary, #1e1e1e);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 6px;
+    padding: 4px;
+    display: flex;
+    gap: 2px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}

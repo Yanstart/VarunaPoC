@@ -64,12 +64,15 @@ markers = [
     "annotation: Annotation CRUD and schema tests",
     "db: Tests requiring PostgreSQL database",
     "e2e: End-to-end browser tests",
+    "load: Load/performance tests",
 ]
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
     "ignore::UserWarning:scipy",
     "ignore:A NumPy version:UserWarning",
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
 
 [tool.coverage.run]

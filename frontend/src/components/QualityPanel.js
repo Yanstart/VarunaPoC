@@ -79,7 +79,7 @@ class QualityPanel {
 
         this.element.innerHTML = `
             <div class="quality-panel__header">
-                <span class="quality-panel__title">Quality Metrics</span>
+                <span class="quality-panel__title">Métriques de qualité</span>
                 <span class="quality-panel__toggle">&#9660;</span>
             </div>
             <div class="quality-panel__body">
@@ -140,7 +140,7 @@ class QualityPanel {
                 </div>
             </div>
             <button class="quality-panel__compute-btn" ${this.isLoading ? 'disabled' : ''}>
-                ${this.isLoading ? 'Computing...' : 'Compute Agreement'}
+                ${this.isLoading ? 'Calcul en cours...' : 'Calculer les métriques'}
             </button>
             ${this.kappaResult ? this._renderKappa() : ''}
             ${this.confusionResult ? this._renderConfusionMatrix() : ''}
@@ -156,7 +156,7 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Cohen's Kappa</div>
+                <div class="quality-panel__section-title">Score Kappa</div>
                 <div class="quality-panel__kappa quality-panel__kappa--${cssClass}">
                     <span class="quality-panel__kappa-value">${r.kappa.toFixed(3)}</span>
                     <span class="quality-panel__kappa-label">${r.interpretation}</span>
@@ -201,8 +201,8 @@ class QualityPanel {
         const rows = r.metrics.map(m => `
             <div class="quality-panel__f1-row">
                 <span class="quality-panel__f1-label">${m.label}</span>
-                <span class="quality-panel__f1-value" title="Precision">${m.precision.toFixed(2)}</span>
-                <span class="quality-panel__f1-value" title="Recall">${m.recall.toFixed(2)}</span>
+                <span class="quality-panel__f1-value" title="Précision">${m.precision.toFixed(2)}</span>
+                <span class="quality-panel__f1-value" title="Rappel">${m.recall.toFixed(2)}</span>
                 <span class="quality-panel__f1-value" title="F1">${m.f1.toFixed(2)}</span>
             </div>
         `).join('');
@@ -255,7 +255,7 @@ class QualityPanel {
                     <input type="checkbox"
                            class="quality-panel__disagree-checkbox"
                            ${this.showDisagreements ? 'checked' : ''}>
-                    Show Disagreements on Slide
+                    Superposition des désaccords
                 </label>
             </div>
         `;

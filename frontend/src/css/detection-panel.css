@@ -368,3 +368,66 @@
 .detection-item__conf--high { color: #4CAF50; }
 .detection-item__conf--medium { color: #ff9800; }
 .detection-item__conf--low { color: #ff6b6b; }
+
+/* Confidence badges */
+.detection-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.detection-badge--high {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.detection-badge--medium {
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.detection-badge--low {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.detection-badge--unknown {
+    background: rgba(149, 165, 166, 0.2);
+    color: #95a5a6;
+    border: 1px solid rgba(149, 165, 166, 0.3);
+}
+
+.detection-panel__header {
+    padding: 10px 14px;
+    border-bottom: 1px solid #333;
+}
+
+.detection-panel__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+/* Accordion collapse */
+.detection-panel__header--collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detection-panel__chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    color: var(--text-secondary, #999);
+}

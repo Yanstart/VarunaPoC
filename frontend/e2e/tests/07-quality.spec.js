@@ -25,8 +25,6 @@ test.describe('Quality Panel', () => {
         const infoPanel = page.locator('#info');
         await expect(infoPanel).toBeVisible({ timeout: 10_000 });
 
-        // Quality panel or its container should exist in the DOM
-        const qualityEl = page.locator('.quality-panel');
         // Panel might be lazily initialized; check that the info panel loaded first
         await expect(infoPanel).toContainText('Information', { timeout: 10_000 });
     });
@@ -38,7 +36,7 @@ test.describe('Quality Panel', () => {
         // Should show format, dimensions, levels
         await expect(infoPanel).toContainText('SVS', { timeout: 10_000 });
         await expect(infoPanel).toContainText('50,000');
-        await expect(infoPanel).toContainText('5 pyramid levels');
+        await expect(infoPanel).toContainText('5 niveaux de pyramide');
     });
 
     test('layer manager container exists in info panel', async ({ page }) => {

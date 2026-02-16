@@ -39,7 +39,7 @@ test.describe('Authentication', () => {
         await page.goto('/');
 
         // Should show login page
-        await expect(page.locator('.login-page, .page-login')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#app.page-login')).toBeVisible({ timeout: 10_000 });
 
         // Login button should be present
         await expect(page.locator('#login-btn')).toBeVisible();

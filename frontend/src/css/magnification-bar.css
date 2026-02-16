@@ -1,0 +1,19 @@
+.magnification-bar {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: var(--bg-primary, rgba(0, 0, 0, 0.7));
+    color: var(--text-primary, #fff);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    z-index: 10;
+    pointer-events: none;
+    transition: background 0.2s ease;
+}
+
+.magnification-bar--diagnostic {
+    background: var(--accent-primary, #00b894);
+}

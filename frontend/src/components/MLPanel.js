@@ -34,6 +34,7 @@ class MLPanel {
         this.heatmapVisible = false;
         this.heatmapOpacity = 0.5;
         this.isLoading = false;
+        this.isCollapsed = true;
 
         // Elements
         this.element = null;
@@ -57,20 +58,16 @@ class MLPanel {
         this.element = document.createElement('div');
         this.element.className = 'ml-panel';
         this.element.innerHTML = `
-            <div class="ml-panel__header">
+            <div class="ml-panel__header ml-panel__header--collapsible">
                 <span class="ml-panel__title">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                         <path d="M2 17l10 5 10-5"/>
                         <path d="M2 12l10 5 10-5"/>
                     </svg>
-                    ML Analysis
+                    Analyse IA
                 </span>
-                <button class="ml-panel__collapse" title="Collapse">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                </button>
+                <span class="ml-panel__chevron">\u25B6</span>
             </div>
             <div class="ml-panel__content">
                 <div class="ml-panel__actions">
@@ -80,7 +77,7 @@ class MLPanel {
                             <path d="M12 16v-4"/>
                             <path d="M12 8h.01"/>
                         </svg>
-                        Analyze Slide
+                        Analyser la lame
                     </button>
                     <button class="ml-panel__btn ml-panel__btn--heatmap" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -90,17 +87,17 @@ class MLPanel {
                             <path d="M9 3v18"/>
                             <path d="M15 3v18"/>
                         </svg>
-                        Show Heatmap
+                        Afficher la carte de chaleur
                     </button>
                 </div>
                 <div class="ml-panel__opacity" style="display: none;">
-                    <label>Heatmap Opacity</label>
+                    <label>Opacité de la carte</label>
                     <input type="range" min="0" max="100" value="50" class="ml-panel__slider">
                     <span class="ml-panel__opacity-value">50%</span>
                 </div>
                 <div class="ml-panel__results">
                     <div class="ml-panel__placeholder">
-                        Load a slide and click "Analyze" to run ML prediction
+                        Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
                     </div>
                 </div>
             </div>
@@ -113,10 +110,19 @@ class MLPanel {
         this.opacityContainer = this.element.querySelector('.ml-panel__opacity');
         this.opacityValue = this.element.querySelector('.ml-panel__opacity-value');
         this.resultsContainer = this.element.querySelector('.ml-panel__results');
-        this.collapseBtn = this.element.querySelector('.ml-panel__collapse');
         this.content = this.element.querySelector('.ml-panel__content');
 
+        // Make header clickable for accordion
+        const header = this.element.querySelector('.ml-panel__header');
+        if (header) {
+            header.addEventListener('click', () => this._toggleCollapse());
+        }
+
         this.container.appendChild(this.element);
+
+        // Start collapsed by default
+        const body = this.element.querySelector('.ml-panel__content');
+        if (body) body.style.display = 'none';
     }
 
     /**
@@ -138,11 +144,6 @@ class MLPanel {
                 viewerId: this.viewerId,
                 opacity: this.heatmapOpacity,
             });
-        });
-
-        // Collapse button
-        this.collapseBtn.addEventListener('click', () => {
-            this.element.classList.toggle('is-collapsed');
         });
 
         // Listen for slide loaded events - Store unsubscribe functions
@@ -182,7 +183,7 @@ class MLPanel {
         // Reset results
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__placeholder">
-                Click "Analyze Slide" to run ML prediction
+                Cliquez « Analyser la lame » pour lancer la prédiction IA
             </div>
         `;
     }
@@ -202,7 +203,7 @@ class MLPanel {
 
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__placeholder">
-                Load a slide and click "Analyze" to run ML prediction
+                Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
             </div>
         `;
     }
@@ -218,15 +219,15 @@ class MLPanel {
         this.predictBtn.disabled = true;
         this.predictBtn.innerHTML = `
             <span class="ml-panel__spinner"></span>
-            Analyzing...
+            Analyse en cours...
         `;
 
         // Show loading in results
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__loading">
                 <span class="ml-panel__spinner ml-panel__spinner--large"></span>
-                <p>Running ML analysis...</p>
-                <p class="ml-panel__loading-sub">This may take a few seconds</p>
+                <p>Analyse IA en cours...</p>
+                <p class="ml-panel__loading-sub">Cela peut prendre quelques secondes</p>
             </div>
         `;
 
@@ -270,7 +271,7 @@ class MLPanel {
                     <path d="M12 16v-4"/>
                     <path d="M12 8h.01"/>
                 </svg>
-                Analyze Slide
+                Analyser la lame
             `;
         }
     }
@@ -308,12 +309,12 @@ class MLPanel {
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__result">
                 <div class="ml-panel__prediction">
-                    <span class="ml-panel__prediction-label">Prediction</span>
+                    <span class="ml-panel__prediction-label">Prédiction</span>
                     <span class="ml-panel__prediction-class">${result.prediction_class}</span>
                 </div>
                 <div class="ml-panel__metrics">
                     <div class="ml-panel__metric">
-                        <span class="ml-panel__metric-label">Confidence</span>
+                        <span class="ml-panel__metric-label">Confiance</span>
                         <span class="ml-panel__metric-value" style="color: ${confColor}">
                             ${confidence}%
                         </span>
@@ -334,7 +335,7 @@ class MLPanel {
                     </div>
                 </div>
                 <div class="ml-panel__probabilities">
-                    <span class="ml-panel__prob-title">Class Probabilities</span>
+                    <span class="ml-panel__prob-title">Probabilités par classe</span>
                     ${probBars}
                 </div>
             </div>
@@ -392,7 +393,7 @@ class MLPanel {
                     <path d="M9 3v18"/>
                     <path d="M15 3v18"/>
                 </svg>
-                Hide Heatmap
+                Masquer la carte de chaleur
             `;
         } else {
             this.opacityContainer.style.display = 'none';
@@ -404,7 +405,7 @@ class MLPanel {
                     <path d="M9 3v18"/>
                     <path d="M15 3v18"/>
                 </svg>
-                Show Heatmap
+                Afficher la carte de chaleur
             `;
         }
 
@@ -415,6 +416,22 @@ class MLPanel {
             predictionClass: this.prediction.prediction_class,
             opacity: this.heatmapOpacity,
         });
+    }
+
+    /**
+     * Toggle collapse state of the panel
+     * @private
+     */
+    _toggleCollapse() {
+        this.isCollapsed = !this.isCollapsed;
+        const body = this.element.querySelector('.ml-panel__content');
+        const chevron = this.element.querySelector('.ml-panel__chevron');
+        if (body) {
+            body.style.display = this.isCollapsed ? 'none' : 'block';
+        }
+        if (chevron) {
+            chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
     }
 
     /**

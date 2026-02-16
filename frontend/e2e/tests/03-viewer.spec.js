@@ -19,7 +19,7 @@ test.describe('Slide Viewer', () => {
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
 
         // Should switch to viewer page
-        await expect(page.locator('.page-viewer, .viewer-page')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
         await expect(page.locator('#viewer')).toBeVisible();
     });
 
@@ -28,8 +28,8 @@ test.describe('Slide Viewer', () => {
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
         await page.locator('#viewer').waitFor();
 
-        // OSD creates a canvas element inside the viewer container
-        await expect(page.locator('#viewer canvas, #viewer .openseadragon-canvas')).toBeVisible({
+        // OSD creates canvas elements inside the viewer container
+        await expect(page.locator('#viewer canvas').first()).toBeVisible({
             timeout: 10_000,
         });
     });
@@ -53,7 +53,7 @@ test.describe('Slide Viewer', () => {
     test('back button returns to home page', async ({ page }) => {
         // Navigate to viewer
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
-        await expect(page.locator('.viewer-page')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
 
         // Click back button
         await page.locator('#back-btn').click();
@@ -65,13 +65,13 @@ test.describe('Slide Viewer', () => {
     test('compare button switches to compare mode', async ({ page, mockSlideData }) => {
         // Navigate to viewer
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
-        await expect(page.locator('.viewer-page')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
 
         // Mock the slides list for compare picker
         await page.route('**/api/slides', (route) => {
-            if (route.request().url().includes('/browse')) return route.fallback();
-            if (route.request().url().includes('/by-name')) return route.fallback();
-            if (route.request().url().match(/\/api\/slides\/[^/]+\//)) return route.fallback();
+            if (route.request().url().includes('/browse')) { return route.fallback(); }
+            if (route.request().url().includes('/by-name')) { return route.fallback(); }
+            if (route.request().url().match(/\/api\/slides\/[^/]+\//)) { return route.fallback(); }
             return route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -86,6 +86,6 @@ test.describe('Slide Viewer', () => {
         await page.locator('#compare-btn').click();
 
         // Should switch to compare page
-        await expect(page.locator('.compare-page, .page-compare')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#app.page-compare')).toBeVisible({ timeout: 10_000 });
     });
 });

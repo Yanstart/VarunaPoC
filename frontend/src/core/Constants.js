@@ -195,8 +195,8 @@ export const DEFAULT_LAYOUT = LayoutPresets.SINGLE;
  * @readonly
  */
 export const SyncConfig = Object.freeze({
-    /** Sync is disabled by default per user requirement */
-    ENABLED_BY_DEFAULT: false,
+    /** Sync is enabled by default for compare mode */
+    ENABLED_BY_DEFAULT: true,
 
     /** Debounce time for sync events (ms) */
     DEBOUNCE_MS: 16, // ~60fps

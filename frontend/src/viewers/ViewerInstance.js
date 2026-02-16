@@ -572,6 +572,27 @@ class ViewerInstance {
     }
 
     /**
+     * Get current optical-equivalent magnification.
+     * Assumes 0.25 um/px at max resolution (40x objective equivalent).
+     * @returns {number} Magnification value (e.g. 1, 2, 5, 10, 20, 40)
+     */
+    getOpticalMagnification() {
+        if (!this._osdViewer || !this._osdViewer.viewport) return 1;
+        const zoom = this._osdViewer.viewport.getZoom(true);
+        const maxZoom = this._osdViewer.viewport.getMaxZoom();
+        const ratio = zoom / maxZoom;
+        const rawMag = ratio * 40;
+        const objectives = [1, 2, 4, 5, 10, 20, 40];
+        let closest = objectives[0];
+        for (const obj of objectives) {
+            if (Math.abs(obj - rawMag) < Math.abs(closest - rawMag)) {
+                closest = obj;
+            }
+        }
+        return closest;
+    }
+
+    /**
      * Destroy the viewer instance
      * Cleans up resources and event handlers
      */
