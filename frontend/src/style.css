@@ -29,3 +29,6 @@
 /* 5. Auth styles (Phase 3) */
 @import './css/login.css';
 @import './css/user-menu.css';
+
+/* 6. Auto-tag styles */
+@import './css/auto-tag.css';

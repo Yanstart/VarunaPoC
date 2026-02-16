@@ -23,6 +23,7 @@ import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
 import { QualityPanel } from './QualityPanel.js';
 import { annotationStore } from '../services/AnnotationStore.js';
+import { apiService } from '../services/ApiService.js';
 
 /**
  * ViewerPanel class - Panel wrapper for a single viewer
@@ -532,7 +533,47 @@ class ViewerPanel {
         // Do NOT emit it again here - double emission causes MLPanel.setSlide() to be called
         // twice, resetting prediction state and making heatmap non-reactivable.
 
+
+        // Auto-tag: fetch and display slide tags
+        this._loadSlideTags(slideId);
         console.warn(`[ViewerPanel] Loaded slide "${slideId}" in panel "${this.id}"`);
+    }
+
+    /**
+     * Load and display auto-detected tags for the current slide
+     * @param {string} slideId
+     * @private
+     */
+    async _loadSlideTags(slideId) {
+        try {
+            const result = await apiService.getSlideTags(slideId);
+            this._renderTagBadge(result.tags);
+        } catch (err) {
+            console.warn('[ViewerPanel] Tag fetch failed:', err);
+        }
+    }
+
+    /**
+     * Render tag badge in the viewer header
+     * @param {Object} tags - Tags object with organ, stain, etc.
+     * @private
+     */
+    _renderTagBadge(tags) {
+        // Remove existing badge
+        const existing = this.element.querySelector('.viewer-panel-tags');
+        if (existing) existing.remove();
+
+        const parts = [tags.organ, tags.stain, tags.pathology].filter(Boolean);
+        if (parts.length === 0) return;
+
+        const badge = document.createElement('div');
+        badge.className = 'viewer-panel-tags';
+        badge.textContent = parts.join(' \u2014 ');
+
+        const header = this.element.querySelector('.viewer-panel-header');
+        if (header) {
+            header.appendChild(badge);
+        }
     }
 
     /**
