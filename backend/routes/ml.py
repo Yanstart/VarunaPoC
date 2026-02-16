@@ -200,6 +200,21 @@ class FeedbackResponse(BaseModel):
     correction_type: str
     stats: Dict[str, int]
 
+
+class SimilarSlideResult(BaseModel):
+    """A single similar slide result."""
+    slide_id: str
+    score: float = Field(..., ge=0, le=1)
+    name: Optional[str] = None
+    overview_url: Optional[str] = None
+
+
+class SimilarityResponse(BaseModel):
+    """Response for similarity search endpoint."""
+    query_slide_id: str
+    results: List[SimilarSlideResult]
+    index_size: int
+
 # ============================================================================
 # DEPENDENCIES
 # ============================================================================
@@ -903,6 +918,90 @@ async def submit_feedback(
     except Exception as e:
         logger.error(f"Feedback submission failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Feedback error: {e!s}")
+
+
+@router.get("/feedback/stats")
+async def get_feedback_stats(
+    model_name: str = Query(None),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Get aggregated feedback statistics per model (7-day sliding window)."""
+    from services.feedback_collector import FeedbackCollector
+    from core.database import get_db_context
+
+    collector = FeedbackCollector()
+    async with get_db_context() as session:
+        stats = await collector.get_stats(session, model_name=model_name)
+
+    return {
+        "stats": [
+            {
+                "model_name": s.model_name,
+                "window_days": s.window_days,
+                "total_corrections": s.total_corrections,
+                "confirmed": s.confirmed,
+                "rejected": s.rejected,
+                "refined": s.refined,
+                "relabeled": s.relabeled,
+                "rejection_rate": s.rejection_rate,
+                "needs_retrain": s.needs_retrain,
+                "high_rejection": s.high_rejection,
+            }
+            for s in stats
+        ],
+    }
+
+
+# ============================================================================
+# SIMILARITY SEARCH
+# ============================================================================
+
+_similarity_index = None
+
+
+def get_similarity_index():
+    """Get or create the singleton SimilarityIndex."""
+    global _similarity_index
+    if _similarity_index is None:
+        from services.ml.similarity_index import SimilarityIndex, FAISS_AVAILABLE
+
+        if not FAISS_AVAILABLE:
+            raise HTTPException(503, "Similarity search unavailable (faiss-cpu not installed)")
+        _similarity_index = SimilarityIndex()
+    return _similarity_index
+
+
+@router.post("/similar/{slide_id}", response_model=SimilarityResponse)
+async def search_similar(
+    slide_id: str,
+    top_k: int = Query(5, ge=1, le=20),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Find the K most similar slides to the given slide."""
+    import os
+
+    index = get_similarity_index()
+
+    # Get query embeddings from disk cache
+    disk_cache = DiskCache()
+    model = os.getenv("ML_EXTRACTOR", "ctranspath")
+    embeddings = disk_cache.load_embeddings(slide_id, model)
+
+    if embeddings is None:
+        raise HTTPException(404, f"No embeddings cached for slide {slide_id}")
+
+    results = index.search(embeddings, top_k=top_k, exclude_id=slide_id)
+
+    # Enrich with slide names and overview URLs
+    for r in results:
+        r["name"] = r["slide_id"].split("/")[-1] if "/" in r["slide_id"] else r["slide_id"]
+        r["overview_url"] = f"/api/slides/{r['slide_id']}/overview"
+
+    return SimilarityResponse(
+        query_slide_id=slide_id,
+        results=[SimilarSlideResult(**r) for r in results],
+        index_size=index.size(),
+    )
 
 
 @router.post("/batch/predict", response_model=BatchJobResponse)

@@ -532,6 +532,20 @@ class ApiService {
         return this.get(`/api/ml/focus/${encodeURIComponent(slideId)}?${params}`);
     }
 
+    /**
+     * Search for similar slides using FAISS similarity index
+     * @param {string} slideId - Query slide ID
+     * @param {Object} [options={}] - Search options
+     * @param {number} [options.topK=5] - Number of results
+     * @returns {Promise<Object>} SimilarityResponse with results array
+     */
+    async getSimilarSlides(slideId, options = {}) {
+        const params = new URLSearchParams();
+        if (options.topK) {params.set('top_k', options.topK);}
+        const query = params.toString() ? `?${params}` : '';
+        return this.post(`/api/ml/similar/${encodeURIComponent(slideId)}${query}`, {});
+    }
+
     // ==========================================
     // ANNOTATIONS API
     // ==========================================
