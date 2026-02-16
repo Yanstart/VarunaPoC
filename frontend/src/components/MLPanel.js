@@ -30,6 +30,7 @@ class MLPanel {
         this.slideId = null;
 
         // State
+        this.selectedModelId = null;
         this.prediction = null;
         this.heatmapVisible = false;
         this.heatmapOpacity = 0.5;
@@ -38,6 +39,7 @@ class MLPanel {
 
         // Elements
         this.element = null;
+        this.modelSelect = null;
         this.predictBtn = null;
         this.heatmapBtn = null;
         this.opacitySlider = null;
@@ -70,6 +72,12 @@ class MLPanel {
                 <span class="ml-panel__chevron">\u25B6</span>
             </div>
             <div class="ml-panel__content">
+                <div class="ml-panel__model-selector">
+                    <label class="ml-panel__model-label">Modele IA</label>
+                    <select class="ml-panel__model-select" disabled>
+                        <option value="">Chargement...</option>
+                    </select>
+                </div>
                 <div class="ml-panel__actions">
                     <button class="ml-panel__btn ml-panel__btn--predict" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -111,12 +119,15 @@ class MLPanel {
         this.opacityValue = this.element.querySelector('.ml-panel__opacity-value');
         this.resultsContainer = this.element.querySelector('.ml-panel__results');
         this.content = this.element.querySelector('.ml-panel__content');
+        this.modelSelect = this.element.querySelector('.ml-panel__model-select');
 
         // Make header clickable for accordion
         const header = this.element.querySelector('.ml-panel__header');
         if (header) {
             header.addEventListener('click', () => this._toggleCollapse());
         }
+
+        this._loadModels();
 
         this.container.appendChild(this.element);
 
@@ -239,6 +250,7 @@ class MLPanel {
         try {
             const result = await apiService.predict(this.slideId, {
                 numMcSamples: 10,
+                modelId: this.selectedModelId || undefined,
             });
 
             this.prediction = result;
@@ -415,6 +427,74 @@ class MLPanel {
             visible: this.heatmapVisible,
             predictionClass: this.prediction.prediction_class,
             opacity: this.heatmapOpacity,
+        });
+    }
+
+
+    /**
+     * Load available ML models and populate the selector
+     * @private
+     */
+    async _loadModels() {
+        try {
+            const models = await apiService.listModels();
+            this._populateModelSelector(models);
+        } catch (err) {
+            console.warn('[MLPanel] Could not load models:', err);
+        }
+    }
+
+    /**
+     * Get user-friendly model name
+     * @param {Object} model
+     * @returns {string}
+     * @private
+     */
+    _friendlyModelName(model) {
+        const nameMap = {
+            'ctranspath': 'CTransPath',
+            'phikon': 'Phikon v2',
+            'uni': 'UNI',
+            'resnet50_imagenet': 'ResNet-50',
+        };
+        const name = model.model_name || model.model_id;
+        for (const [key, friendly] of Object.entries(nameMap)) {
+            if (name.toLowerCase().includes(key)) return friendly;
+        }
+        return name;
+    }
+
+    /**
+     * Populate the model selector dropdown
+     * @param {Array} models
+     * @private
+     */
+    _populateModelSelector(models) {
+        const select = this.element.querySelector('.ml-panel__model-select');
+        if (!select) return;
+
+        // Clear existing options
+        while (select.firstChild) select.removeChild(select.firstChild);
+
+        if (models.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Aucun modele disponible';
+            select.appendChild(opt);
+            return;
+        }
+
+        models.forEach((model, i) => {
+            const opt = document.createElement('option');
+            opt.value = model.model_id;
+            const friendly = this._friendlyModelName(model);
+            opt.textContent = i === 0 ? `${friendly} (recommande)` : friendly;
+            select.appendChild(opt);
+        });
+
+        select.disabled = false;
+        select.addEventListener('change', (e) => {
+            this.selectedModelId = e.target.value || null;
         });
     }
 

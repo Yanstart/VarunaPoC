@@ -446,3 +446,33 @@
     transition: transform 0.2s ease;
     color: var(--text-secondary, #999);
 }
+
+/* ============================================
+   MODEL SELECTOR
+   ============================================ */
+
+.ml-panel__model-selector {
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+}
+
+.ml-panel__model-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #aaa);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.ml-panel__model-select {
+    width: 100%;
+    padding: 4px 8px;
+    background: var(--bg-secondary, #2a2a2a);
+    color: var(--text-primary, #eee);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.ml-panel__model-select:disabled {
+    opacity: 0.5;
+}

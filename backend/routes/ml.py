@@ -5,6 +5,7 @@ Endpoints:
 - POST /ml/predict/{slide_id} - Prédiction sur slide
 - POST /ml/features/{slide_id} - Extraction features
 - GET  /ml/heatmap/{slide_id} - Génération heatmap
+- GET  /ml/focus/{slide_id} - Focus assist zones
 - POST /ml/batch/predict - Batch inference
 - GET  /ml/models - Liste modèles disponibles
 - POST /ml/models/reload - Reload model configuration
@@ -138,6 +139,67 @@ class ModelInfoResponse(BaseModel):
     provider: str
 
 
+
+class TagsResponse(BaseModel):
+    """Response pour auto-tag endpoint."""
+
+    slide_id: str
+    tags: Dict[str, Optional[str]]
+    source: str
+
+
+
+
+class FocusZone(BaseModel):
+    """A single zone of interest."""
+    rank: int
+    score: float = Field(..., ge=0.0, le=1.0)
+    centroid: List[float]
+    bbox: List[float]
+    area_px: float
+
+
+class FocusResponse(BaseModel):
+    """Response for focus assist endpoint."""
+    slide_id: str
+    zones: List[FocusZone]
+    model_id: str
+    total_zones_above_threshold: int
+
+
+
+class RegionMeasurement(BaseModel):
+    region_id: int
+    label: str
+    feret_diameter_mm: float
+    area_mm2: float
+    perimeter_mm: float
+    bbox_mm: List[float]
+    confidence: float
+
+
+class MeasurementResponse(BaseModel):
+    slide_id: str
+    measurements: List[RegionMeasurement]
+    mpp: float
+    unit: str = "mm"
+
+
+class FeedbackRequest(BaseModel):
+    """Pathologist feedback on an ML prediction."""
+    original_annotation_id: str = Field(..., description="UUID of the original annotation")
+    correction_type: str = Field(..., pattern="^(confirmed|rejected|refined|relabeled)$")
+    corrected_class: Optional[str] = None
+    corrected_geometry: Optional[Dict] = None
+    notes: Optional[str] = None
+
+
+class FeedbackResponse(BaseModel):
+    correction_id: str
+    slide_id: str
+    correction_type: str
+    stats: Dict[str, int]
+
 # ============================================================================
 # DEPENDENCIES
 # ============================================================================
@@ -239,6 +301,31 @@ def get_tag_router():
     config_path = os.getenv("ML_ROUTES_CONFIG", "config/ml_routes.yaml")
     return TagRouter(config_path)
 
+
+
+from services.cache.memory_cache import MemoryCache
+
+_memory_cache = None
+
+
+def get_memory_cache():
+    global _memory_cache
+    if _memory_cache is None:
+        _memory_cache = MemoryCache(maxsize=512, ttl=300)
+    return _memory_cache
+
+
+
+from services.cache.disk_cache import DiskCache
+
+_disk_cache = None
+
+
+def get_disk_cache():
+    global _disk_cache
+    if _disk_cache is None:
+        _disk_cache = DiskCache()
+    return _disk_cache
 
 # ============================================================================
 # ENDPOINTS
@@ -594,6 +681,230 @@ async def detect_regions_endpoint(
         raise HTTPException(status_code=500, detail=f"Detection error: {e!s}")
 
 
+
+@router.get("/focus/{slide_id}", response_model=FocusResponse)
+async def get_focus_zones(
+    slide_id: str,
+    top_n: int = Query(10, ge=1, le=50, description="Number of top zones to return"),
+    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum attention score"),
+    resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution"),
+    prediction_class: str = Query("tissue", description="Target class"),
+    provider=Depends(get_ml_provider),
+    disk_cache: DiskCache = Depends(get_disk_cache),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Focus Assist — Retourne les N zones les plus intéressantes d'une lame.
+
+    Utilise la heatmap ML pour identifier les régions d'attention élevée,
+    les trie par score décroissant et retourne les top N zones avec
+    coordonnées, bounding box et score.
+    """
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        # Check disk cache for heatmap
+        model_id = provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        cached_heatmap = disk_cache.load_heatmap(slide_id, model_id)
+
+        if cached_heatmap is not None:
+            heatmap = cached_heatmap
+            # We need slide dimensions - get from OpenSlide
+            import openslide
+            slide = openslide.OpenSlide(slide_path)
+            slide_dimensions = slide.dimensions
+            slide.close()
+        else:
+            # Generate heatmap
+            heatmap_result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
+            heatmap = heatmap_result.heatmap
+            slide_dimensions = heatmap_result.slide_dimensions
+            # Cache for future use
+            disk_cache.save_heatmap(slide_id, model_id, heatmap)
+
+        # Find zones above threshold
+        import numpy as np
+        from services.detection.postprocessing import heatmap_to_contours
+
+        contours_with_confidence = heatmap_to_contours(
+            heatmap, threshold=threshold, min_area=50.0, closing_iterations=2
+        )
+
+        # Scale and compute zone properties
+        heatmap_h, heatmap_w = heatmap.shape[:2]
+        scale_x = slide_dimensions[0] / heatmap_w
+        scale_y = slide_dimensions[1] / heatmap_h
+
+        zones = []
+        for contour, confidence in contours_with_confidence:
+            scaled = contour.copy().astype(float)
+            scaled[:, 0] *= scale_x
+            scaled[:, 1] *= scale_y
+
+            xs, ys = scaled[:, 0], scaled[:, 1]
+            centroid = [float(np.mean(xs)), float(np.mean(ys))]
+            bbox = [float(np.min(xs)), float(np.min(ys)), float(np.max(xs)), float(np.max(ys))]
+
+            # Area via shoelace
+            n = len(scaled)
+            if n >= 3:
+                x, y = scaled[:, 0], scaled[:, 1]
+                area = abs(float(np.sum(x[:-1]*y[1:] - x[1:]*y[:-1]) + x[-1]*y[0] - x[0]*y[-1])) / 2.0
+            else:
+                area = 0.0
+
+            zones.append({
+                "score": round(confidence, 4),
+                "centroid": [round(c, 2) for c in centroid],
+                "bbox": [round(v, 2) for v in bbox],
+                "area_px": round(area, 2),
+            })
+
+        # Sort by score descending
+        zones.sort(key=lambda z: z["score"], reverse=True)
+        total_above = len(zones)
+        zones = zones[:top_n]
+
+        # Add rank
+        focus_zones = [
+            FocusZone(rank=i+1, **z) for i, z in enumerate(zones)
+        ]
+
+        return FocusResponse(
+            slide_id=slide_id,
+            zones=focus_zones,
+            model_id=model_id,
+            total_zones_above_threshold=total_above,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Focus assist failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Focus assist error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Focus assist error: {e!s}")
+
+
+
+
+@router.get("/measure/{slide_id}", response_model=MeasurementResponse)
+async def measure_slide(
+    slide_id: str,
+    threshold: float = Query(0.5, ge=0.0, le=1.0),
+    prediction_class: str = Query("tissue"),
+    resolution_level: int = Query(2, ge=0, le=5),
+    provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Auto-measure tumor dimensions in millimeters."""
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        # Get MPP from slide metadata
+        import openslide
+        slide = openslide.OpenSlide(slide_path)
+        mpp = float(slide.properties.get('openslide.mpp-x', '0.25'))
+        slide.close()
+
+        # Generate heatmap
+        heatmap_result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
+
+        # Extract contours
+        from services.detection.postprocessing import heatmap_to_contours
+        contours = heatmap_to_contours(
+            heatmap_result.heatmap, threshold=threshold, min_area=100.0
+        )
+
+        # Measure regions
+        from services.measurement import measure_regions
+        measurements = measure_regions(
+            contours,
+            heatmap_result.slide_dimensions,
+            heatmap_result.heatmap.shape[:2],
+            mpp,
+        )
+
+        return MeasurementResponse(
+            slide_id=slide_id,
+            measurements=[RegionMeasurement(**m) for m in measurements],
+            mpp=mpp,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Measurement failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Measurement error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Measurement error: {e!s}")
+
+
+@router.post("/feedback/{slide_id}", response_model=FeedbackResponse)
+async def submit_feedback(
+    slide_id: str,
+    request: FeedbackRequest,
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Record pathologist correction on ML prediction."""
+    import uuid as uuid_mod
+
+    try:
+        # Validate annotation ID format
+        try:
+            annotation_uuid = uuid_mod.UUID(request.original_annotation_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid annotation UUID format")
+
+        # Create correction record
+        from core.database import get_db_context
+        from models.correction import Correction
+        from sqlalchemy import select, func
+
+        async with get_db_context() as session:
+            correction = Correction(
+                annotation_id=annotation_uuid,
+                slide_id=slide_id,
+                correction_type=request.correction_type,
+                comment=request.notes,
+                created_by=current_user.username if hasattr(current_user, 'username') else "anonymous",
+            )
+            session.add(correction)
+            await session.flush()
+
+            # Get stats
+            result = await session.execute(
+                select(
+                    Correction.correction_type,
+                    func.count(Correction.id),
+                ).where(
+                    Correction.slide_id == slide_id
+                ).group_by(Correction.correction_type)
+            )
+            stats = {row[0]: row[1] for row in result.all()}
+
+        return FeedbackResponse(
+            correction_id=str(correction.id),
+            slide_id=slide_id,
+            correction_type=request.correction_type,
+            stats=stats,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Feedback submission failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Feedback error: {e!s}")
+
+
 @router.post("/batch/predict", response_model=BatchJobResponse)
 async def batch_predict(
     request: BatchPredictionRequest,
@@ -725,6 +1036,73 @@ async def reload_models(
     except Exception as e:
         logger.error(f"Failed to reload configuration: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/tags/{slide_id}", response_model=TagsResponse)
+async def get_slide_tags(
+    slide_id: str,
+    tag_extractor=Depends(get_tag_extractor),
+    memory_cache: MemoryCache = Depends(get_memory_cache),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Auto-tag une lame — classification automatique (organe, coloration, pathologie).
+
+    Utilise le TagExtractor existant pour extraire des tags depuis les métadonnées
+    et le nom de fichier de la lame. Les résultats sont mis en cache mémoire.
+    """
+    # Check cache
+    cache_key = f"tags:{slide_id}"
+    cached = memory_cache.get(cache_key)
+    if cached is not None:
+        return TagsResponse(
+            slide_id=slide_id,
+            tags=cached["tags"],
+            source=cached["source"],
+        )
+
+    # Get slide path
+    slide_path = get_slide_path_by_id(slide_id)
+    if not slide_path:
+        raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+
+    # Extract format from extension
+    from pathlib import Path
+
+    ext = Path(slide_path).suffix.upper().lstrip(".")
+    slide_format = ext if ext else "UNKNOWN"
+
+    # Extract tags
+    try:
+        raw_tags = tag_extractor.extract_tags(slide_path, slide_format)
+    except Exception as e:
+        logger.warning(f"Tag extraction failed for {slide_id}: {e}")
+        raw_tags = {
+            "organ": None,
+            "stain": None,
+            "marker": None,
+            "confidence": 0.0,
+            "source": "error",
+        }
+
+    tags_dict = {
+        "organ": raw_tags.get("organ"),
+        "stain": raw_tags.get("stain"),
+        "marker": raw_tags.get("marker"),
+        "pathology": None,  # Will be populated by ML in future
+        "confidence": raw_tags.get("confidence", 0.0),
+    }
+    source = raw_tags.get("source", "unknown")
+
+    # Cache result
+    memory_cache.set(cache_key, {"tags": tags_dict, "source": source})
+
+    return TagsResponse(
+        slide_id=slide_id,
+        tags=tags_dict,
+        source=source,
+    )
+
 
 
 @router.get("/health")
