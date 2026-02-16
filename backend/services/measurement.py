@@ -4,9 +4,10 @@ Converts pixel measurements to millimeters using slide MPP (microns per pixel).
 Computes Feret diameter (max caliper diameter) for TNM staging.
 """
 
+from typing import Dict, List, Tuple
+
 import numpy as np
 from scipy.spatial.distance import pdist
-from typing import List, Dict, Tuple
 
 
 def compute_feret_diameter(contour_points: np.ndarray) -> float:

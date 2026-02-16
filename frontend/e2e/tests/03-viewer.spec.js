@@ -20,16 +20,17 @@ test.describe('Slide Viewer', () => {
 
         // Should switch to viewer page
         await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
-        await expect(page.locator('#viewer')).toBeVisible();
+        // Viewer container is created (OSD may set 0 dimensions until tile source opens)
+        await expect(page.locator('#viewer')).toBeAttached();
     });
 
     test('OpenSeadragon canvas is rendered', async ({ page }) => {
         // Navigate to viewer
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
-        await page.locator('#viewer').waitFor();
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
 
         // OSD creates canvas elements inside the viewer container
-        await expect(page.locator('#viewer canvas').first()).toBeVisible({
+        await expect(page.locator('#viewer canvas').first()).toBeAttached({
             timeout: 10_000,
         });
     });

@@ -11,9 +11,9 @@ Usage:
         stats = await collector.get_stats(session, model_name="ctranspath")
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +67,10 @@ class FeedbackCollector:
         Returns:
             List of FeedbackStats, one per model_name
         """
+        from sqlalchemy import case as sql_case
+        from sqlalchemy import func, select
+
         from models.correction import Correction
-        from sqlalchemy import select, func, case as sql_case
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=self.window_days)
 

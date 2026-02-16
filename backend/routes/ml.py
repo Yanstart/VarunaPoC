@@ -700,6 +700,7 @@ async def detect_regions_endpoint(
 def _compute_focus_zones(heatmap, slide_dimensions, threshold, top_n):
     """Extract and rank focus zones from a heatmap."""
     import numpy as np
+
     from services.detection.postprocessing import heatmap_to_contours
 
     contours_with_confidence = heatmap_to_contours(
@@ -893,9 +894,10 @@ async def submit_feedback(
             raise HTTPException(status_code=422, detail="Invalid annotation UUID format")
 
         # Create correction record
+        from sqlalchemy import func, select
+
         from core.database import get_db_context
         from models.correction import Correction
-        from sqlalchemy import select, func
 
         async with get_db_context() as session:
             correction = Correction(
@@ -941,8 +943,8 @@ async def get_feedback_stats(
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Get aggregated feedback statistics per model (7-day sliding window)."""
-    from services.feedback_collector import FeedbackCollector
     from core.database import get_db_context
+    from services.feedback_collector import FeedbackCollector
 
     collector = FeedbackCollector()
     async with get_db_context() as session:
@@ -978,7 +980,7 @@ def get_similarity_index():
     """Get or create the singleton SimilarityIndex."""
     global _similarity_index
     if _similarity_index is None:
-        from services.ml.similarity_index import SimilarityIndex, FAISS_AVAILABLE
+        from services.ml.similarity_index import FAISS_AVAILABLE, SimilarityIndex
 
         if not FAISS_AVAILABLE:
             raise HTTPException(503, "Similarity search unavailable (faiss-cpu not installed)")

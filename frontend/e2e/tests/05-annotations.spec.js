@@ -13,9 +13,10 @@ test.describe('Annotations', () => {
         await page.goto('/');
         await page.waitForSelector('.folder-browser');
 
-        // Navigate to viewer
+        // Navigate to viewer (wait for page transition + metadata load)
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
-        await page.locator('#viewer').waitFor({ timeout: 10_000 });
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#info')).toContainText('Information', { timeout: 10_000 });
     });
 
     test('drawing tools toolbar is visible on viewer page', async ({ page }) => {
