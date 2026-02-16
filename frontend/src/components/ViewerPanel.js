@@ -381,7 +381,7 @@ class ViewerPanel {
                 if (data.viewerId === this.viewer?.id) {
                     this._updateMagnification();
                 }
-            })
+            }),
         );
     }
 
@@ -390,7 +390,9 @@ class ViewerPanel {
      * @private
      */
     _updateMagnification() {
-        if (!this.viewer || !this.magBar) return;
+        if (!this.viewer || !this.magBar) {
+            return;
+        }
         const mag = this.viewer.getOpticalMagnification();
         this.magBar.textContent = '\u00d7' + mag;
         this.magBar.classList.toggle('magnification-bar--diagnostic', mag >= 10);
@@ -605,10 +607,14 @@ class ViewerPanel {
     _renderTagBadge(tags) {
         // Remove existing badge
         const existing = this.element.querySelector('.viewer-panel-tags');
-        if (existing) existing.remove();
+        if (existing) {
+            existing.remove();
+        }
 
         const parts = [tags.organ, tags.stain, tags.pathology].filter(Boolean);
-        if (parts.length === 0) return;
+        if (parts.length === 0) {
+            return;
+        }
 
         const badge = document.createElement('div');
         badge.className = 'viewer-panel-tags';

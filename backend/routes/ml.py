@@ -139,7 +139,6 @@ class ModelInfoResponse(BaseModel):
     provider: str
 
 
-
 class TagsResponse(BaseModel):
     """Response pour auto-tag endpoint."""
 
@@ -148,10 +147,9 @@ class TagsResponse(BaseModel):
     source: str
 
 
-
-
 class FocusZone(BaseModel):
     """A single zone of interest."""
+
     rank: int
     score: float = Field(..., ge=0.0, le=1.0)
     centroid: List[float]
@@ -161,11 +159,11 @@ class FocusZone(BaseModel):
 
 class FocusResponse(BaseModel):
     """Response for focus assist endpoint."""
+
     slide_id: str
     zones: List[FocusZone]
     model_id: str
     total_zones_above_threshold: int
-
 
 
 class RegionMeasurement(BaseModel):
@@ -187,6 +185,7 @@ class MeasurementResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     """Pathologist feedback on an ML prediction."""
+
     original_annotation_id: str = Field(..., description="UUID of the original annotation")
     correction_type: str = Field(..., pattern="^(confirmed|rejected|refined|relabeled)$")
     corrected_class: Optional[str] = None
@@ -203,6 +202,7 @@ class FeedbackResponse(BaseModel):
 
 class SimilarSlideResult(BaseModel):
     """A single similar slide result."""
+
     slide_id: str
     score: float = Field(..., ge=0, le=1)
     name: Optional[str] = None
@@ -211,9 +211,11 @@ class SimilarSlideResult(BaseModel):
 
 class SimilarityResponse(BaseModel):
     """Response for similarity search endpoint."""
+
     query_slide_id: str
     results: List[SimilarSlideResult]
     index_size: int
+
 
 # ============================================================================
 # DEPENDENCIES
@@ -317,7 +319,6 @@ def get_tag_router():
     return TagRouter(config_path)
 
 
-
 from services.cache.memory_cache import MemoryCache
 
 _memory_cache = None
@@ -330,7 +331,6 @@ def get_memory_cache():
     return _memory_cache
 
 
-
 from services.cache.disk_cache import DiskCache
 
 _disk_cache = None
@@ -341,6 +341,7 @@ def get_disk_cache():
     if _disk_cache is None:
         _disk_cache = DiskCache()
     return _disk_cache
+
 
 # ============================================================================
 # ENDPOINTS
@@ -696,6 +697,52 @@ async def detect_regions_endpoint(
         raise HTTPException(status_code=500, detail=f"Detection error: {e!s}")
 
 
+def _compute_focus_zones(heatmap, slide_dimensions, threshold, top_n):
+    """Extract and rank focus zones from a heatmap."""
+    import numpy as np
+    from services.detection.postprocessing import heatmap_to_contours
+
+    contours_with_confidence = heatmap_to_contours(
+        heatmap, threshold=threshold, min_area=50.0, closing_iterations=2
+    )
+
+    heatmap_h, heatmap_w = heatmap.shape[:2]
+    scale_x = slide_dimensions[0] / heatmap_w
+    scale_y = slide_dimensions[1] / heatmap_h
+
+    zones = []
+    for contour, confidence in contours_with_confidence:
+        scaled = contour.copy().astype(float)
+        scaled[:, 0] *= scale_x
+        scaled[:, 1] *= scale_y
+
+        xs, ys = scaled[:, 0], scaled[:, 1]
+        centroid = [float(np.mean(xs)), float(np.mean(ys))]
+        bbox = [float(np.min(xs)), float(np.min(ys)), float(np.max(xs)), float(np.max(ys))]
+
+        n = len(scaled)
+        if n >= 3:
+            x, y = scaled[:, 0], scaled[:, 1]
+            area = (
+                abs(float(np.sum(x[:-1] * y[1:] - x[1:] * y[:-1]) + x[-1] * y[0] - x[0] * y[-1]))
+                / 2.0
+            )
+        else:
+            area = 0.0
+
+        zones.append(
+            {
+                "score": round(confidence, 4),
+                "centroid": [round(c, 2) for c in centroid],
+                "bbox": [round(v, 2) for v in bbox],
+                "area_px": round(area, 2),
+            }
+        )
+
+    zones.sort(key=lambda z: z["score"], reverse=True)
+    total_above = len(zones)
+    return zones[:top_n], total_above
+
 
 @router.get("/focus/{slide_id}", response_model=FocusResponse)
 async def get_focus_zones(
@@ -722,71 +769,38 @@ async def get_focus_zones(
         _check_slide_format(slide_path, slide_id)
 
         # Check disk cache for heatmap
-        model_id = provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        model_id = (
+            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        )
         cached_heatmap = disk_cache.load_heatmap(slide_id, model_id)
 
         if cached_heatmap is not None:
             heatmap = cached_heatmap
             # We need slide dimensions - get from OpenSlide
             import openslide
+
             slide = openslide.OpenSlide(slide_path)
             slide_dimensions = slide.dimensions
             slide.close()
         else:
             # Generate heatmap
-            heatmap_result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
+            heatmap_result = provider.generate_heatmap(
+                slide_path, prediction_class, resolution_level
+            )
             heatmap = heatmap_result.heatmap
             slide_dimensions = heatmap_result.slide_dimensions
             # Cache for future use
             disk_cache.save_heatmap(slide_id, model_id, heatmap)
 
         # Find zones above threshold
-        import numpy as np
-        from services.detection.postprocessing import heatmap_to_contours
-
-        contours_with_confidence = heatmap_to_contours(
-            heatmap, threshold=threshold, min_area=50.0, closing_iterations=2
+        zones, total_above = _compute_focus_zones(
+            heatmap,
+            slide_dimensions,
+            threshold,
+            top_n,
         )
 
-        # Scale and compute zone properties
-        heatmap_h, heatmap_w = heatmap.shape[:2]
-        scale_x = slide_dimensions[0] / heatmap_w
-        scale_y = slide_dimensions[1] / heatmap_h
-
-        zones = []
-        for contour, confidence in contours_with_confidence:
-            scaled = contour.copy().astype(float)
-            scaled[:, 0] *= scale_x
-            scaled[:, 1] *= scale_y
-
-            xs, ys = scaled[:, 0], scaled[:, 1]
-            centroid = [float(np.mean(xs)), float(np.mean(ys))]
-            bbox = [float(np.min(xs)), float(np.min(ys)), float(np.max(xs)), float(np.max(ys))]
-
-            # Area via shoelace
-            n = len(scaled)
-            if n >= 3:
-                x, y = scaled[:, 0], scaled[:, 1]
-                area = abs(float(np.sum(x[:-1]*y[1:] - x[1:]*y[:-1]) + x[-1]*y[0] - x[0]*y[-1])) / 2.0
-            else:
-                area = 0.0
-
-            zones.append({
-                "score": round(confidence, 4),
-                "centroid": [round(c, 2) for c in centroid],
-                "bbox": [round(v, 2) for v in bbox],
-                "area_px": round(area, 2),
-            })
-
-        # Sort by score descending
-        zones.sort(key=lambda z: z["score"], reverse=True)
-        total_above = len(zones)
-        zones = zones[:top_n]
-
-        # Add rank
-        focus_zones = [
-            FocusZone(rank=i+1, **z) for i, z in enumerate(zones)
-        ]
+        focus_zones = [FocusZone(rank=i + 1, **z) for i, z in enumerate(zones)]
 
         return FocusResponse(
             slide_id=slide_id,
@@ -803,8 +817,6 @@ async def get_focus_zones(
     except Exception as e:
         logger.error(f"Focus assist error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Focus assist error: {e!s}")
-
-
 
 
 @router.get("/measure/{slide_id}", response_model=MeasurementResponse)
@@ -825,8 +837,9 @@ async def measure_slide(
 
         # Get MPP from slide metadata
         import openslide
+
         slide = openslide.OpenSlide(slide_path)
-        mpp = float(slide.properties.get('openslide.mpp-x', '0.25'))
+        mpp = float(slide.properties.get("openslide.mpp-x", "0.25"))
         slide.close()
 
         # Generate heatmap
@@ -834,12 +847,12 @@ async def measure_slide(
 
         # Extract contours
         from services.detection.postprocessing import heatmap_to_contours
-        contours = heatmap_to_contours(
-            heatmap_result.heatmap, threshold=threshold, min_area=100.0
-        )
+
+        contours = heatmap_to_contours(heatmap_result.heatmap, threshold=threshold, min_area=100.0)
 
         # Measure regions
         from services.measurement import measure_regions
+
         measurements = measure_regions(
             contours,
             heatmap_result.slide_dimensions,
@@ -890,7 +903,9 @@ async def submit_feedback(
                 slide_id=slide_id,
                 correction_type=request.correction_type,
                 comment=request.notes,
-                created_by=current_user.username if hasattr(current_user, 'username') else "anonymous",
+                created_by=(
+                    current_user.username if hasattr(current_user, "username") else "anonymous"
+                ),
             )
             session.add(correction)
             await session.flush()
@@ -900,9 +915,9 @@ async def submit_feedback(
                 select(
                     Correction.correction_type,
                     func.count(Correction.id),
-                ).where(
-                    Correction.slide_id == slide_id
-                ).group_by(Correction.correction_type)
+                )
+                .where(Correction.slide_id == slide_id)
+                .group_by(Correction.correction_type)
             )
             stats = {row[0]: row[1] for row in result.all()}
 
@@ -1201,7 +1216,6 @@ async def get_slide_tags(
         tags=tags_dict,
         source=source,
     )
-
 
 
 @router.get("/health")

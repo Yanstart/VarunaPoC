@@ -12,7 +12,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -30,7 +29,7 @@ def _make_synthetic_heatmap(size=100, num_blobs=3):
     ][:num_blobs]
     scores = [0.9, 0.7, 0.55][:num_blobs]
 
-    for (cx, cy), peak in zip(centers, scores):
+    for (cx, cy), peak in zip(centers, scores, strict=True):
         for y in range(size):
             for x in range(size):
                 dist = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
@@ -119,10 +118,8 @@ class TestFocusZonesComputation:
             float(np.max(contour[:, 1])),
         ]
 
-        # bbox[0] <= bbox[2] (x_min <= x_max)
-        assert bbox[0] <= bbox[2]
-        # bbox[1] <= bbox[3] (y_min <= y_max)
-        assert bbox[1] <= bbox[3]
+        assert bbox[0] <= bbox[2], "x_min <= x_max"
+        assert bbox[1] <= bbox[3], "y_min <= y_max"
 
     def test_shoelace_area_positive(self):
         """Area via shoelace formula should be positive for valid contours."""
@@ -144,9 +141,9 @@ class TestFocusZonesComputation:
         assert n >= 3
 
         x, y = scaled[:, 0], scaled[:, 1]
-        area = abs(float(
-            np.sum(x[:-1] * y[1:] - x[1:] * y[:-1]) + x[-1] * y[0] - x[0] * y[-1]
-        )) / 2.0
+        area = (
+            abs(float(np.sum(x[:-1] * y[1:] - x[1:] * y[:-1]) + x[-1] * y[0] - x[0] * y[-1])) / 2.0
+        )
 
         assert area > 0
 
@@ -159,7 +156,7 @@ class TestFocusZonesComputation:
             pytest.skip("Not enough zones to test sorting")
 
         zones = []
-        for contour, confidence in results:
+        for _contour, confidence in results:
             zones.append({"score": round(confidence, 4)})
 
         zones.sort(key=lambda z: z["score"], reverse=True)
@@ -206,7 +203,7 @@ class TestFocusZonePydanticModels:
     def test_focus_zone_score_validation(self):
         from routes.ml import FocusZone
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="less than or equal to 1"):
             FocusZone(
                 rank=1,
                 score=1.5,  # Invalid: > 1.0
@@ -219,8 +216,20 @@ class TestFocusZonePydanticModels:
         from routes.ml import FocusResponse, FocusZone
 
         zones = [
-            FocusZone(rank=1, score=0.9, centroid=[100.0, 200.0], bbox=[0.0, 0.0, 200.0, 400.0], area_px=80000.0),
-            FocusZone(rank=2, score=0.7, centroid=[500.0, 600.0], bbox=[400.0, 500.0, 600.0, 700.0], area_px=40000.0),
+            FocusZone(
+                rank=1,
+                score=0.9,
+                centroid=[100.0, 200.0],
+                bbox=[0.0, 0.0, 200.0, 400.0],
+                area_px=80000.0,
+            ),
+            FocusZone(
+                rank=2,
+                score=0.7,
+                centroid=[500.0, 600.0],
+                bbox=[400.0, 500.0, 600.0, 700.0],
+                area_px=40000.0,
+            ),
         ]
 
         response = FocusResponse(

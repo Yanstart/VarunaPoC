@@ -3,6 +3,7 @@ Measurement Service - Compute physical measurements from detected regions.
 Converts pixel measurements to millimeters using slide MPP (microns per pixel).
 Computes Feret diameter (max caliper diameter) for TNM staging.
 """
+
 import numpy as np
 from scipy.spatial.distance import pdist
 from typing import List, Dict, Tuple
@@ -42,18 +43,19 @@ def measure_regions(
         perimeter_px = _polygon_perimeter(scaled)
 
         xs, ys = scaled[:, 0], scaled[:, 1]
-        bbox = [float(np.min(xs)), float(np.min(ys)),
-                float(np.max(xs)), float(np.max(ys))]
+        bbox = [float(np.min(xs)), float(np.min(ys)), float(np.max(xs)), float(np.max(ys))]
 
-        measurements.append({
-            "region_id": i,
-            "label": "Tumor",
-            "feret_diameter_mm": round(pixels_to_mm(feret_px, mpp), 2),
-            "area_mm2": round(pixels_to_mm(area_px ** 0.5, mpp) ** 2, 2),
-            "perimeter_mm": round(pixels_to_mm(perimeter_px, mpp), 2),
-            "bbox_mm": [round(pixels_to_mm(v, mpp), 2) for v in bbox],
-            "confidence": round(confidence, 4),
-        })
+        measurements.append(
+            {
+                "region_id": i,
+                "label": "Tumor",
+                "feret_diameter_mm": round(pixels_to_mm(feret_px, mpp), 2),
+                "area_mm2": round(pixels_to_mm(area_px**0.5, mpp) ** 2, 2),
+                "perimeter_mm": round(pixels_to_mm(perimeter_px, mpp), 2),
+                "bbox_mm": [round(pixels_to_mm(v, mpp), 2) for v in bbox],
+                "confidence": round(confidence, 4),
+            }
+        )
 
     return measurements
 
@@ -63,14 +65,11 @@ def _polygon_area(points: np.ndarray) -> float:
     if n < 3:
         return 0.0
     x, y = points[:, 0], points[:, 1]
-    return abs(float(
-        np.sum(x[:-1] * y[1:] - x[1:] * y[:-1])
-        + x[-1] * y[0] - x[0] * y[-1]
-    )) / 2.0
+    return abs(float(np.sum(x[:-1] * y[1:] - x[1:] * y[:-1]) + x[-1] * y[0] - x[0] * y[-1])) / 2.0
 
 
 def _polygon_perimeter(points: np.ndarray) -> float:
     if len(points) < 2:
         return 0.0
     diffs = np.diff(points, axis=0, append=points[:1])
-    return float(np.sum(np.sqrt(np.sum(diffs ** 2, axis=1))))
+    return float(np.sum(np.sqrt(np.sum(diffs**2, axis=1))))

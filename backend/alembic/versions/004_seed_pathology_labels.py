@@ -26,7 +26,12 @@ PATHOLOGY_LABELS = [
     {"name": "Tissu sain", "color": "#2ecc71", "category": "diagnostic", "sort_order": 5},
     {"name": "Marge de résection", "color": "#f39c12", "category": "structure", "sort_order": 10},
     {"name": "Embole vasculaire", "color": "#c0392b", "category": "structure", "sort_order": 11},
-    {"name": "Invasion péri-nerveuse", "color": "#d35400", "category": "structure", "sort_order": 12},
+    {
+        "name": "Invasion péri-nerveuse",
+        "color": "#d35400",
+        "category": "structure",
+        "sort_order": 12,
+    },
     {"name": "Artefact", "color": "#95a5a6", "category": "qualite", "sort_order": 20},
     {"name": "Zone floue", "color": "#7f8c8d", "category": "qualite", "sort_order": 21},
     {"name": "Pli de tissu", "color": "#bdc3c7", "category": "qualite", "sort_order": 22},
@@ -53,6 +58,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    names = [l["name"] for l in PATHOLOGY_LABELS]
+    names = [label["name"] for label in PATHOLOGY_LABELS]
     placeholders = ", ".join(f"'{n}'" for n in names)
     op.execute(sa.text(f"DELETE FROM annotation_labels WHERE name IN ({placeholders})"))

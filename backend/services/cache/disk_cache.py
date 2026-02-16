@@ -10,6 +10,7 @@ Directory structure:
 Thread-safe: uses atomic write (write to tmp, then rename).
 """
 
+import contextlib
 import logging
 import os
 import tempfile
@@ -67,17 +68,15 @@ class DiskCache:
         fd, tmp_path = tempfile.mkstemp(suffix=".npy", dir=str(path.parent))
         try:
             np.save(tmp_path, data)
-            os.replace(tmp_path, str(path))
+            Path(tmp_path).replace(path)
             logger.debug("Cached %s: %s (%s)", data_type, path, data.shape)
         except Exception:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+            if Path(tmp_path).exists():
+                Path(tmp_path).unlink()
             raise
         finally:
-            try:
+            with contextlib.suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
 
     def _load(self, slide_id: str, model: str, data_type: str) -> np.ndarray | None:
         """Load numpy array from disk."""

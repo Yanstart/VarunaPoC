@@ -44,8 +44,13 @@ test.describe('ML Panel', () => {
         // Open ML panel
         await page.locator('#ml-btn').click();
 
+        // Expand the collapsed accordion by clicking the header
+        const mlHeader = page.locator('.ml-panel__header');
+        await expect(mlHeader).toBeVisible({ timeout: 5_000 });
+        await mlHeader.click();
+
         // Should have predict and heatmap buttons
-        await expect(page.locator('.ml-panel__btn--predict')).toBeVisible();
-        await expect(page.locator('.ml-panel__btn--heatmap')).toBeVisible();
+        await expect(page.locator('.ml-panel__btn--predict')).toBeVisible({ timeout: 5_000 });
+        await expect(page.locator('.ml-panel__btn--heatmap')).toBeVisible({ timeout: 5_000 });
     });
 });

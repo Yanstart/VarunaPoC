@@ -1,5 +1,5 @@
 """Tests for auto-tag endpoint logic."""
-import pytest
+
 from services.ml.tag_extractor import TagExtractor
 
 

@@ -39,14 +39,12 @@ class TestSimilarityEndpoint:
         """Mock auth dependency to allow unauthenticated access."""
         with patch(
             "routes.ml.require_role",
-            return_value=lambda: MagicMock(
-                username="test_user", roles=["MEDECIN"]
-            ),
+            return_value=lambda: MagicMock(username="test_user", roles=["MEDECIN"]),
         ):
             yield
 
     @pytest.fixture
-    def mock_deps(self, mock_auth):
+    def mock_deps(self, mock_auth):  # noqa: ARG002
         """Patch DiskCache and SimilarityIndex for endpoint tests."""
         mock_disk_cache = MagicMock()
         mock_index = MagicMock()

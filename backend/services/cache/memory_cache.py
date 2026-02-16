@@ -53,8 +53,6 @@ class MemoryCache:
             "hits": self._hits,
             "misses": self._misses,
             "hit_rate": (
-                self._hits / (self._hits + self._misses)
-                if (self._hits + self._misses) > 0
-                else 0.0
+                self._hits / (self._hits + self._misses) if (self._hits + self._misses) > 0 else 0.0
             ),
         }

@@ -26,9 +26,9 @@ test.describe('Annotations', () => {
         const toolbar = page.locator('.drawing-tools');
         await expect(toolbar).toBeVisible({ timeout: 5_000 });
 
-        // Should have tool buttons (select, rectangle, polygon, point, freehand, circle + delete)
+        // Tool buttons: 2 primary + 1 "more" + 4 overflow + 1 delete = 8
         const buttons = toolbar.locator('.drawing-tools__btn');
-        await expect(buttons).toHaveCount(7, { timeout: 5_000 });
+        await expect(buttons).toHaveCount(8, { timeout: 5_000 });
     });
 
     test('clicking tool button activates it', async ({ page }) => {

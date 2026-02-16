@@ -21,7 +21,7 @@ import pytest
 # Try importing faiss; if unavailable, skip all tests
 faiss = pytest.importorskip("faiss", reason="faiss-cpu not installed")
 
-from services.ml.similarity_index import SimilarityIndex, FAISS_AVAILABLE
+from services.ml.similarity_index import SimilarityIndex
 
 
 @pytest.mark.similarity
@@ -38,10 +38,7 @@ class TestSimilarityIndex:
     def sample_embeddings(self):
         """Generate 5 slides with random embeddings (10 patches, 128 dim)."""
         rng = np.random.RandomState(42)
-        return {
-            f"slide-{i:03d}": rng.randn(10, 128).astype(np.float32)
-            for i in range(5)
-        }
+        return {f"slide-{i:03d}": rng.randn(10, 128).astype(np.float32) for i in range(5)}
 
     def test_add_and_search(self, index_dir, sample_embeddings):
         """Add 5 slides, search for most similar, verify results sorted by score."""

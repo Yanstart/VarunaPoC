@@ -40,16 +40,12 @@ async def precompute_embeddings(slide_id: str, slide_path: str) -> None:
         provider = get_provider(provider_name)
 
         if not provider.model_loaded:
-            logger.warning(
-                "ML provider not loaded, skipping pre-computation for %s", slide_id
-            )
+            logger.warning("ML provider not loaded, skipping pre-computation for %s", slide_id)
             return
 
         result = provider.extract_features(slide_path, tile_size=224, overlap=0)
         cache.save_embeddings(slide_id, model_name, result.embeddings)
-        logger.info(
-            "Pre-computed embeddings for %s: shape=%s", slide_id, result.embeddings.shape
-        )
+        logger.info("Pre-computed embeddings for %s: shape=%s", slide_id, result.embeddings.shape)
 
     except Exception as e:
         logger.error("Background embedding extraction failed for %s: %s", slide_id, e)

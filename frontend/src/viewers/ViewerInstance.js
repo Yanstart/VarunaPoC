@@ -577,7 +577,9 @@ class ViewerInstance {
      * @returns {number} Magnification value (e.g. 1, 2, 5, 10, 20, 40)
      */
     getOpticalMagnification() {
-        if (!this._osdViewer || !this._osdViewer.viewport) return 1;
+        if (!this._osdViewer || !this._osdViewer.viewport) {
+            return 1;
+        }
         const zoom = this._osdViewer.viewport.getZoom(true);
         const maxZoom = this._osdViewer.viewport.getMaxZoom();
         const ratio = zoom / maxZoom;

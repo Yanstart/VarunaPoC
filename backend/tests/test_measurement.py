@@ -1,7 +1,8 @@
 """Tests for measurement service."""
+
 import numpy as np
-import pytest
-from services.measurement import compute_feret_diameter, pixels_to_mm, measure_regions
+
+from services.measurement import compute_feret_diameter, measure_regions, pixels_to_mm
 
 
 class TestFeretDiameter:

@@ -7,9 +7,9 @@ threshold detection, and rejection rate computation.
 
 import sys
 import types
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # Ensure sqlalchemy + models.correction are importable via mocks so that
@@ -17,8 +17,10 @@ from unittest.mock import AsyncMock, MagicMock
 # the real packages are not installed in the test environment.
 # ---------------------------------------------------------------------------
 
+
 class _Column:
     """Mimics a SQLAlchemy column for comparison-based query building."""
+
     def __init__(self, name="col"):
         self._name = name
 
@@ -40,6 +42,7 @@ class _Column:
 
 class _FakeCorrection:
     """Fake Correction ORM model for testing."""
+
     id = _Column("id")
     model_name = _Column("model_name")
     correction_type = _Column("correction_type")
@@ -91,7 +94,7 @@ def _ensure_mock_modules():
 
 _ensure_mock_modules()
 
-from services.feedback_collector import FeedbackCollector, FeedbackStats  # noqa: E402
+from services.feedback_collector import FeedbackCollector
 
 
 class TestFeedbackCollector:

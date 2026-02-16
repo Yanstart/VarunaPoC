@@ -340,7 +340,7 @@ class DetectionPanel {
      */
     _getConfidenceBadge(confidence) {
         if (confidence === null || confidence === undefined) {
-            return `<span class="detection-badge detection-badge--unknown" title="Confiance inconnue">?</span>`;
+            return '<span class="detection-badge detection-badge--unknown" title="Confiance inconnue">?</span>';
         }
         if (confidence >= 0.8) {
             return `<span class="detection-badge detection-badge--high" title="Confiance élevée">${Math.round(confidence * 100)}%</span>`;
@@ -521,11 +521,15 @@ class DetectionPanel {
      * @private
      */
     async _submitFeedback(index, correctionType) {
-        if (!this.detectionResult || this.feedbackStatus.has(index)) return;
+        if (!this.detectionResult || this.feedbackStatus.has(index)) {
+            return;
+        }
 
         const features = this.detectionResult.geojson?.features || [];
         const feature = features[index];
-        if (!feature) return;
+        if (!feature) {
+            return;
+        }
 
         const annotationId = feature.properties?.annotation_id || feature.properties?.id;
         if (!annotationId) {

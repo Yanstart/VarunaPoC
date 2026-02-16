@@ -133,7 +133,9 @@ class MLPanel {
 
         // Start collapsed by default
         const body = this.element.querySelector('.ml-panel__content');
-        if (body) body.style.display = 'none';
+        if (body) {
+            body.style.display = 'none';
+        }
     }
 
     /**
@@ -459,7 +461,9 @@ class MLPanel {
         };
         const name = model.model_name || model.model_id;
         for (const [key, friendly] of Object.entries(nameMap)) {
-            if (name.toLowerCase().includes(key)) return friendly;
+            if (name.toLowerCase().includes(key)) {
+                return friendly;
+            }
         }
         return name;
     }
@@ -471,10 +475,14 @@ class MLPanel {
      */
     _populateModelSelector(models) {
         const select = this.element.querySelector('.ml-panel__model-select');
-        if (!select) return;
+        if (!select) {
+            return;
+        }
 
         // Clear existing options
-        while (select.firstChild) select.removeChild(select.firstChild);
+        while (select.firstChild) {
+            select.removeChild(select.firstChild);
+        }
 
         if (models.length === 0) {
             const opt = document.createElement('option');

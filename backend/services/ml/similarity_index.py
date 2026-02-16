@@ -115,7 +115,7 @@ class SimilarityIndex:
         scores, indices = self.index.search(query, k)
 
         results = []
-        for score, idx in zip(scores[0], indices[0]):
+        for score, idx in zip(scores[0], indices[0], strict=False):
             if idx < 0 or idx >= len(self.slide_ids):
                 continue
             sid = self.slide_ids[idx]
