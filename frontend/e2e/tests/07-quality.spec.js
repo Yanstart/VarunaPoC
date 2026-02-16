@@ -36,7 +36,7 @@ test.describe('Quality Panel', () => {
         // Should show format, dimensions, levels
         await expect(infoPanel).toContainText('SVS', { timeout: 10_000 });
         await expect(infoPanel).toContainText('50,000');
-        await expect(infoPanel).toContainText('5 pyramid levels');
+        await expect(infoPanel).toContainText('5 niveaux de pyramide');
     });
 
     test('layer manager container exists in info panel', async ({ page }) => {

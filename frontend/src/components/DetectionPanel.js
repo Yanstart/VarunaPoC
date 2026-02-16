@@ -65,7 +65,7 @@ class DetectionPanel {
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'detection-panel__title';
-        titleSpan.textContent = 'Auto-Detection';
+        titleSpan.textContent = 'Détection automatique';
 
         const chevron = document.createElement('span');
         chevron.className = 'detection-panel__chevron';

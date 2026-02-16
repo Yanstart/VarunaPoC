@@ -203,7 +203,7 @@ class MLPanel {
 
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__placeholder">
-                Load a slide and click "Analyze" to run ML prediction
+                Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
             </div>
         `;
     }

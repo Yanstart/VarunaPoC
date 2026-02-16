@@ -161,7 +161,7 @@ class CompareLayout {
             `panel-${index}`,
             this.element,
             {
-                title: `Viewer ${index + 1}`,
+                title: `Visualiseur ${index + 1}`,
                 showHeader: true,
                 showClose: this.layout.maxViewers > 1,
                 onSlideSelect: (p) => this._handleSlideSelect(p, index),

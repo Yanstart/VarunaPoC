@@ -272,9 +272,9 @@ function showHomePage() {
             <rect x="3" y="3" width="8" height="18" rx="1"/>
             <rect x="13" y="3" width="8" height="18" rx="1"/>
         </svg>
-        Compare Mode
+        Mode comparaison
     `;
-    compareBtn.title = 'Open compare mode for side-by-side viewing';
+    compareBtn.title = 'Ouvrir le mode comparaison';
     compareBtn.addEventListener('click', () => showComparePage());
     app.appendChild(compareBtn);
 
@@ -301,13 +301,13 @@ async function showViewerPage(slide) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    Back
+                    Retour
                 </button>
                 <div class="viewer-title">
                     <h1>${slide.name}</h1>
                     <p class="slide-info">
                         ${slide.format} | ${slide.structure_type}
-                        ${slide.is_supported === false ? ' | <span class="warning">Not supported</span>' : ''}
+                        ${slide.is_supported === false ? ' | <span class="warning">Non supporté</span>' : ''}
                     </p>
                 </div>
                 <button id="compare-btn" class="header-button" title="Open in compare mode">
@@ -316,7 +316,7 @@ async function showViewerPage(slide) {
                         <rect x="13" y="3" width="8" height="18" rx="1"/>
                     </svg>
                 </button>
-                <button id="ml-btn" class="header-button header-button--ml" title="ML Analysis">
+                <button id="ml-btn" class="header-button header-button--ml" title="Analyse IA">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                         <path d="M2 17l10 5 10-5"/>
@@ -461,9 +461,9 @@ async function showComparePage(initialSlide = null) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    Back
+                    Retour
                 </button>
-                <h1 class="compare-title">Compare Mode</h1>
+                <h1 class="compare-title">Mode comparaison</h1>
             </header>
             <main id="compare-container" class="compare-container"></main>
         </div>
@@ -501,7 +501,7 @@ function showSlidePicker() {
     modal.innerHTML = `
         <div class="slide-picker-content">
             <header class="slide-picker-header">
-                <h2>Select Slide</h2>
+                <h2>Sélectionner une lame</h2>
                 <button class="slide-picker-close">&times;</button>
             </header>
             <div class="slide-picker-body">
@@ -540,7 +540,7 @@ async function loadSlidesInPicker(container) {
         const data = await apiService.fetchSlides();
 
         if (!data.slides || data.slides.length === 0) {
-            container.innerHTML = '<p class="empty">No slides found</p>';
+            container.innerHTML = '<p class="empty">Aucune lame trouvée</p>';
             return;
         }
 
@@ -601,12 +601,12 @@ async function loadSlide(slide) {
     const infoPanel = document.querySelector('#info');
 
     try {
-        infoPanel.innerHTML = '<div class="loading">Loading metadata...</div>';
+        infoPanel.innerHTML = '<div class="loading">Chargement des métadonnées...</div>';
 
         // Get metadata
         const metadata = await apiService.getSlideInfo(slide.id);
 
-        infoPanel.innerHTML = '<div class="loading">Loading tiles (DZI streaming)...</div>';
+        infoPanel.innerHTML = '<div class="loading">Chargement des tuiles (flux DZI)...</div>';
 
         // Load slide with tiles
         await loadSlideWithTiles(appState.viewer, slide.id);
@@ -620,24 +620,24 @@ async function loadSlide(slide) {
                 <dd>${slide.format}</dd>
                 <dt>Dimensions</dt>
                 <dd>${w.toLocaleString()} x ${h.toLocaleString()} px</dd>
-                <dt>Levels</dt>
-                <dd>${metadata.level_count} pyramid levels</dd>
+                <dt>Niveaux</dt>
+                <dd>${metadata.level_count} niveaux de pyramide</dd>
                 <dt>Structure</dt>
                 <dd>${slide.structure_type}</dd>
                 ${slide.has_joint_files ? `
-                    <dt>Joint files</dt>
+                    <dt>Fichiers joints</dt>
                     <dd>${slide.joint_files_count}</dd>
                 ` : ''}
                 ${slide.has_companion_dirs ? `
-                    <dt>Companion dirs</dt>
+                    <dt>Dossiers compagnons</dt>
                     <dd>${slide.companion_dirs_count}</dd>
                 ` : ''}
             </dl>
             <p class="note">
-                <strong>Tile Streaming Active:</strong><br>
-                256x256 tiles loaded on demand<br>
-                ${metadata.level_count} zoom levels available<br>
-                Mini-map shows current position
+                <strong>Flux de tuiles actif</strong><br>
+                Tuiles 256x256 chargées à la demande<br>
+                ${metadata.level_count} niveaux de zoom disponibles<br>
+                La mini-carte montre la position actuelle
             </p>
         `;
 
