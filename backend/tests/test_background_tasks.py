@@ -1,5 +1,6 @@
 """Tests for background embedding pre-computation."""
 import asyncio
+import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -32,7 +33,10 @@ class TestPrecomputeEmbeddings:
         mock_result = MagicMock()
         mock_result.embeddings = np.zeros((10, 512))
 
-        with patch("services.cache.disk_cache.DiskCache") as MockCache,              patch("core.interfaces.get_provider") as mock_get_provider:
+        _mock_ifaces = MagicMock()
+        with patch.dict(sys.modules, {"core": MagicMock(), "core.interfaces": _mock_ifaces}), \
+             patch("services.cache.disk_cache.DiskCache") as MockCache, \
+             patch.object(_mock_ifaces, "get_provider") as mock_get_provider:
             mock_cache = MockCache.return_value
             mock_cache.exists.return_value = False
 
@@ -49,7 +53,10 @@ class TestPrecomputeEmbeddings:
         from services.background_tasks import precompute_embeddings, _active_tasks
         _active_tasks.discard("test-slide-3")
 
-        with patch("services.cache.disk_cache.DiskCache") as MockCache,              patch("core.interfaces.get_provider") as mock_get_provider:
+        _mock_ifaces = MagicMock()
+        with patch.dict(sys.modules, {"core": MagicMock(), "core.interfaces": _mock_ifaces}), \
+             patch("services.cache.disk_cache.DiskCache") as MockCache, \
+             patch.object(_mock_ifaces, "get_provider") as mock_get_provider:
             mock_cache = MockCache.return_value
             mock_cache.exists.return_value = False
 
