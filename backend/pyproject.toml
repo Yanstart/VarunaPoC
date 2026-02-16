@@ -65,6 +65,8 @@ markers = [
     "db: Tests requiring PostgreSQL database",
     "e2e: End-to-end browser tests",
     "load: Load/performance tests",
+    "focus: Focus assist tests",
+    "similarity: Similarity search tests",
 ]
 filterwarnings = [
     "error",
