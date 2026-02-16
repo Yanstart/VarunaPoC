@@ -29,3 +29,6 @@ locust>=2.20.0
 
 # Phase 5: Caching
 cachetools>=5.3.0
+
+# Phase 6: Wave 2 ML
+# scipy already included above (>=1.11.0 satisfied by 1.12.0)
