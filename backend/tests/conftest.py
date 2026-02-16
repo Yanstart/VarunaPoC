@@ -8,10 +8,18 @@ Documentation:
     - FastAPI Testing: https://fastapi.tiangolo.com/tutorial/testing/
 """
 
-# IMPORTANT: Configure OpenSlide DLL path BEFORE any openslide import
-import asyncio
+# Ensure the backend root (parent of this tests/ directory) is on sys.path
+# so that `from core.xxx import yyy` resolves correctly in all environments.
 import os
 import sys
+from pathlib import Path
+
+_BACKEND_ROOT = str(Path(__file__).resolve().parent.parent)
+if _BACKEND_ROOT not in sys.path:
+    sys.path.insert(0, _BACKEND_ROOT)
+
+# IMPORTANT: Configure OpenSlide DLL path BEFORE any openslide import
+import asyncio
 
 # Configure OpenSlide for Windows (MSYS2 UCRT64 installation)
 OPENSLIDE_PATH = r"C:\msys64\ucrt64\bin"

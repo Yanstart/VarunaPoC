@@ -73,8 +73,14 @@ def _ensure_mock_modules():
 
     # --- core.database (needed by models.correction) ----------------------------
     if "core" not in sys.modules:
-        core = types.ModuleType("core")
-        mods_needed["core"] = core
+        try:
+            import core as _real_core
+
+            sys.modules["core"] = _real_core
+        except ImportError:
+            core = types.ModuleType("core")
+            core.__path__ = []  # Mark as package so submodule imports work
+            mods_needed["core"] = core
     if "core.database" not in sys.modules:
         core_db = types.ModuleType("core.database")
         core_db.Base = type("Base", (), {})
