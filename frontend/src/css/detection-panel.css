@@ -405,3 +405,29 @@
     color: #95a5a6;
     border: 1px solid rgba(149, 165, 166, 0.3);
 }
+
+.detection-panel__header {
+    padding: 10px 14px;
+    border-bottom: 1px solid #333;
+}
+
+.detection-panel__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+/* Accordion collapse */
+.detection-panel__header--collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detection-panel__chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    color: var(--text-secondary, #999);
+}

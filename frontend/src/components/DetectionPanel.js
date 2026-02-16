@@ -31,6 +31,7 @@ class DetectionPanel {
         this.slideId = options.slideId || null;
 
         // State
+        this.isCollapsed = true;
         this.isDetecting = false;
         this.threshold = 0.5;
         this.minArea = 100;
@@ -57,8 +58,34 @@ class DetectionPanel {
     _create() {
         this.element = document.createElement('div');
         this.element.className = 'detection-panel';
+
+        // Create collapsible header
+        const header = document.createElement('div');
+        header.className = 'detection-panel__header detection-panel__header--collapsible';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'detection-panel__title';
+        titleSpan.textContent = 'Auto-Detection';
+
+        const chevron = document.createElement('span');
+        chevron.className = 'detection-panel__chevron';
+        chevron.textContent = '\u25B6';
+
+        header.appendChild(titleSpan);
+        header.appendChild(chevron);
+        header.addEventListener('click', () => this._toggleCollapse());
+        this.element.appendChild(header);
+
+        // Create body container
+        this._body = document.createElement('div');
+        this._body.className = 'detection-panel__body';
+        this.element.appendChild(this._body);
+
         this._renderIdle();
         this.container.appendChild(this.element);
+
+        // Start collapsed by default
+        this._body.style.display = 'none';
     }
 
     /**
@@ -75,9 +102,9 @@ class DetectionPanel {
 
         return `
             <div class="detection-panel__control detection-panel__label-select">
-                <label>Classification Label</label>
+                <label>Étiquette de classification</label>
                 <select class="detection-panel__select">
-                    <option value="">-- No label --</option>
+                    <option value="">-- Sans étiquette --</option>
                     ${options}
                 </select>
             </div>
@@ -102,21 +129,21 @@ class DetectionPanel {
     // ==========================================
 
     _renderIdle() {
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Auto-Detection</h4>
+                <h4>Détection automatique</h4>
                 <p class="detection-panel__desc">
-                    Detect regions of interest using ML heatmap analysis.
+                    Détection des régions d'intérêt par analyse IA.
                 </p>
 
                 <div class="detection-panel__control">
-                    <label>Threshold: <span class="detection-panel__value">${this.threshold}</span></label>
+                    <label>Seuil : <span class="detection-panel__value">${this.threshold}</span></label>
                     <input type="range" class="detection-panel__slider"
                         min="0.1" max="0.95" step="0.05" value="${this.threshold}">
                 </div>
 
                 <div class="detection-panel__control">
-                    <label>Min Area: <span class="detection-panel__value">${this.minArea} px</span></label>
+                    <label>Surface min. : <span class="detection-panel__value">${this.minArea} px</span></label>
                     <input type="range" class="detection-panel__slider"
                         min="10" max="1000" step="10" value="${this.minArea}">
                 </div>
@@ -127,7 +154,7 @@ class DetectionPanel {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    Detect Regions
+                    Détecter les régions
                 </button>
             </div>
         `;
@@ -158,12 +185,12 @@ class DetectionPanel {
     // ==========================================
 
     _renderLoading() {
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Auto-Detection</h4>
+                <h4>Détection automatique</h4>
                 <div class="detection-panel__loading">
                     <div class="detection-panel__spinner"></div>
-                    <span>Detecting regions...</span>
+                    <span>Détection en cours...</span>
                 </div>
             </div>
         `;
@@ -185,14 +212,14 @@ class DetectionPanel {
         // Confidence distribution
         const confDist = this._computeConfidenceDistribution(features);
 
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Detection Results</h4>
+                <h4>Résultats de détection</h4>
 
                 <div class="detection-panel__count-summary">
                     <div class="count-summary__total">
                         <span class="count-summary__number">${total}</span>
-                        <span class="count-summary__label">regions detected</span>
+                        <span class="count-summary__label">régions détectées</span>
                     </div>
                     <div class="count-summary__breakdown">
                         <div class="count-summary__bar">
@@ -207,17 +234,17 @@ class DetectionPanel {
                                  title="Low confidence (<0.5): ${confDist.low}"></div>
                         </div>
                         <div class="count-summary__legend">
-                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} high</span>
-                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} med</span>
-                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} low</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} élevée</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} moyenne</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} faible</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="detection-panel__stats">
-                    <span class="stat stat--total">${pendingCount} pending</span>
-                    <span class="stat stat--accepted">${acceptedCount} accepted</span>
-                    <span class="stat stat--rejected">${rejectedCount} rejected</span>
+                    <span class="stat stat--total">${pendingCount} en attente</span>
+                    <span class="stat stat--accepted">${acceptedCount} acceptée</span>
+                    <span class="stat stat--rejected">${rejectedCount} rejetée</span>
                 </div>
 
                 ${this._buildLabelSelector()}
@@ -229,7 +256,7 @@ class DetectionPanel {
                 <div class="detection-panel__actions">
                     <button class="detection-panel__btn detection-panel__btn--confirm"
                         ${acceptedCount === 0 && pendingCount === 0 ? 'disabled' : ''}>
-                        Confirm ${acceptedCount > 0 ? acceptedCount : 'All'} Annotations
+                        Tout confirmer ${acceptedCount > 0 ? acceptedCount : ''}
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--secondary">
                         Accept All
@@ -329,12 +356,12 @@ class DetectionPanel {
                     </span>
                 </div>
                 <div class="detection-item__actions">
-                    <button class="detection-item__accept ${isAccepted ? 'is-active' : ''}" data-index="${index}" title="Accept">
+                    <button class="detection-item__accept ${isAccepted ? 'is-active' : ''}" data-index="${index}" title="Accepter">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"/>
                         </svg>
                     </button>
-                    <button class="detection-item__reject ${isRejected ? 'is-active' : ''}" data-index="${index}" title="Reject">
+                    <button class="detection-item__reject ${isRejected ? 'is-active' : ''}" data-index="${index}" title="Rejeter">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                         </svg>
@@ -438,11 +465,11 @@ class DetectionPanel {
     }
 
     _renderError(message) {
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Auto-Detection</h4>
+                <h4>Détection automatique</h4>
                 <div class="detection-panel__error">
-                    <p>Detection failed: ${message}</p>
+                    <p>Erreur lors de la détection : ${message}</p>
                     <button class="detection-panel__btn detection-panel__btn--secondary">Retry</button>
                 </div>
             </div>
@@ -458,6 +485,22 @@ class DetectionPanel {
         this.accepted.clear();
         this.rejected.clear();
         annotationStore.clearDetectionPreview();
+    }
+
+    /**
+     * Toggle collapse state of the panel
+     * @private
+     */
+    _toggleCollapse() {
+        this.isCollapsed = !this.isCollapsed;
+        const body = this.element.querySelector('.detection-panel__body');
+        const chevron = this.element.querySelector('.detection-panel__chevron');
+        if (body) {
+            body.style.display = this.isCollapsed ? 'none' : 'block';
+        }
+        if (chevron) {
+            chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
     }
 
     destroy() {
