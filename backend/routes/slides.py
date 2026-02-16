@@ -11,7 +11,7 @@ API Design:
 """
 
 import openslide
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
 from auth.dependencies import get_current_user
@@ -155,7 +155,7 @@ def resolve_slide_by_name(
 
 
 @router.get("/{slide_id}/info", tags=["visualization"])
-def get_slide_info(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
+def get_slide_info(slide_id: str, background_tasks: BackgroundTasks, current_user: CurrentUser = Depends(get_current_user)):
     """
     Récupère métadonnées d'une lame.
 
@@ -186,6 +186,13 @@ def get_slide_info(slide_id: str, current_user: CurrentUser = Depends(get_curren
 
     try:
         metadata = get_slide_metadata(slide_path)
+
+        # Trigger background embedding pre-computation
+        import os
+        if os.getenv("ML_ENABLED", "true").lower() == "true":
+            from services.background_tasks import precompute_embeddings
+            background_tasks.add_task(precompute_embeddings, slide_id, slide_path)
+
         return metadata
     except openslide.OpenSlideError as e:
         raise HTTPException(
