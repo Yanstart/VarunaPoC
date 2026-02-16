@@ -106,6 +106,10 @@ class CountingPanel {
                 <span class="counting-panel__title">Annotations</span>
                 <span class="counting-panel__total">${data.total}</span>
             </div>
+            <div class="counting-panel__summary">
+                <span class="counting-panel__total-big">${data.total}</span>
+                <span class="counting-panel__total-label">${data.total === 1 ? 'annotation' : 'annotations'}</span>
+            </div>
             <div class="counting-panel__body">
                 ${byLabelHtml || unlabeledHtml ? `
                     <div class="counting-panel__section">
