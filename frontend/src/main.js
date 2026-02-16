@@ -34,6 +34,7 @@ import { viewerManager } from './viewers/ViewerManager.js';
 
 // Components
 import { createFolderBrowser } from './components/FolderBrowser.js';
+import { createCaseBrowser } from './components/CaseBrowser.js';
 import { CompareLayout } from './components/CompareLayout.js';
 import { MLPanel } from './components/MLPanel.js';
 import { HeatmapOverlay } from './components/HeatmapOverlay.js';
@@ -257,12 +258,26 @@ function showHomePage() {
     cleanup();
 
     const app = document.querySelector('#app');
-    app.innerHTML = '';
+    app.textContent = '';
     app.className = 'page-home';
 
-    // Create folder browser
-    appState.folderBrowser = createFolderBrowser(handleSlideSelect);
-    app.appendChild(appState.folderBrowser);
+    // View toggle callback — re-renders home page with new preference
+    function handleViewToggle(_newView) {
+        showHomePage();
+    }
+
+    // Check user preference: default to 'cases' view
+    const viewPref = localStorage.getItem('varuna_home_view') || 'cases';
+
+    if (viewPref === 'explorer') {
+        // Explorer (folder) view
+        appState.folderBrowser = createFolderBrowser(handleSlideSelect, handleViewToggle);
+        app.appendChild(appState.folderBrowser);
+    } else {
+        // Case view (default)
+        const caseBrowser = createCaseBrowser(handleSlideSelect, handleCaseSelect, handleViewToggle);
+        app.appendChild(caseBrowser);
+    }
 
     // Add compare mode button
     const compareBtn = document.createElement('button');
@@ -591,6 +606,22 @@ async function loadSlidesInPicker(container) {
 function handleSlideSelect(slide) {
     console.warn('[App] Navigating to viewer for:', slide.name);
     showViewerPage(slide);
+}
+
+/**
+ * Handle case selection (Case Browser -> Viewer with first slide)
+ * @param {Object} caseData - Case data with slides array
+ */
+function handleCaseSelect(caseData) {
+    if (!caseData.slides || caseData.slides.length === 0) {
+        console.warn('[App] Case has no slides:', caseData.name);
+        return;
+    }
+    console.warn('[App] Navigating to case:', caseData.name, `(${caseData.slides.length} slides)`);
+    const firstSlide = caseData.slides[0];
+    // Store case data on appState for sidebar use (Task A3)
+    appState.currentCase = caseData;
+    showViewerPage(firstSlide);
 }
 
 /**
