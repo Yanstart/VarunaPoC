@@ -699,6 +699,24 @@ class ApiService {
     }
 
     // ==========================================
+    // CLUSTERING API (Wave 4)
+    // ==========================================
+
+    /**
+     * Run morphological clustering on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [params={}] - Clustering parameters
+     * @param {number} [params.n_clusters=4] - Number of clusters (2-8)
+     * @returns {Promise<Object>} Clustering result
+     */
+    async clusterSlide(slideId, params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.n_clusters !== undefined) queryParams.set('n_clusters', params.n_clusters);
+        const qs = queryParams.toString();
+        return this.post(`/api/ml/cluster/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`, {});
+    }
+
+    // ==========================================
     // AUTH API (Phase 3)
     // ==========================================
 

@@ -8,6 +8,7 @@
 @import './detection-panel.css';
 @import './counting-panel.css';
 @import './cell-counting-panel.css';
+@import './clustering-panel.css';
 @import './quality-panel.css';
 
 .viewer-page {
