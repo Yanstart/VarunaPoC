@@ -130,16 +130,16 @@ class CountingPanel {
                         <div class="counting-panel__conf-bar">
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--high"
                                  style="width: ${confTotal ? (conf.high / confTotal * 100) : 0}%"
-                                 title="High: ${conf.high}"></div>
+                                 title="\u00c9lev\u00e9e : ${conf.high}"></div>
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--medium"
                                  style="width: ${confTotal ? (conf.medium / confTotal * 100) : 0}%"
-                                 title="Medium: ${conf.medium}"></div>
+                                 title="Moyenne : ${conf.medium}"></div>
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--low"
                                  style="width: ${confTotal ? (conf.low / confTotal * 100) : 0}%"
-                                 title="Low: ${conf.low}"></div>
+                                 title="Faible : ${conf.low}"></div>
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--none"
                                  style="width: ${confTotal ? (conf.unscored / confTotal * 100) : 0}%"
-                                 title="Unscored: ${conf.unscored}"></div>
+                                 title="Non \u00e9valu\u00e9e : ${conf.unscored}"></div>
                         </div>
                         <div class="counting-panel__conf-legend">
                             ${conf.high ? `<span class="counting-panel__conf-label counting-panel__conf-label--high">${conf.high} élevée</span>` : ''}

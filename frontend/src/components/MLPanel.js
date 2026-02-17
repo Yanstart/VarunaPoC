@@ -35,7 +35,7 @@ class MLPanel {
         this.heatmapVisible = false;
         this.heatmapOpacity = 0.5;
         this.isLoading = false;
-        this.isCollapsed = true;
+        this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_ml_open') !== 'true'; } catch (_) { return true; } })();
 
         // Elements
         this.element = null;
@@ -131,10 +131,14 @@ class MLPanel {
 
         this.container.appendChild(this.element);
 
-        // Start collapsed by default
+        // Apply initial collapse state (collapsed by default, persisted via localStorage)
         const body = this.element.querySelector('.ml-panel__content');
         if (body) {
-            body.style.display = 'none';
+            body.style.display = this.isCollapsed ? 'none' : 'block';
+        }
+        const chevronEl = this.element.querySelector('.ml-panel__chevron');
+        if (chevronEl) {
+            chevronEl.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
         }
     }
 
@@ -335,14 +339,14 @@ class MLPanel {
                     </div>
                     ${uncertainty !== null ? `
                         <div class="ml-panel__metric">
-                            <span class="ml-panel__metric-label">Uncertainty</span>
+                            <span class="ml-panel__metric-label">Incertitude</span>
                             <span class="ml-panel__metric-value ml-panel__metric-value--uncertainty">
                                 ±${uncertainty}%
                             </span>
                         </div>
                     ` : ''}
                     <div class="ml-panel__metric">
-                        <span class="ml-panel__metric-label">Time</span>
+                        <span class="ml-panel__metric-label">Temps</span>
                         <span class="ml-panel__metric-value">
                             ${result.execution_time_ms?.toFixed(0) || '?'}ms
                         </span>
@@ -369,7 +373,7 @@ class MLPanel {
                     <line x1="15" y1="9" x2="9" y2="15"/>
                     <line x1="9" y1="9" x2="15" y2="15"/>
                 </svg>
-                <p>Analysis failed</p>
+                <p>Erreur d'analyse</p>
                 <p class="ml-panel__error-detail">${message}</p>
             </div>
         `;
@@ -454,18 +458,50 @@ class MLPanel {
      */
     _friendlyModelName(model) {
         const nameMap = {
-            'ctranspath': 'CTransPath',
+            'phikon-v2_features_1024d': 'Phikon v2',
+            'phikon-v2': 'Phikon v2',
             'phikon': 'Phikon v2',
+            'ctranspath': 'CTransPath',
             'uni': 'UNI',
             'resnet50_imagenet': 'ResNet-50',
         };
         const name = model.model_name || model.model_id;
+        const nameLower = name.toLowerCase();
+        // Check exact match first, then partial
+        if (nameMap[nameLower]) {
+            return nameMap[nameLower];
+        }
         for (const [key, friendly] of Object.entries(nameMap)) {
-            if (name.toLowerCase().includes(key)) {
+            if (nameLower.includes(key)) {
                 return friendly;
             }
         }
-        return name;
+        // Fallback: capitalize and clean up underscores/dashes
+        return name
+            .replace(/[_-]/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    /**
+     * Get a short description/tooltip for a model
+     * @param {Object} model
+     * @returns {string}
+     * @private
+     */
+    _modelTooltip(model) {
+        const tooltipMap = {
+            'phikon': 'Mod\u00e8le fondation histopathologie, 1024 dimensions',
+            'ctranspath': 'Transformeur pr\u00e9-entra\u00een\u00e9 pour la pathologie computationnelle',
+            'uni': 'Universal image encoder pour la pathologie',
+            'resnet50': 'R\u00e9seau r\u00e9siduel classique pr\u00e9-entra\u00een\u00e9 sur ImageNet',
+        };
+        const name = (model.model_name || model.model_id).toLowerCase();
+        for (const [key, tip] of Object.entries(tooltipMap)) {
+            if (name.includes(key)) {
+                return tip;
+            }
+        }
+        return model.description || '';
     }
 
     /**
@@ -487,7 +523,7 @@ class MLPanel {
         if (models.length === 0) {
             const opt = document.createElement('option');
             opt.value = '';
-            opt.textContent = 'Aucun modele disponible';
+            opt.textContent = 'Aucun mod\u00e8le disponible';
             select.appendChild(opt);
             return;
         }
@@ -496,7 +532,11 @@ class MLPanel {
             const opt = document.createElement('option');
             opt.value = model.model_id;
             const friendly = this._friendlyModelName(model);
-            opt.textContent = i === 0 ? `${friendly} (recommande)` : friendly;
+            opt.textContent = i === 0 ? `${friendly} (recommand\u00e9)` : friendly;
+            const tooltip = this._modelTooltip(model);
+            if (tooltip) {
+                opt.title = tooltip;
+            }
             select.appendChild(opt);
         });
 
@@ -520,6 +560,7 @@ class MLPanel {
         if (chevron) {
             chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
         }
+        try { localStorage.setItem('varuna_panel_ml_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }
 
     /**

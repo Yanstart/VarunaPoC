@@ -188,7 +188,7 @@ class DriftDashboard {
         const isLoaded = model.status === 'loaded';
         badge.className = 'drift-dashboard__model-badge drift-dashboard__model-badge--' +
             (isLoaded ? 'loaded' : 'available');
-        badge.textContent = isLoaded ? 'Loaded' : 'Available';
+        badge.textContent = isLoaded ? 'Charg\u00e9' : 'Disponible';
         headerDiv.appendChild(badge);
 
         card.appendChild(headerDiv);
@@ -229,7 +229,7 @@ class DriftDashboard {
         // Label
         const label = document.createElement('span');
         label.className = 'drift-dashboard__metric-label';
-        label.textContent = metric.metric_name === 'mmd' ? 'MMD' : 'KS Statistic';
+        label.textContent = metric.metric_name === 'mmd' ? 'MMD' : 'Statistique KS';
         row.appendChild(label);
 
         // Value

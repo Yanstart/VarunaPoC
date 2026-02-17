@@ -31,7 +31,7 @@ class ClusteringPanel {
         this.slideId = options.slideId || null;
 
         // State
-        this.isCollapsed = true;
+        this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_clustering_open') !== 'true'; } catch (_) { return true; } })();
         this.isClustering = false;
         this.nClusters = 4;
         this.result = null;
@@ -80,8 +80,11 @@ class ClusteringPanel {
         this._renderIdle();
         this.container.appendChild(this.element);
 
-        // Start collapsed
-        this._body.style.display = 'none';
+        // Apply initial collapse state (collapsed by default, persisted via localStorage)
+        this._body.style.display = this.isCollapsed ? 'none' : 'block';
+        if (!this.isCollapsed) {
+            chevron.textContent = '\u25BC';
+        }
     }
 
     // ==========================================
@@ -212,7 +215,7 @@ class ClusteringPanel {
             // Tile count
             const count = document.createElement('span');
             count.className = 'clustering-panel__legend-count';
-            count.textContent = cluster.tile_count + ' tiles';
+            count.textContent = cluster.tile_count + ' tuiles';
             item.appendChild(count);
 
             legend.appendChild(item);
@@ -341,6 +344,7 @@ class ClusteringPanel {
         if (chevron) {
             chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
         }
+        try { localStorage.setItem('varuna_panel_clustering_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }
 
     destroy() {

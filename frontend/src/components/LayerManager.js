@@ -98,7 +98,7 @@ class LayerManager {
         const item = document.createElement('div');
         item.className = 'layer-item';
         item.innerHTML = `
-            <button class="layer-item__visibility ${isVisible ? 'is-visible' : ''}" title="Toggle visibility">
+            <button class="layer-item__visibility ${isVisible ? 'is-visible' : ''}" title="Afficher/masquer">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     ${isVisible ? eyeOpen : eyeClosed}
                 </svg>

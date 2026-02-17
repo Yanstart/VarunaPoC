@@ -584,7 +584,7 @@ class ViewerInstance {
         const maxZoom = this._osdViewer.viewport.getMaxZoom();
         const ratio = zoom / maxZoom;
         const rawMag = ratio * 40;
-        const objectives = [1, 2, 4, 5, 10, 20, 40];
+        const objectives = [1, 2, 5, 10, 20, 40, 60, 100];
         let closest = objectives[0];
         for (const obj of objectives) {
             if (Math.abs(obj - rawMag) < Math.abs(closest - rawMag)) {

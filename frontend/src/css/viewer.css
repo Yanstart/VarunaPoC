@@ -10,10 +10,12 @@
 @import './cell-counting-panel.css';
 @import './clustering-panel.css';
 @import './quality-panel.css';
+@import './magnification-bar.css';
 @import './quality-badge.css';
 @import './drift-dashboard.css';
 @import './worklist-view.css';
 @import './recent-cases.css';
+@import './auto-tag-badge.css';
 
 .viewer-page {
     width: 100%;

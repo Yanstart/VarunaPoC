@@ -12,9 +12,9 @@ import { apiService } from '../services/ApiService.js';
 
 const ROLE_LABELS = {
     ADMIN_TECHNIQUE: 'Admin',
-    MEDECIN: 'Physician',
-    INFIRMIER: 'Nurse',
-    LECTURE_SEULE: 'Read Only',
+    MEDECIN: 'M\u00e9decin',
+    INFIRMIER: 'Infirmier',
+    LECTURE_SEULE: 'Lecture seule',
 };
 
 const ROLE_COLORS = {
@@ -52,7 +52,7 @@ export class UserMenu {
         const roleColor = ROLE_COLORS[role] || '#666';
 
         this.element.innerHTML = `
-            <button class="user-menu-trigger" title="User menu">
+            <button class="user-menu-trigger" title="Menu utilisateur">
                 <span class="user-avatar">${this._getInitials(username)}</span>
                 <span class="user-name">${username}</span>
                 <span class="user-role-badge" style="background: ${roleColor}">${roleLabel}</span>
@@ -69,7 +69,7 @@ export class UserMenu {
                         <path d="M12 9v2m0 4h.01"/>
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                     </svg>
-                    Break-Glass (Emergency)
+                    Acc\u00e8s d\u2019urgence
                 </button>
                 ` : ''}
                 <button class="user-menu-item" data-action="save-session">
@@ -78,14 +78,14 @@ export class UserMenu {
                         <polyline points="17 21 17 13 7 13 7 21"/>
                         <polyline points="7 3 7 8 15 8"/>
                     </svg>
-                    Save Session
+                    Sauvegarder la session
                 </button>
                 <button class="user-menu-item" data-action="restore-session">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="1 4 1 10 7 10"/>
                         <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                     </svg>
-                    Restore Session
+                    Restaurer la session
                 </button>
                 <div class="user-menu-divider"></div>
                 <button class="user-menu-item" data-action="logout">
@@ -94,7 +94,7 @@ export class UserMenu {
                         <polyline points="16 17 21 12 16 7"/>
                         <line x1="21" y1="12" x2="9" y2="12"/>
                     </svg>
-                    Sign Out
+                    D\u00e9connexion
                 </button>
             </div>
         `;
@@ -140,20 +140,20 @@ export class UserMenu {
     async _handleBreakGlass() {
         this._close();
         const reason = prompt(
-            'Break-Glass Emergency Access\n\n' +
-            'This grants temporary elevated privileges and is logged as a CRITICAL audit event.\n' +
-            'A review by an administrator is required.\n\n' +
-            'Enter medical justification (min 10 characters):',
+            'Acc\u00e8s d\u2019urgence\n\n' +
+            'Cette action accorde des privil\u00e8ges temporaires \u00e9lev\u00e9s et sera audit\u00e9e.\n' +
+            'Une revue par un administrateur est requise.\n\n' +
+            'Entrez la justification m\u00e9dicale (min. 10 caract\u00e8res) :',
         );
         if (!reason || reason.length < 10) {
-            if (reason !== null) {alert('Justification must be at least 10 characters.');}
+            if (reason !== null) {alert('La justification doit contenir au moins 10 caract\u00e8res.');}
             return;
         }
         try {
             const result = await apiService.activateBreakGlass(reason, 30);
-            alert(`Break-Glass activated until ${new Date(result.expires_at).toLocaleTimeString()}`);
+            alert(`Acc\u00e8s d\u2019urgence activ\u00e9 jusqu\u2019\u00e0 ${new Date(result.expires_at).toLocaleTimeString()}`);
         } catch (err) {
-            alert(`Break-Glass failed: ${err.message}`);
+            alert(`\u00c9chec de l\u2019acc\u00e8s d\u2019urgence : ${err.message}`);
         }
     }
 
