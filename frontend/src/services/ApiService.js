@@ -680,6 +680,25 @@ class ApiService {
     }
 
     // ==========================================
+    // CELL COUNTING API (Wave 4)
+    // ==========================================
+
+    /**
+     * Run cell counting on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [params={}] - Counting parameters
+     * @param {Object} [params.region] - Optional GeoJSON polygon region
+     * @param {string} [params.stain] - Stain type (Ki67, HER2, PD-L1)
+     * @returns {Promise<Object>} Counting result
+     */
+    async countCells(slideId, params = {}) {
+        const body = {};
+        if (params.region) body.region = params.region;
+        if (params.stain) body.stain = params.stain;
+        return this.post(`/api/ml/count/${encodeURIComponent(slideId)}`, body);
+    }
+
+    // ==========================================
     // AUTH API (Phase 3)
     // ==========================================
 

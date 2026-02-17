@@ -217,6 +217,31 @@ class SimilarityResponse(BaseModel):
     index_size: int
 
 
+class GeoJSONRegion(BaseModel):
+    """GeoJSON polygon region for cell counting."""
+
+    type: str = Field("Polygon")
+    coordinates: List[List[List[float]]]
+
+
+class CountRequest(BaseModel):
+    """Request for cell counting endpoint."""
+
+    region: Optional[GeoJSONRegion] = None
+    stain: str = Field("Ki67")
+
+
+class CountingResponse(BaseModel):
+    """Response for cell counting endpoint."""
+
+    total_cells: int
+    positive: int
+    negative: int
+    ratio: float
+    percentage: str
+    processing_time_ms: float
+
+
 # ============================================================================
 # DEPENDENCIES
 # ============================================================================
@@ -875,6 +900,56 @@ async def measure_slide(
     except Exception as e:
         logger.error(f"Measurement error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Measurement error: {e!s}")
+
+
+@router.post("/count/{slide_id}", response_model=CountingResponse)
+async def count_cells(
+    slide_id: str,
+    request: CountRequest = CountRequest(),
+    provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Comptage cellulaire automatisé (Ki-67 / IHC).
+
+    Compte les cellules positives et négatives dans une lame ou région.
+    Retourne le ratio et le pourcentage pour l'index Ki-67.
+
+    Used by frontend CellCountingPanel (Wave 4).
+    """
+    from services.ml.counting import CellCountingService
+
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        service = CellCountingService()
+        result = service.count_cells(
+            slide_path=slide_path,
+            provider=provider,
+            stain=request.stain,
+            region=request.region,
+        )
+
+        return CountingResponse(
+            total_cells=result.total_cells,
+            positive=result.positive,
+            negative=result.negative,
+            ratio=result.ratio,
+            percentage=result.percentage,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Cell counting failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Cell counting error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Cell counting error: {e!s}")
 
 
 @router.post("/feedback/{slide_id}", response_model=FeedbackResponse)
