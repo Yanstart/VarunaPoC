@@ -15,7 +15,7 @@ API Design:
 import hashlib
 import random
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import openslide
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -58,6 +58,34 @@ class HistoryItem(BaseModel):
 class HistoryResponse(BaseModel):
     items: List[HistoryItem]
     total: int
+
+
+# ==========================================
+# MPP (Microns Per Pixel) Schema
+# ==========================================
+
+# Objective power to MPP lookup table (common scanner defaults)
+_OBJECTIVE_TO_MPP = {
+    100: 0.10,
+    80: 0.125,
+    60: 0.167,
+    40: 0.25,
+    20: 0.50,
+    10: 1.0,
+    5: 2.0,
+    4: 2.5,
+    2: 5.0,
+    1: 10.0,
+}
+
+
+class MPPResponse(BaseModel):
+    """Microns-per-pixel metadata for a slide."""
+
+    mpp_x: float
+    mpp_y: float
+    objective: Optional[int] = None
+    source: str = "openslide"
 
 
 router = APIRouter(prefix="/api/slides")
@@ -302,6 +330,81 @@ def resolve_slide_by_name(
     if not slide:
         raise HTTPException(404, f"No slide found matching '{slide_name}'")
     return slide
+
+
+@router.get("/{slide_id}/mpp", tags=["visualization"], response_model=MPPResponse)
+def get_slide_mpp(
+    slide_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Retrieve microns-per-pixel (MPP) calibration data for a slide.
+
+    Args:
+        slide_id: Unique slide identifier (MD5 hash).
+
+    Returns:
+        MPPResponse with mpp_x, mpp_y, objective power, and data source.
+
+    Raises:
+        404: Slide not found or MPP data unavailable.
+        422: Slide detected but cannot be opened.
+
+    Technical Notes:
+        - Primary source: ``openslide.mpp-x`` / ``openslide.mpp-y`` properties.
+        - Fallback: estimate MPP from ``openslide.objective-power`` using a
+          standard lookup table (40x -> 0.25, 20x -> 0.50, etc.).
+        - Returns 404 if neither MPP nor objective power is available.
+    """
+    slide_path = get_slide_path_by_id(slide_id)
+    if not slide_path:
+        raise HTTPException(404, f"Slide {slide_id} not found")
+
+    try:
+        slide = openslide.OpenSlide(slide_path)
+    except openslide.OpenSlideError as e:
+        raise HTTPException(
+            422,
+            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
+        )
+
+    try:
+        props = slide.properties
+
+        # Read objective power (may be None)
+        obj_str = props.get("openslide.objective-power")
+        objective = int(float(obj_str)) if obj_str else None
+
+        # Try direct MPP from metadata
+        mpp_x_str = props.get("openslide.mpp-x")
+        mpp_y_str = props.get("openslide.mpp-y")
+
+        if mpp_x_str and mpp_y_str:
+            return MPPResponse(
+                mpp_x=float(mpp_x_str),
+                mpp_y=float(mpp_y_str),
+                objective=objective,
+                source="openslide",
+            )
+
+        # Fallback: estimate from objective power
+        if objective and objective in _OBJECTIVE_TO_MPP:
+            estimated = _OBJECTIVE_TO_MPP[objective]
+            return MPPResponse(
+                mpp_x=estimated,
+                mpp_y=estimated,
+                objective=objective,
+                source="estimated_from_objective",
+            )
+
+        # No MPP data available
+        raise HTTPException(
+            404,
+            f"MPP data not available for slide {slide_id}. "
+            "Neither openslide.mpp-x/y nor openslide.objective-power found in metadata.",
+        )
+    finally:
+        slide.close()
 
 
 @router.get("/{slide_id}/info", tags=["visualization"])
