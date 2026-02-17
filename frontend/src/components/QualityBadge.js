@@ -51,7 +51,7 @@ export class QualityBadge {
         this.el = document.createElement('span');
         this.el.className = 'quality-badge';
         this.el.setAttribute('role', 'status');
-        this.el.setAttribute('aria-label', 'Quality assessment loading');
+        this.el.setAttribute('aria-label', '\u00c9valuation de qualit\u00e9 en cours');
 
         // Dot indicator
         this._dot = document.createElement('span');
@@ -61,7 +61,7 @@ export class QualityBadge {
         // Text label
         this._label = document.createElement('span');
         this._label.className = 'quality-badge__label';
-        this._label.textContent = 'Qualite: ...';
+        this._label.textContent = 'Qualit\u00e9 : ...';
         this.el.appendChild(this._label);
 
         // Tooltip (hidden by default)
@@ -134,13 +134,13 @@ export class QualityBadge {
 
         // Update badge class
         this.el.className = `quality-badge quality-badge--${variant}`;
-        this.el.setAttribute('aria-label', `Quality: ${quality_label} (${pct}%)`);
+        this.el.setAttribute('aria-label', `Qualit\u00e9 : ${quality_label} (${pct}%)`);
 
         // Update dot
         this._dot.className = `quality-badge__dot quality-badge__dot--${variant}`;
 
         // Update label text using textContent (safe from XSS)
-        this._label.textContent = `Qualite: ${quality_label} (${pct}%)`;
+        this._label.textContent = `Qualit\u00e9 : ${quality_label} (${pct}%)`;
 
         // Build tooltip content using DOM methods
         this._buildTooltipContent(data);
@@ -163,7 +163,7 @@ export class QualityBadge {
         // Title
         const title = document.createElement('div');
         title.className = 'quality-badge__tooltip-title';
-        title.textContent = `Qualite: ${quality_label} (${pct}%)`;
+        title.textContent = `Qualit\u00e9 : ${quality_label} (${pct}%)`;
         this._tooltip.appendChild(title);
 
         // Recommendation
@@ -207,8 +207,8 @@ export class QualityBadge {
     _renderError() {
         this.el.className = 'quality-badge quality-badge--poor';
         this._dot.className = 'quality-badge__dot quality-badge__dot--poor';
-        this._label.textContent = 'Qualite: erreur';
-        this.el.setAttribute('aria-label', 'Quality assessment failed');
+        this._label.textContent = 'Qualit\u00e9 : erreur';
+        this.el.setAttribute('aria-label', '\u00c9chec de l\u2019\u00e9valuation de qualit\u00e9');
     }
 
     /**
@@ -254,7 +254,7 @@ export class QualityBadge {
         // Reset to loading state
         this.el.className = 'quality-badge';
         this._dot.className = 'quality-badge__dot';
-        this._label.textContent = 'Qualite: ...';
+        this._label.textContent = 'Qualit\u00e9 : ...';
 
         if (slideId) {
             this._fetchQuality(slideId);

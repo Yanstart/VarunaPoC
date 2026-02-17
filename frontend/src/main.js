@@ -53,6 +53,9 @@ import { QualityBadge } from './components/QualityBadge.js';
 import { DriftDashboard } from './components/DriftDashboard.js';
 import { createWorklistView } from './components/WorklistView.js';
 import { createRecentCases } from './components/RecentCases.js';
+import { FocusAssistPanel } from './components/FocusAssistPanel.js';
+import { AutoTagBadge } from './components/AutoTagBadge.js';
+import { MagnificationBar } from './components/MagnificationBar.js';
 
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
@@ -112,6 +115,11 @@ const appState = {
 
     /** Wave 4: Drift dashboard */
     driftDashboard: null,
+
+    /** Waves 1-2: Focus assist, auto-tag, magnification */
+    focusAssistPanel: null,
+    autoTagBadge: null,
+    magnificationBar: null,
 
     /** Wave 3: Case navigation */
     caseSidebar: null,
@@ -409,6 +417,9 @@ async function showViewerPage(slide) {
     if (viewerTitle) {
         appState.qualityBadge = new QualityBadge(slide.id, eventBus);
         viewerTitle.insertAdjacentElement('afterend', appState.qualityBadge.el);
+
+        // Wave 2: Auto-tag badge below slide info
+        appState.autoTagBadge = new AutoTagBadge(viewerTitle, { slideId: slide.id });
     }
 
     // Compare button
@@ -474,12 +485,28 @@ async function showViewerPage(slide) {
             clusteringContainer.style.marginTop = '8px';
             mlContainer2.appendChild(clusteringContainer);
             appState.clusteringPanel = new ClusteringPanel(clusteringContainer, { slideId: slide.id });
+
+            // Wave 2: Focus Assist Panel
+            const focusContainer = document.createElement('div');
+            focusContainer.id = 'focus-assist-panel-container';
+            focusContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(focusContainer);
+            appState.focusAssistPanel = new FocusAssistPanel(focusContainer, { slideId: slide.id });
         }
     }
 
     // Wave 4: Clustering Overlay (canvas on OSD viewer)
     if (viewerInstance) {
         appState.clusteringOverlay = new ClusteringOverlay(viewerInstance);
+    }
+
+    // Wave 1: Magnification Bar (floating badge in viewer area)
+    if (viewerInstance && viewerInstance.viewer) {
+        appState.magnificationBar = new MagnificationBar(viewerInstance.viewer);
+        const viewerArea = document.querySelector('.viewer-area');
+        if (viewerArea && appState.magnificationBar.element) {
+            viewerArea.appendChild(appState.magnificationBar.element);
+        }
     }
 
     // Phase 2: Layer Manager (in info panel)
@@ -841,6 +868,16 @@ async function handleSlideSwitch(newSlide) {
     if (appState.qualityBadge && appState.qualityBadge.setSlide) {
         appState.qualityBadge.setSlide(newSlide.id);
     }
+
+    // 12. Reset focus assist panel for new slide
+    if (appState.focusAssistPanel && appState.focusAssistPanel.setSlide) {
+        appState.focusAssistPanel.setSlide(newSlide.id);
+    }
+
+    // 13. Reset auto-tag badge for new slide
+    if (appState.autoTagBadge && appState.autoTagBadge.setSlide) {
+        appState.autoTagBadge.setSlide(newSlide.id);
+    }
 }
 
 /**
@@ -980,6 +1017,20 @@ function cleanup() {
     if (appState.driftDashboard) {
         appState.driftDashboard.destroy();
         appState.driftDashboard = null;
+    }
+
+    // Waves 1-2: Focus assist, auto-tag, magnification
+    if (appState.focusAssistPanel) {
+        appState.focusAssistPanel.destroy();
+        appState.focusAssistPanel = null;
+    }
+    if (appState.autoTagBadge) {
+        appState.autoTagBadge.destroy();
+        appState.autoTagBadge = null;
+    }
+    if (appState.magnificationBar) {
+        appState.magnificationBar.destroy();
+        appState.magnificationBar = null;
     }
 
     // Destroy ML components

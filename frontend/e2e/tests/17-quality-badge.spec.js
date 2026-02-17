@@ -50,6 +50,6 @@ test.describe('Quality Badge', () => {
         }
 
         const label = page.locator('.quality-badge__label');
-        await expect(label).toContainText('Qualite');
+        await expect(label).toContainText('Qualit');
     });
 });

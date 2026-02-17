@@ -31,7 +31,7 @@ class DetectionPanel {
         this.slideId = options.slideId || null;
 
         // State
-        this.isCollapsed = true;
+        this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_detection_open') !== 'true'; } catch (_) { return true; } })();
         this.isDetecting = false;
         this.threshold = 0.5;
         this.minArea = 100;
@@ -88,8 +88,11 @@ class DetectionPanel {
         this._renderIdle();
         this.container.appendChild(this.element);
 
-        // Start collapsed by default
-        this._body.style.display = 'none';
+        // Apply initial collapse state (collapsed by default, persisted via localStorage)
+        this._body.style.display = this.isCollapsed ? 'none' : 'block';
+        if (!this.isCollapsed) {
+            chevron.textContent = '\u25BC';
+        }
     }
 
     /**
@@ -229,13 +232,13 @@ class DetectionPanel {
                         <div class="count-summary__bar">
                             <div class="count-summary__segment count-summary__segment--high"
                                  style="width: ${total ? (confDist.high / total * 100) : 0}%"
-                                 title="High confidence (>=0.8): ${confDist.high}"></div>
+                                 title="Confiance \u00e9lev\u00e9e (\u22650.8) : ${confDist.high}"></div>
                             <div class="count-summary__segment count-summary__segment--medium"
                                  style="width: ${total ? (confDist.medium / total * 100) : 0}%"
-                                 title="Medium confidence (0.5-0.8): ${confDist.medium}"></div>
+                                 title="Confiance moyenne (0.5-0.8) : ${confDist.medium}"></div>
                             <div class="count-summary__segment count-summary__segment--low"
                                  style="width: ${total ? (confDist.low / total * 100) : 0}%"
-                                 title="Low confidence (<0.5): ${confDist.low}"></div>
+                                 title="Confiance faible (<0.5) : ${confDist.low}"></div>
                         </div>
                         <div class="count-summary__legend">
                             <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} élevée</span>
@@ -263,10 +266,10 @@ class DetectionPanel {
                         Tout confirmer ${acceptedCount > 0 ? acceptedCount : ''}
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--secondary">
-                        Accept All
+                        Tout accepter
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--danger">
-                        Discard All
+                        Tout rejeter
                     </button>
                 </div>
             </div>
@@ -367,7 +370,7 @@ class DetectionPanel {
         return `
             <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''}">
                 <div class="detection-item__info">
-                    <span class="detection-item__label">Region ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}${dimensionHtml}</span>
+                    <span class="detection-item__label">R\u00e9gion ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}${dimensionHtml}</span>
                     <span class="detection-item__meta">
                         <span class="detection-item__conf detection-item__conf--${confLevel}">${confidence}</span>
                          | ${area} px
@@ -387,9 +390,14 @@ class DetectionPanel {
                 </div>
                 <div class="detection-item__feedback">
                     ${this.feedbackStatus.has(index)
-        ? `<span class="feedback-badge feedback-badge--${this.feedbackStatus.get(index)}">${this.feedbackStatus.get(index) === 'confirmed' ? 'Confirm\u00e9' : 'Rejet\u00e9'}</span>`
-        : `<button class="feedback-btn feedback-btn--confirm" data-feedback-index="${index}" data-feedback-type="confirmed" title="Confirmer la pr\u00e9diction">Confirmer</button>
-           <button class="feedback-btn feedback-btn--reject" data-feedback-index="${index}" data-feedback-type="rejected" title="Rejeter la pr\u00e9diction">Rejeter</button>`}
+        ? `<span class="feedback-badge feedback-badge--${this.feedbackStatus.get(index)}">${
+            this.feedbackStatus.get(index) === 'confirmed' ? '\u2714 Confirm\u00e9'
+                : this.feedbackStatus.get(index) === 'rejected' ? '\u2718 Rejet\u00e9'
+                    : '\u270E Corrig\u00e9'
+        }</span>`
+        : `<button class="feedback-btn feedback-btn--confirm" data-feedback-index="${index}" data-feedback-type="confirmed" title="Confirmer la pr\u00e9diction IA">Confirmer</button>
+           <button class="feedback-btn feedback-btn--correct" data-feedback-index="${index}" data-feedback-type="refined" title="Corriger / re-\u00e9tiqueter">Corriger</button>
+           <button class="feedback-btn feedback-btn--reject" data-feedback-index="${index}" data-feedback-type="rejected" title="Rejeter la pr\u00e9diction IA">Rejeter</button>`}
                 </div>
             </div>
         `;
@@ -504,7 +512,7 @@ class DetectionPanel {
                 <h4>Détection automatique</h4>
                 <div class="detection-panel__error">
                     <p>Erreur lors de la détection : ${message}</p>
-                    <button class="detection-panel__btn detection-panel__btn--secondary">Retry</button>
+                    <button class="detection-panel__btn detection-panel__btn--secondary">Réessayer</button>
                 </div>
             </div>
         `;
@@ -517,7 +525,7 @@ class DetectionPanel {
     /**
      * Submit pathologist feedback for a detection
      * @param {number} index - Detection index
-     * @param {string} correctionType - 'confirmed' or 'rejected'
+     * @param {string} correctionType - 'confirmed', 'rejected', or 'refined'
      * @private
      */
     async _submitFeedback(index, correctionType) {
@@ -579,6 +587,7 @@ class DetectionPanel {
         if (chevron) {
             chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
         }
+        try { localStorage.setItem('varuna_panel_detection_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }
 
     destroy() {

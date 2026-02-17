@@ -43,7 +43,7 @@ test.describe('Authentication', () => {
 
         // Login button should be present
         await expect(page.locator('#login-btn')).toBeVisible();
-        await expect(page.locator('#login-btn')).toContainText('Sign in');
+        await expect(page.locator('#login-btn')).toContainText('Se connecter');
     });
 
     test('login page shows hospital branding', async ({ page, mockSlideData }) => {
@@ -56,7 +56,7 @@ test.describe('Authentication', () => {
 
         // Should show title and description
         await expect(page.locator('.login-title')).toHaveText('VarunaPoC');
-        await expect(page.locator('.login-subtitle')).toContainText('Digital Pathology');
+        await expect(page.locator('.login-subtitle')).toContainText('pathologie');
         await expect(page.locator('.login-footer')).toContainText('CHU UCL Namur');
     });
 

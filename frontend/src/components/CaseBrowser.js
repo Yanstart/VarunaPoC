@@ -79,7 +79,7 @@ function buildHeader(onViewToggle) {
 
     const subtitle = document.createElement('p');
     subtitle.className = 'subtitle';
-    subtitle.textContent = 'Digital Pathology Slide Viewer';
+    subtitle.textContent = 'Visualiseur de pathologie num\u00e9rique';
     titleBlock.appendChild(subtitle);
 
     header.appendChild(titleBlock);
