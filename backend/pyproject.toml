@@ -73,6 +73,7 @@ markers = [
     "drift: Drift detection tests",
     "quality: Slide quality control tests",
     "worklist: Worklist and history tests",
+    "retraining: Retraining pipeline tests",
 ]
 filterwarnings = [
     "error",
