@@ -49,6 +49,10 @@ import { CountingPanel } from './components/CountingPanel.js';
 import { CellCountingPanel } from './components/CellCountingPanel.js';
 import { ClusteringPanel } from './components/ClusteringPanel.js';
 import { ClusteringOverlay } from './components/ClusteringOverlay.js';
+import { QualityBadge } from './components/QualityBadge.js';
+import { DriftDashboard } from './components/DriftDashboard.js';
+import { createWorklistView } from './components/WorklistView.js';
+import { createRecentCases } from './components/RecentCases.js';
 
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
@@ -102,6 +106,12 @@ const appState = {
     /** Wave 4: Clustering */
     clusteringPanel: null,
     clusteringOverlay: null,
+
+    /** Wave 4: Quality badge */
+    qualityBadge: null,
+
+    /** Wave 4: Drift dashboard */
+    driftDashboard: null,
 
     /** Wave 3: Case navigation */
     caseSidebar: null,
@@ -242,8 +252,12 @@ function setupEventListeners() {
         }
     });
 
-    // Listen for page changes
+    // Listen for page changes (handles drift dashboard back navigation)
     eventBus.on(Events.PAGE_CHANGED, ({ page }) => {
+        if (page === Pages.HOME && appState.currentPage === 'drift') {
+            showHomePage();
+            return;
+        }
         appState.currentPage = page;
     });
 }
@@ -288,10 +302,29 @@ function showHomePage() {
         // Explorer (folder) view
         appState.folderBrowser = createFolderBrowser(handleSlideSelect, handleViewToggle);
         app.appendChild(appState.folderBrowser);
+    } else if (viewPref === 'worklist') {
+        // Worklist view ("Mes cas")
+        const worklistView = createWorklistView(handleSlideSelect, handleViewToggle);
+        app.appendChild(worklistView);
     } else {
-        // Case view (default)
+        // Case view (default) — includes recent cases section
+        const recentCases = createRecentCases(handleSlideSelect);
+        app.appendChild(recentCases);
         const caseBrowser = createCaseBrowser(handleSlideSelect, handleCaseSelect, handleViewToggle);
         app.appendChild(caseBrowser);
+    }
+
+    // Worklist shortcut button
+    if (viewPref !== 'worklist') {
+        const worklistBtn = document.createElement('button');
+        worklistBtn.className = 'worklist-shortcut-button';
+        worklistBtn.textContent = 'Mes cas';
+        worklistBtn.title = 'Ouvrir la liste de travail';
+        worklistBtn.addEventListener('click', () => {
+            localStorage.setItem('varuna_home_view', 'worklist');
+            showHomePage();
+        });
+        app.appendChild(worklistBtn);
     }
 
     // Add compare mode button
@@ -370,6 +403,13 @@ async function showViewerPage(slide) {
 
     // Back button
     document.querySelector('#back-btn').addEventListener('click', showHomePage);
+
+    // Wave 4: Quality Badge in header
+    const viewerTitle = document.querySelector('.viewer-title');
+    if (viewerTitle) {
+        appState.qualityBadge = new QualityBadge(slide.id, eventBus);
+        viewerTitle.insertAdjacentElement('afterend', appState.qualityBadge.el);
+    }
 
     // Compare button
     document.querySelector('#compare-btn').addEventListener('click', () => {
@@ -604,6 +644,20 @@ async function showComparePage(initialSlide = null) {
 }
 
 /**
+ * Show drift monitoring dashboard (admin page)
+ */
+function showDriftPage() {
+    cleanup();
+    appState.currentPage = 'drift';
+
+    const app = document.querySelector('#app');
+    app.className = 'page-drift';
+    app.textContent = '';
+
+    appState.driftDashboard = new DriftDashboard(app);
+}
+
+/**
  * Show slide picker modal
  */
 function showSlidePicker() {
@@ -782,6 +836,11 @@ async function handleSlideSwitch(newSlide) {
     if (appState.clusteringOverlay && appState.clusteringOverlay.clear) {
         appState.clusteringOverlay.clear();
     }
+
+    // 11. Reset quality badge for new slide
+    if (appState.qualityBadge && appState.qualityBadge.setSlide) {
+        appState.qualityBadge.setSlide(newSlide.id);
+    }
 }
 
 /**
@@ -911,6 +970,18 @@ function cleanup() {
         appState.annotationLayer = null;
     }
 
+    // Wave 4: Quality badge
+    if (appState.qualityBadge) {
+        appState.qualityBadge.destroy();
+        appState.qualityBadge = null;
+    }
+
+    // Wave 4: Drift dashboard
+    if (appState.driftDashboard) {
+        appState.driftDashboard.destroy();
+        appState.driftDashboard = null;
+    }
+
     // Destroy ML components
     if (appState.heatmapOverlay) {
         appState.heatmapOverlay.destroy();
@@ -981,6 +1052,33 @@ function showError(err) {
 // Inject additional styles
 const additionalStyles = document.createElement('style');
 additionalStyles.textContent = `
+    /* Worklist shortcut button on home page */
+    .worklist-shortcut-button {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: var(--color-bg-elevated, #1a1a1a);
+        color: var(--color-text-primary, #e0e0e0);
+        border: 1px solid var(--color-border, #333);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: all 0.2s ease;
+        z-index: 100;
+    }
+
+    .worklist-shortcut-button:hover {
+        border-color: var(--color-primary, #4a9eff);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
     /* Compare mode button on home page */
     .compare-mode-button {
         position: fixed;

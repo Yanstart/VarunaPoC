@@ -1,0 +1,64 @@
+.recent-cases {
+    margin-bottom: 20px;
+}
+
+.recent-cases__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+    padding: 0 16px;
+    margin-bottom: 8px;
+}
+
+.recent-cases__scroll {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px;
+    overflow-x: auto;
+}
+
+.recent-cases__card {
+    min-width: 180px;
+    padding: 10px 12px;
+    background: rgba(26,26,26,0.95);
+    border: 1px solid #333;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+}
+
+.recent-cases__card:hover {
+    border-color: #4a9eff;
+}
+
+.recent-cases__name {
+    font-size: 13px;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-cases__time {
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.recent-cases__count {
+    font-size: 11px;
+    color: #666;
+}
+
+.recent-cases__loading,
+.recent-cases__error,
+.recent-cases__empty {
+    padding: 12px 0;
+    color: #888;
+    font-size: 12px;
+}
+
+.recent-cases__error {
+    color: #ff6b6b;
+}

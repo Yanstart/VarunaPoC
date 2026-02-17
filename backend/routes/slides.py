@@ -8,18 +8,57 @@ API Design:
 - GET /api/browse?path={path} → Navigation hiérarchique dans /Slides
 - GET /api/slides/{id}/info → Métadonnées d'une lame
 - GET /api/slides/{id}/overview → Image overview (JPEG)
+- GET /api/slides/worklist → Liste de travail (mes cas assignés)
+- GET /api/slides/history → Historique des lames consultées
 """
+
+import hashlib
+import random
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List
 
 import openslide
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
 
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.slide_scanner import get_slide_by_name, get_slide_path_by_id, scan_slides_directory
 from services.tile_server import tile_server
+
+# ==========================================
+# Worklist & History Schemas
+# ==========================================
+
+
+class WorklistItem(BaseModel):
+    slide_id: str
+    slide_name: str
+    case_path: str
+    status: str  # "pending", "in_progress", "completed"
+    assigned_date: str  # ISO date
+    is_new: bool  # True if never opened
+
+
+class WorklistResponse(BaseModel):
+    items: List[WorklistItem]
+    counts: Dict[str, int]  # {"pending": 3, "in_progress": 1, "completed": 5}
+
+
+class HistoryItem(BaseModel):
+    slide_id: str
+    slide_name: str
+    viewed_at: str  # ISO datetime
+    view_count: int
+
+
+class HistoryResponse(BaseModel):
+    items: List[HistoryItem]
+    total: int
+
 
 router = APIRouter(prefix="/api/slides")
 
@@ -121,6 +160,117 @@ def browse_slides_directory(
         raise HTTPException(404, str(e))
     except Exception as e:
         raise HTTPException(500, f"Error browsing directory: {e}")
+
+
+@router.get("/worklist", tags=["navigation"])
+def get_worklist(
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Liste de travail : cas assignés au médecin connecté.
+
+    Mock implementation: génère des items déterministes depuis la liste de lames.
+    Le seed est basé sur le hash du sub utilisateur pour la reproductibilité.
+
+    Returns:
+        WorklistResponse avec items et counts par statut.
+    """
+    slides = scan_slides_directory()
+
+    # Deterministic seed from user sub
+    seed = int(hashlib.md5(current_user.sub.encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+
+    statuses = ["pending", "in_progress", "completed"]
+    weights = [0.5, 0.3, 0.2]  # ~50% pending, ~30% in_progress, ~20% completed
+
+    now = datetime.now(timezone.utc)
+    items = []
+
+    for slide in slides:
+        # Pick status based on weighted random
+        status = rng.choices(statuses, weights=weights, k=1)[0]
+
+        # assigned_date: random date in the last 30 days
+        days_ago = rng.randint(0, 30)
+        assigned_date = now - timedelta(days=days_ago)
+
+        # is_new: ~30% of pending items
+        is_new = status == "pending" and rng.random() < 0.3
+
+        # Derive case_path from slide path
+        slide_path = slide.get("path", "")
+        case_path = "/".join(slide_path.replace("\\", "/").split("/")[:-1]) or "/"
+
+        items.append(
+            WorklistItem(
+                slide_id=slide["id"],
+                slide_name=slide["name"],
+                case_path=case_path,
+                status=status,
+                assigned_date=assigned_date.isoformat(),
+                is_new=is_new,
+            )
+        )
+
+    # Sort by date, most recent first
+    items.sort(key=lambda x: x.assigned_date, reverse=True)
+
+    # Compute counts
+    counts = {s: sum(1 for item in items if item.status == s) for s in statuses}
+
+    return WorklistResponse(items=items, counts=counts)
+
+
+@router.get("/history", tags=["navigation"])
+def get_history(
+    limit: int = Query(20, ge=1, le=100, description="Nombre max d'items à retourner"),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Historique des lames récemment consultées.
+
+    Mock implementation: génère un historique déterministe depuis la liste de lames.
+    Le seed est basé sur le hash du sub utilisateur pour la reproductibilité.
+
+    Args:
+        limit: Nombre maximum d'items (défaut 20, max 100).
+
+    Returns:
+        HistoryResponse avec items et total.
+    """
+    slides = scan_slides_directory()
+
+    # Deterministic seed from user sub
+    seed = int(hashlib.md5(current_user.sub.encode()).hexdigest()[:8], 16) + 42
+    rng = random.Random(seed)
+
+    now = datetime.now(timezone.utc)
+    items = []
+
+    for slide in slides:
+        # viewed_at: random datetime in the last 7 days
+        seconds_ago = rng.randint(0, 7 * 24 * 3600)
+        viewed_at = now - timedelta(seconds=seconds_ago)
+
+        view_count = rng.randint(1, 10)
+
+        items.append(
+            HistoryItem(
+                slide_id=slide["id"],
+                slide_name=slide["name"],
+                viewed_at=viewed_at.isoformat(),
+                view_count=view_count,
+            )
+        )
+
+    # Sort by viewed_at, most recent first
+    items.sort(key=lambda x: x.viewed_at, reverse=True)
+
+    total = len(items)
+    items = items[:limit]
+
+    return HistoryResponse(items=items, total=total)
 
 
 @router.get("/by-name/{slide_name:path}", tags=["pacs-integration"])
