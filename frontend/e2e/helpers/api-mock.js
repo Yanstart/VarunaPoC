@@ -471,6 +471,27 @@ export async function mockMLSimilarity(page) {
 }
 
 /**
+ * Mock cell counting endpoint.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockCellCounting(page) {
+    await page.route('**/api/ml/count/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                total_cells: 1247,
+                positive: 312,
+                negative: 935,
+                ratio: 0.25,
+                percentage: '25.0%',
+                processing_time_ms: 2800,
+            }),
+        }),
+    );
+}
+
+/**
  * Setup all common mocks for a standard test scenario.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
@@ -490,4 +511,5 @@ export async function setupFullMocks(page, mockData) {
     await mockMLFeedback(page);
     await mockMLModels(page);
     await mockMLSimilarity(page);
+    await mockCellCounting(page);
 }

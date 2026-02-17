@@ -46,6 +46,7 @@ import { DrawingTools } from './components/DrawingTools.js';
 import { LayerManager } from './components/LayerManager.js';
 import { DetectionPanel } from './components/DetectionPanel.js';
 import { CountingPanel } from './components/CountingPanel.js';
+import { CellCountingPanel } from './components/CellCountingPanel.js';
 
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
@@ -92,6 +93,9 @@ const appState = {
     /** Phase 3: Auth components */
     loginPage: null,
     userMenu: null,
+
+    /** Wave 4: Cell counting panel */
+    cellCountingPanel: null,
 
     /** Wave 3: Case navigation */
     caseSidebar: null,
@@ -410,6 +414,13 @@ async function showViewerPage(slide) {
             detectionContainer.style.marginTop = '8px';
             mlContainer2.appendChild(detectionContainer);
             appState.detectionPanel = new DetectionPanel(detectionContainer, { slideId: slide.id });
+
+            // Wave 4: Cell Counting Panel
+            const cellCountingContainer = document.createElement('div');
+            cellCountingContainer.id = 'cell-counting-panel-container';
+            cellCountingContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(cellCountingContainer);
+            appState.cellCountingPanel = new CellCountingPanel(cellCountingContainer, { slideId: slide.id });
         }
     }
 
@@ -738,6 +749,11 @@ async function handleSlideSwitch(newSlide) {
     if (appState.detectionPanel && appState.detectionPanel.setSlide) {
         appState.detectionPanel.setSlide(newSlide.id);
     }
+
+    // 8. Reset cell counting panel for new slide
+    if (appState.cellCountingPanel && appState.cellCountingPanel.setSlide) {
+        appState.cellCountingPanel.setSlide(newSlide.id);
+    }
 }
 
 /**
@@ -837,6 +853,10 @@ function cleanup() {
     if (appState.detectionPanel) {
         appState.detectionPanel.destroy();
         appState.detectionPanel = null;
+    }
+    if (appState.cellCountingPanel) {
+        appState.cellCountingPanel.destroy();
+        appState.cellCountingPanel = null;
     }
     if (appState.countingPanel) {
         appState.countingPanel.destroy();

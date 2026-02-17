@@ -68,6 +68,7 @@ markers = [
     "load: Load/performance tests",
     "focus: Focus assist tests",
     "similarity: Similarity search tests",
+    "counting: Cell counting tests",
 ]
 filterwarnings = [
     "error",

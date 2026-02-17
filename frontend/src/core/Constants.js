@@ -102,6 +102,11 @@ export const Events = Object.freeze({
     DETECTION_CONFIRM: 'detection:confirm',
     DETECTION_REJECT: 'detection:reject',
 
+    // Cell counting events (Wave 4)
+    CELL_COUNTING_START: 'cellCounting:start',
+    CELL_COUNTING_COMPLETE: 'cellCounting:complete',
+    CELL_COUNTING_ERROR: 'cellCounting:error',
+
     // Auth events (Phase 3)
     AUTH_LOGIN: 'auth:login',
     AUTH_LOGOUT: 'auth:logout',
