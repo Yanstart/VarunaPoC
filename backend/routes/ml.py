@@ -18,7 +18,7 @@ References:
 import base64
 import logging
 from io import BytesIO
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -296,6 +296,26 @@ class DriftReportResponse(BaseModel):
 
 class AllDriftReportsResponse(BaseModel):
     reports: List[DriftReportResponse]
+
+
+class RetrainingRequest(BaseModel):
+    """Request pour retraining pipeline."""
+
+    dataset_tag: str = Field("latest")
+    config: Optional[Dict[str, Any]] = None
+
+
+class RetrainingResponse(BaseModel):
+    """Response pour retraining pipeline."""
+
+    run_id: str
+    status: str
+    model_name: str
+    dataset_version: str
+    metrics: Dict[str, float]
+    processing_time_ms: float
+    artifact_uri: Optional[str] = None
+    recommendation: str
 
 
 # ============================================================================
@@ -1204,6 +1224,47 @@ async def get_all_drift_reports(
     except Exception as e:
         logger.error(f"Drift detection failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Drift detection error: {e!s}")
+
+
+@router.post("/pipeline/retrain/{model_id}", response_model=RetrainingResponse)
+async def retrain_model(
+    model_id: str,
+    request: RetrainingRequest = RetrainingRequest(),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """
+    Trigger a model retraining pipeline run.
+
+    Pipeline: DVC data versioning -> Slideflow MIL training -> MLflow tracking.
+
+    Requires ADMIN_TECHNIQUE role.
+    """
+    from services.ml.retraining import RetrainingPipelineService
+
+    try:
+        service = RetrainingPipelineService()
+        result = await service.trigger_retraining(
+            model_id=model_id,
+            dataset_tag=request.dataset_tag,
+            config=request.config,
+        )
+
+        return RetrainingResponse(
+            run_id=result.run_id,
+            status=result.status,
+            model_name=result.model_name,
+            dataset_version=result.dataset_version,
+            metrics=result.metrics,
+            processing_time_ms=result.processing_time_ms,
+            artifact_uri=result.artifact_uri,
+            recommendation=result.recommendation,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Retraining pipeline failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Retraining error: {e!s}")
 
 
 @router.post("/feedback/{slide_id}", response_model=FeedbackResponse)
