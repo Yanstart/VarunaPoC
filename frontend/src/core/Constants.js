@@ -130,6 +130,11 @@ export const Events = Object.freeze({
     QUALITY_READY: 'quality:ready',
     QUALITY_ERROR: 'quality:error',
     QUALITY_DISAGREEMENT_TOGGLE: 'quality:disagreementToggle',
+
+    // Drift monitoring events (Wave 4)
+    DRIFT_LOADING: 'drift:loading',
+    DRIFT_READY: 'drift:ready',
+    DRIFT_ERROR: 'drift:error',
 });
 
 /**

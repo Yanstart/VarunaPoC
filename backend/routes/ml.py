@@ -262,6 +262,42 @@ class ClusteringResponse(BaseModel):
     processing_time_ms: float
 
 
+class ArtifactModel(BaseModel):
+    type: str
+    severity: str
+    bbox: List[int]
+    area_percent: float
+
+
+class QualityResponse(BaseModel):
+    overall_score: float = Field(..., ge=0.0, le=1.0)
+    quality_label: str
+    artifacts: List[ArtifactModel]
+    recommendation: str
+    processing_time_ms: float
+
+
+class DriftMetricModel(BaseModel):
+    metric_name: str
+    value: float
+    threshold: float
+    is_drifted: bool
+    window_size: int
+
+
+class DriftReportResponse(BaseModel):
+    model_id: str
+    report_date: str
+    metrics: List[DriftMetricModel]
+    overall_drifted: bool
+    recommendation: str
+    processing_time_ms: float
+
+
+class AllDriftReportsResponse(BaseModel):
+    reports: List[DriftReportResponse]
+
+
 # ============================================================================
 # DEPENDENCIES
 # ============================================================================
@@ -1027,6 +1063,147 @@ async def cluster_slide(
     except Exception as e:
         logger.error(f"Clustering error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Clustering error: {e!s}")
+
+
+@router.get("/quality/{slide_id}", response_model=QualityResponse)
+async def get_slide_quality(
+    slide_id: str,
+    provider=Depends(get_ml_provider),
+    disk_cache: DiskCache = Depends(get_disk_cache),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Controle qualite automatique -- evalue la qualite d'une lame.
+
+    Retourne un score global, un label, une liste d'artefacts detectes
+    et une recommandation.
+    """
+    from services.ml.quality import QualityService
+
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        model_id = (
+            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        )
+
+        service = QualityService()
+        result = service.assess_quality(
+            slide_path=slide_path,
+            disk_cache=disk_cache,
+            model_id=model_id,
+        )
+
+        return QualityResponse(
+            overall_score=result.overall_score,
+            quality_label=result.quality_label,
+            artifacts=[
+                ArtifactModel(
+                    type=a.type,
+                    severity=a.severity,
+                    bbox=a.bbox,
+                    area_percent=a.area_percent,
+                )
+                for a in result.artifacts
+            ],
+            recommendation=result.recommendation,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Quality assessment failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Quality assessment error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Quality assessment error: {e!s}")
+
+
+@router.get("/drift/{model_id}", response_model=DriftReportResponse)
+async def get_drift_report(
+    model_id: str,
+    provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """Get drift report for a specific model."""
+    from services.ml.drift import DriftDetectorService
+
+    try:
+        service = DriftDetectorService()
+        result = service.detect_drift(model_id)
+
+        return DriftReportResponse(
+            model_id=result.model_id,
+            report_date=result.report_date,
+            metrics=[
+                DriftMetricModel(
+                    metric_name=m.metric_name,
+                    value=m.value,
+                    threshold=m.threshold,
+                    is_drifted=m.is_drifted,
+                    window_size=m.window_size,
+                )
+                for m in result.metrics
+            ],
+            overall_drifted=result.overall_drifted,
+            recommendation=result.recommendation,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Drift detection failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Drift detection error: {e!s}")
+
+
+@router.get("/drift", response_model=AllDriftReportsResponse)
+async def get_all_drift_reports(
+    provider=Depends(get_ml_provider),
+    tag_router=Depends(get_tag_router),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """Get drift reports for all loaded models."""
+    from services.ml.drift import DriftDetectorService
+
+    try:
+        service = DriftDetectorService()
+        routes = tag_router.get_all_routes()
+
+        reports = []
+        for route in routes:
+            result = service.detect_drift(route.model_id)
+            reports.append(
+                DriftReportResponse(
+                    model_id=result.model_id,
+                    report_date=result.report_date,
+                    metrics=[
+                        DriftMetricModel(
+                            metric_name=m.metric_name,
+                            value=m.value,
+                            threshold=m.threshold,
+                            is_drifted=m.is_drifted,
+                            window_size=m.window_size,
+                        )
+                        for m in result.metrics
+                    ],
+                    overall_drifted=result.overall_drifted,
+                    recommendation=result.recommendation,
+                    processing_time_ms=result.processing_time_ms,
+                )
+            )
+
+        return AllDriftReportsResponse(reports=reports)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Drift detection failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Drift detection error: {e!s}")
 
 
 @router.post("/feedback/{slide_id}", response_model=FeedbackResponse)

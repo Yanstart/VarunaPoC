@@ -1,0 +1,108 @@
+/**
+ * Quality Badge Styles
+ * Displays slide quality assessment as a colored badge with tooltip.
+ */
+
+.quality-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: help;
+    position: relative;
+    user-select: none;
+}
+
+.quality-badge--good {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+}
+
+.quality-badge--acceptable {
+    background: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+}
+
+.quality-badge--poor {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.quality-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.quality-badge__dot--good {
+    background: #2ecc71;
+}
+
+.quality-badge__dot--acceptable {
+    background: #f1c40f;
+}
+
+.quality-badge__dot--poor {
+    background: #e74c3c;
+}
+
+.quality-badge__label {
+    white-space: nowrap;
+}
+
+/* Tooltip */
+.quality-badge__tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 260px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    color: #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    line-height: 1.5;
+}
+
+.quality-badge__tooltip-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.quality-badge__tooltip-rec {
+    color: #aaa;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.quality-badge__tooltip-section {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #ccc;
+}
+
+.quality-badge__tooltip-list {
+    margin: 0 0 8px 0;
+    padding-left: 16px;
+    list-style: disc;
+}
+
+.quality-badge__tooltip-list li {
+    margin-bottom: 2px;
+    color: #bbb;
+}
+
+.quality-badge__tooltip-time {
+    color: #666;
+    font-size: 11px;
+    border-top: 1px solid #333;
+    padding-top: 6px;
+    margin-top: 4px;
+}

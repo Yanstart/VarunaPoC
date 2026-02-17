@@ -717,6 +717,40 @@ class ApiService {
     }
 
     // ==========================================
+    // SLIDE QUALITY API (Wave 4)
+    // ==========================================
+
+    /**
+     * Get automatic quality assessment for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} Quality result with score, label, artifacts
+     */
+    async getSlideQuality(slideId) {
+        return this.get(`/api/ml/quality/${encodeURIComponent(slideId)}`);
+    }
+
+    // ==========================================
+    // DRIFT MONITORING API (Wave 4)
+    // ==========================================
+
+    /**
+     * Get drift report for a specific model
+     * @param {string} modelId - Model identifier
+     * @returns {Promise<Object>} DriftReportResponse
+     */
+    async getDriftReport(modelId) {
+        return this.get(`/api/ml/drift/${encodeURIComponent(modelId)}`);
+    }
+
+    /**
+     * Get drift reports for all loaded models
+     * @returns {Promise<Object>} AllDriftReportsResponse with reports array
+     */
+    async getAllDriftReports() {
+        return this.get('/api/ml/drift');
+    }
+
+    // ==========================================
     // AUTH API (Phase 3)
     // ==========================================
 
@@ -831,6 +865,27 @@ class ApiService {
      */
     async getDisagreements(slideId, params) {
         return this.post(`/api/quality/${encodeURIComponent(slideId)}/disagreements`, params);
+    }
+
+    // ==========================================
+    // WORKLIST & HISTORY API (Wave 4)
+    // ==========================================
+
+    /**
+     * Get worklist (assigned cases) for the current user
+     * @returns {Promise<Object>} WorklistResponse with items and counts
+     */
+    async getWorklist() {
+        return this.get('/api/slides/worklist', { useCache: false });
+    }
+
+    /**
+     * Get recently viewed slides history
+     * @param {number} [limit=20] - Maximum number of items
+     * @returns {Promise<Object>} HistoryResponse with items and total
+     */
+    async getHistory(limit = 20) {
+        return this.get(`/api/slides/history?limit=${limit}`, { useCache: false });
     }
 
     // ==========================================

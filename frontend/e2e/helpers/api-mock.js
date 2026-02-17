@@ -521,6 +521,114 @@ export async function mockClustering(page) {
 }
 
 /**
+ * Mock slide quality endpoint (Wave 4).
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockSlideQuality(page) {
+    await page.route('**/api/ml/quality/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                overall_score: 0.85,
+                quality_label: 'Bonne',
+                artifacts: [
+                    { type: 'fold', severity: 'minor', bbox: [1000, 2000, 1500, 2500], area_percent: 2.1 },
+                ],
+                recommendation: 'Qualité suffisante pour diagnostic',
+                processing_time_ms: 450,
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock drift report endpoints (Wave 4).
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockDriftReport(page) {
+    await page.route('**/api/ml/drift/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                model_id: 'ctranspath',
+                report_date: '2026-02-17T12:00:00Z',
+                metrics: [
+                    { metric_name: 'mmd', value: 0.08, threshold: 0.10, is_drifted: false, window_size: 100 },
+                    { metric_name: 'ks_statistic', value: 0.12, threshold: 0.15, is_drifted: false, window_size: 100 },
+                ],
+                overall_drifted: false,
+                recommendation: 'No action needed',
+                processing_time_ms: 320,
+            }),
+        }),
+    );
+
+    await page.route('**/api/ml/drift', (route) => {
+        // Only match exact /api/ml/drift (not /api/ml/drift/xxx)
+        const url = route.request().url();
+        if (url.match(/\/api\/ml\/drift\/[^/]+/)) return route.fallback();
+        return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                reports: [{
+                    model_id: 'ctranspath',
+                    report_date: '2026-02-17T12:00:00Z',
+                    metrics: [
+                        { metric_name: 'mmd', value: 0.08, threshold: 0.10, is_drifted: false, window_size: 100 },
+                        { metric_name: 'ks_statistic', value: 0.12, threshold: 0.15, is_drifted: false, window_size: 100 },
+                    ],
+                    overall_drifted: false,
+                    recommendation: 'No action needed',
+                    processing_time_ms: 320,
+                }],
+            }),
+        });
+    });
+}
+
+/**
+ * Mock /api/slides/worklist endpoint
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockWorklist(page) {
+    await page.route('**/api/slides/worklist', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                items: [
+                    { slide_id: 'test-slide-001', slide_name: 'HE_prostate_2024.svs', case_path: '/Cases/Patient_001', status: 'pending', assigned_date: '2026-02-15T10:00:00Z', is_new: true },
+                    { slide_id: 'test-slide-002', slide_name: 'HE_breast_2024.svs', case_path: '/Cases/Patient_002', status: 'in_progress', assigned_date: '2026-02-14T09:00:00Z', is_new: false },
+                ],
+                counts: { pending: 1, in_progress: 1, completed: 0 },
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock /api/slides/history endpoint
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockHistory(page) {
+    await page.route('**/api/slides/history**', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                items: [
+                    { slide_id: 'test-slide-001', slide_name: 'HE_prostate_2024.svs', viewed_at: '2026-02-17T11:30:00Z', view_count: 3 },
+                ],
+                total: 1,
+            }),
+        }),
+    );
+}
+
+/**
  * Setup all common mocks for a standard test scenario.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
@@ -542,4 +650,8 @@ export async function setupFullMocks(page, mockData) {
     await mockMLSimilarity(page);
     await mockCellCounting(page);
     await mockClustering(page);
+    await mockSlideQuality(page);
+    await mockDriftReport(page);
+    await mockWorklist(page);
+    await mockHistory(page);
 }
