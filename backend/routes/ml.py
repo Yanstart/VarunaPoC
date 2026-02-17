@@ -242,6 +242,26 @@ class CountingResponse(BaseModel):
     processing_time_ms: float
 
 
+class ClusterInfoModel(BaseModel):
+    id: int
+    color: str
+    label: str
+    tile_count: int
+    centroid_embedding: List[float] = []
+
+
+class TileAssignmentModel(BaseModel):
+    x: int
+    y: int
+    cluster_id: int
+
+
+class ClusteringResponse(BaseModel):
+    clusters: List[ClusterInfoModel]
+    tile_assignments: List[TileAssignmentModel]
+    processing_time_ms: float
+
+
 # ============================================================================
 # DEPENDENCIES
 # ============================================================================
@@ -950,6 +970,63 @@ async def count_cells(
     except Exception as e:
         logger.error(f"Cell counting error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Cell counting error: {e!s}")
+
+
+@router.post("/cluster/{slide_id}", response_model=ClusteringResponse)
+async def cluster_slide(
+    slide_id: str,
+    n_clusters: int = Query(4, ge=2, le=8, description="Number of clusters"),
+    provider=Depends(get_ml_provider),
+    disk_cache: DiskCache = Depends(get_disk_cache),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Clustering morphologique -- identifie les patterns dans une lame."""
+    from services.ml.clustering import ClusteringService
+
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        model_id = (
+            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        )
+
+        service = ClusteringService()
+        result = service.cluster(
+            slide_path=slide_path,
+            n_clusters=n_clusters,
+            disk_cache=disk_cache,
+            model_id=model_id,
+        )
+
+        return ClusteringResponse(
+            clusters=[
+                ClusterInfoModel(
+                    id=c.id,
+                    color=c.color,
+                    label=c.label,
+                    tile_count=c.tile_count,
+                    centroid_embedding=c.centroid_embedding,
+                )
+                for c in result.clusters
+            ],
+            tile_assignments=[
+                TileAssignmentModel(x=t.x, y=t.y, cluster_id=t.cluster_id)
+                for t in result.tile_assignments
+            ],
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Clustering failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Clustering error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Clustering error: {e!s}")
 
 
 @router.post("/feedback/{slide_id}", response_model=FeedbackResponse)

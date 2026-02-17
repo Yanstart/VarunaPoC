@@ -47,6 +47,8 @@ import { LayerManager } from './components/LayerManager.js';
 import { DetectionPanel } from './components/DetectionPanel.js';
 import { CountingPanel } from './components/CountingPanel.js';
 import { CellCountingPanel } from './components/CellCountingPanel.js';
+import { ClusteringPanel } from './components/ClusteringPanel.js';
+import { ClusteringOverlay } from './components/ClusteringOverlay.js';
 
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
@@ -96,6 +98,10 @@ const appState = {
 
     /** Wave 4: Cell counting panel */
     cellCountingPanel: null,
+
+    /** Wave 4: Clustering */
+    clusteringPanel: null,
+    clusteringOverlay: null,
 
     /** Wave 3: Case navigation */
     caseSidebar: null,
@@ -421,7 +427,19 @@ async function showViewerPage(slide) {
             cellCountingContainer.style.marginTop = '8px';
             mlContainer2.appendChild(cellCountingContainer);
             appState.cellCountingPanel = new CellCountingPanel(cellCountingContainer, { slideId: slide.id });
+
+            // Wave 4: Clustering Panel
+            const clusteringContainer = document.createElement('div');
+            clusteringContainer.id = 'clustering-panel-container';
+            clusteringContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(clusteringContainer);
+            appState.clusteringPanel = new ClusteringPanel(clusteringContainer, { slideId: slide.id });
         }
+    }
+
+    // Wave 4: Clustering Overlay (canvas on OSD viewer)
+    if (viewerInstance) {
+        appState.clusteringOverlay = new ClusteringOverlay(viewerInstance);
     }
 
     // Phase 2: Layer Manager (in info panel)
@@ -754,6 +772,16 @@ async function handleSlideSwitch(newSlide) {
     if (appState.cellCountingPanel && appState.cellCountingPanel.setSlide) {
         appState.cellCountingPanel.setSlide(newSlide.id);
     }
+
+    // 9. Reset clustering panel for new slide
+    if (appState.clusteringPanel && appState.clusteringPanel.setSlide) {
+        appState.clusteringPanel.setSlide(newSlide.id);
+    }
+
+    // 10. Clear clustering overlay for new slide
+    if (appState.clusteringOverlay && appState.clusteringOverlay.clear) {
+        appState.clusteringOverlay.clear();
+    }
 }
 
 /**
@@ -857,6 +885,14 @@ function cleanup() {
     if (appState.cellCountingPanel) {
         appState.cellCountingPanel.destroy();
         appState.cellCountingPanel = null;
+    }
+    if (appState.clusteringPanel) {
+        appState.clusteringPanel.destroy();
+        appState.clusteringPanel = null;
+    }
+    if (appState.clusteringOverlay) {
+        appState.clusteringOverlay.destroy();
+        appState.clusteringOverlay = null;
     }
     if (appState.countingPanel) {
         appState.countingPanel.destroy();

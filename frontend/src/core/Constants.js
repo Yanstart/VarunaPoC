@@ -107,6 +107,13 @@ export const Events = Object.freeze({
     CELL_COUNTING_COMPLETE: 'cellCounting:complete',
     CELL_COUNTING_ERROR: 'cellCounting:error',
 
+    // Clustering events (Wave 4)
+    CLUSTERING_START: 'clustering:start',
+    CLUSTERING_COMPLETE: 'clustering:complete',
+    CLUSTERING_ERROR: 'clustering:error',
+    CLUSTERING_OVERLAY_TOGGLE: 'clustering:overlayToggle',
+    CLUSTERING_OVERLAY_OPACITY: 'clustering:overlayOpacity',
+
     // Auth events (Phase 3)
     AUTH_LOGIN: 'auth:login',
     AUTH_LOGOUT: 'auth:logout',

@@ -69,6 +69,7 @@ markers = [
     "focus: Focus assist tests",
     "similarity: Similarity search tests",
     "counting: Cell counting tests",
+    "clustering: Clustering tests",
 ]
 filterwarnings = [
     "error",

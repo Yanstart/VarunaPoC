@@ -492,6 +492,35 @@ export async function mockCellCounting(page) {
 }
 
 /**
+ * Mock clustering endpoint.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockClustering(page) {
+    await page.route('**/api/ml/cluster/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                clusters: [
+                    { id: 0, color: '#e74c3c', label: 'Cluster A', tile_count: 18, centroid_embedding: [] },
+                    { id: 1, color: '#2ecc71', label: 'Cluster B', tile_count: 22, centroid_embedding: [] },
+                    { id: 2, color: '#3498db', label: 'Cluster C', tile_count: 14, centroid_embedding: [] },
+                    { id: 3, color: '#f39c12', label: 'Cluster D', tile_count: 10, centroid_embedding: [] },
+                ],
+                tile_assignments: [
+                    { x: 0, y: 0, cluster_id: 0 },
+                    { x: 1, y: 0, cluster_id: 1 },
+                    { x: 0, y: 1, cluster_id: 2 },
+                    { x: 1, y: 1, cluster_id: 3 },
+                ],
+                processing_time_ms: 1500,
+                metadata: { mode: 'mock', grid_size: 8, model_id: 'unknown' },
+            }),
+        }),
+    );
+}
+
+/**
  * Setup all common mocks for a standard test scenario.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
@@ -512,4 +541,5 @@ export async function setupFullMocks(page, mockData) {
     await mockMLModels(page);
     await mockMLSimilarity(page);
     await mockCellCounting(page);
+    await mockClustering(page);
 }
