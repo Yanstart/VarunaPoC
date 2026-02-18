@@ -1,0 +1,7 @@
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P self-hosted=catthehacker/ubuntu:act-latest
+--env CI=true
+--env RUNNER_OS=Linux
+--env RUNNER_ARCH=X64
+--secret-file .github/runner/.secrets
+--container-architecture linux/amd64

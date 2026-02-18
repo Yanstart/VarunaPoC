@@ -1,0 +1,14 @@
+{
+  "action": "opened",
+  "number": 999,
+  "pull_request": {
+    "number": 999,
+    "head": {
+      "ref": "feature/test",
+      "sha": "abc1234567890"
+    },
+    "base": {
+      "ref": "main"
+    }
+  }
+}

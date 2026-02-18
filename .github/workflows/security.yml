@@ -31,7 +31,7 @@ jobs:
   # ============================================
   dependency-scan:
     name: Dependency Vulnerability Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     continue-on-error: true  # Informational - don't block PRs
     permissions:
       contents: read
@@ -77,7 +77,7 @@ jobs:
   # ============================================
   python-security:
     name: Python Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     continue-on-error: true  # Informational - don't block PRs
     permissions:
       contents: read
@@ -129,7 +129,7 @@ jobs:
   # ============================================
   javascript-security:
     name: JavaScript Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     continue-on-error: true  # Informational - don't block PRs
     permissions:
       contents: read
@@ -167,7 +167,7 @@ jobs:
   # ============================================
   docker-scan:
     name: Docker Image Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     continue-on-error: true  # Informational - don't block PRs
     permissions:
       contents: read
@@ -192,8 +192,10 @@ jobs:
           push: false
           load: true
           tags: varuna-${{ matrix.component }}:security-scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache/${{ matrix.component }}
+            type=registry,ref=localhost:5000/varuna/${{ matrix.component }}:buildcache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new/${{ matrix.component }},mode=max
 
       - name: Run Trivy vulnerability scanner (Docker image)
         uses: aquasecurity/trivy-action@master
@@ -219,12 +221,18 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
+      - name: Rotate Docker build cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache/${{ matrix.component }}
+          mv /tmp/.buildx-cache-new/${{ matrix.component }} /tmp/.buildx-cache/${{ matrix.component }} 2>/dev/null || true
+
   # ============================================
   # Code Quality & SAST
   # ============================================
   codeql-analysis:
     name: CodeQL Analysis
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     continue-on-error: true  # Informational - don't block PRs
     permissions:
       security-events: write
@@ -259,7 +267,7 @@ jobs:
   # ============================================
   secret-scan:
     name: Secret Scanning
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     # No continue-on-error: secret leaks MUST block merges
     permissions:
       contents: read
@@ -282,7 +290,7 @@ jobs:
   # ============================================
   compliance-check:
     name: HIPAA/GDPR Compliance Check
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     # No continue-on-error: compliance violations MUST block merges
     permissions:
       contents: read
@@ -351,7 +359,7 @@ jobs:
       - codeql-analysis
       - secret-scan
       - compliance-check
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     if: always()
     permissions:
       contents: read
