@@ -158,25 +158,20 @@ jobs:
             type=registry,ref=localhost:5000/varuna/backend:buildcache
           cache-to: type=local,dest=/tmp/.buildx-cache-new/backend,mode=max
 
-      - name: Cleanup stale containers
-        run: docker rm -f test-backend 2>/dev/null || true
-
       - name: Test backend container
         run: |
-          docker run -d --name test-backend \
-            -p 8000:8000 \
-            varuna-backend:ci-test
-
-          # Wait for container to be ready
+          CONTAINER="ci-backend-${{ github.run_id }}"
+          docker rm -f "$CONTAINER" 2>/dev/null || true
+          docker run -d --name "$CONTAINER" -P varuna-backend:ci-test
           sleep 10
-
-          # Health check
-          curl -f http://localhost:8000/api/health || exit 1
+          PORT=$(docker port "$CONTAINER" 8000/tcp | head -1 | cut -d: -f2)
+          curl -f "http://localhost:$PORT/api/health" || \
+            (echo "--- container logs ---" && docker logs "$CONTAINER" && exit 1)
 
       - name: Cleanup
         if: always()
         run: |
-          docker rm -f test-backend 2>/dev/null || true
+          docker rm -f "ci-backend-${{ github.run_id }}" 2>/dev/null || true
           rm -rf /tmp/.buildx-cache/backend
           mv /tmp/.buildx-cache-new/backend /tmp/.buildx-cache/backend 2>/dev/null || true
 
@@ -270,25 +265,20 @@ jobs:
             type=registry,ref=localhost:5000/varuna/frontend:buildcache
           cache-to: type=local,dest=/tmp/.buildx-cache-new/frontend,mode=max
 
-      - name: Cleanup stale containers
-        run: docker rm -f test-frontend 2>/dev/null || true
-
       - name: Test frontend container
         run: |
-          docker run -d --name test-frontend \
-            -p 80:80 \
-            varuna-frontend:ci-test
-
-          # Wait for container to be ready
+          CONTAINER="ci-frontend-${{ github.run_id }}"
+          docker rm -f "$CONTAINER" 2>/dev/null || true
+          docker run -d --name "$CONTAINER" -P varuna-frontend:ci-test
           sleep 10
-
-          # Health check
-          curl -f http://localhost:80/ || exit 1
+          PORT=$(docker port "$CONTAINER" 80/tcp | head -1 | cut -d: -f2)
+          curl -f "http://localhost:$PORT/" || \
+            (echo "--- container logs ---" && docker logs "$CONTAINER" && exit 1)
 
       - name: Cleanup
         if: always()
         run: |
-          docker rm -f test-frontend 2>/dev/null || true
+          docker rm -f "ci-frontend-${{ github.run_id }}" 2>/dev/null || true
           rm -rf /tmp/.buildx-cache/frontend
           mv /tmp/.buildx-cache-new/frontend /tmp/.buildx-cache/frontend 2>/dev/null || true
 
@@ -305,43 +295,38 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cleanup stale containers
-        run: docker rm -f backend frontend 2>/dev/null || true
+        run: |
+          docker rm -f "integ-backend-${{ github.run_id }}" "integ-frontend-${{ github.run_id }}" 2>/dev/null || true
 
       - name: Start backend container
         run: |
           cd backend
           docker build -t varuna-backend:test .
-          docker run -d --name backend \
-            -p 8000:8000 \
-            -e CORS_ORIGINS="http://localhost:80" \
+          docker run -d --name "integ-backend-${{ github.run_id }}" \
+            -P \
+            -e CORS_ORIGINS="*" \
             varuna-backend:test
 
       - name: Start frontend container
         run: |
           cd frontend
-          docker build -t varuna-frontend:test \
-            --build-arg VITE_API_URL=http://localhost:8000 \
-            .
-          docker run -d --name frontend \
-            -p 80:80 \
+          docker build -t varuna-frontend:test .
+          docker run -d --name "integ-frontend-${{ github.run_id }}" \
+            -P \
             varuna-frontend:test
 
-      - name: Wait for services
-        run: sleep 15
-
-      - name: Test backend health
+      - name: Wait for services and test
         run: |
-          curl -f http://localhost:8000/api/health
-          echo "Backend is healthy"
-
-      - name: Test frontend access
-        run: |
-          curl -f http://localhost:80/
-          echo "Frontend is accessible"
+          BE_PORT=$(docker port "integ-backend-${{ github.run_id }}" 8000/tcp | head -1 | cut -d: -f2)
+          FE_PORT=$(docker port "integ-frontend-${{ github.run_id }}" 80/tcp | head -1 | cut -d: -f2)
+          sleep 15
+          curl -f "http://localhost:$BE_PORT/api/health" && echo "Backend healthy"
+          curl -f "http://localhost:$FE_PORT/" && echo "Frontend accessible"
 
       - name: Cleanup
         if: always()
-        run: docker rm -f backend frontend 2>/dev/null || true
+        run: |
+          docker rm -f "integ-backend-${{ github.run_id }}" "integ-frontend-${{ github.run_id }}" 2>/dev/null || true
 
   # ============================================
   # E2E - Playwright Browser Tests
@@ -403,27 +388,30 @@ jobs:
           cd backend
           docker build -t varuna-backend:e2e-test .
 
-      - name: Cleanup stale containers
-        run: docker rm -f e2e-backend 2>/dev/null || true
-
       - name: Start backend container
+        id: e2e-backend
         run: |
-          docker run -d --name e2e-backend \
-            -p 8000:8000 \
-            -e CORS_ORIGINS="http://localhost:5173,http://localhost:80" \
+          CONTAINER="e2e-backend-${{ github.run_id }}"
+          docker rm -f "$CONTAINER" 2>/dev/null || true
+          docker run -d --name "$CONTAINER" -P \
+            -e CORS_ORIGINS="*" \
             varuna-backend:e2e-test
+          PORT=$(docker port "$CONTAINER" 8000/tcp | head -1 | cut -d: -f2)
+          echo "port=$PORT" >> "$GITHUB_OUTPUT"
 
       - name: Wait for backend healthy
         run: |
+          PORT=${{ steps.e2e-backend.outputs.port }}
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
-              echo "Backend is healthy"
+            if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
+              echo "Backend is healthy on port $PORT"
               exit 0
             fi
             echo "Waiting for backend... ($i/30)"
             sleep 2
           done
           echo "Backend failed to start"
+          docker logs "e2e-backend-${{ github.run_id }}"
           exit 1
 
       - name: Run Playwright tests
@@ -433,7 +421,7 @@ jobs:
         env:
           CI: true
           BASE_URL: http://localhost:5173
-          API_URL: http://localhost:8000
+          API_URL: http://localhost:${{ steps.e2e-backend.outputs.port }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -453,7 +441,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker rm -f e2e-backend 2>/dev/null || true
+        run: docker rm -f "e2e-backend-${{ github.run_id }}" 2>/dev/null || true
 
   # ============================================
   # CI Status Check (required for PR merge)
