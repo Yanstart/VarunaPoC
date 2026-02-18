@@ -73,6 +73,28 @@ class AuditEvents:
     SESSION_SAVED = "SESSION_SAVED"
     SESSION_RESTORED = "SESSION_RESTORED"
 
+    # FHIR access events (#109)
+    FHIR_READ = "FHIR_READ"
+    FHIR_SEARCH = "FHIR_SEARCH"
+    FHIR_EXPORT = "FHIR_EXPORT"
+
+    # DICOM events (#109)
+    DICOM_EXPORT = "DICOM_EXPORT"
+    DICOM_QUERY = "DICOM_QUERY"
+    DICOM_RETRIEVE = "DICOM_RETRIEVE"
+
+    # Data access events (#109)
+    DATA_EXPORT = "DATA_EXPORT"
+    DATA_DOWNLOAD = "DATA_DOWNLOAD"
+    DATA_PRINT = "DATA_PRINT"
+
+    # Integration events (#109)
+    EHEALTH_TOKEN_REQUEST = "EHEALTH_TOKEN_REQUEST"
+    EHBOX_MESSAGE_SENT = "EHBOX_MESSAGE_SENT"
+    HL7_MESSAGE_PARSED = "HL7_MESSAGE_PARSED"
+    APSR_GENERATED = "APSR_GENERATED"
+    TERMINOLOGY_LOOKUP = "TERMINOLOGY_LOOKUP"
+
 
 async def log_audit_event(
     event_type: str,
@@ -83,6 +105,9 @@ async def log_audit_event(
     resource_id: str | None = None,
     level: str = "INFO",
     details: dict[str, Any] | None = None,
+    data_classification: str | None = None,
+    legal_basis: str | None = None,
+    retention_years: int | None = None,
 ) -> None:
     """
     Log an audit event to both DB and JSON file.
@@ -96,6 +121,9 @@ async def log_audit_event(
         resource_id: ID of the affected resource
         level: Severity (INFO, WARNING, CRITICAL)
         details: Additional context-specific data
+        data_classification: Data sensitivity (public, internal, confidential, restricted)
+        legal_basis: GDPR legal basis (consent, contract, legal_obligation, etc.)
+        retention_years: Data retention period in years
     """
     event = {
         "id": str(uuid.uuid4()),
@@ -111,6 +139,10 @@ async def log_audit_event(
         "details": details,
         "ip_address": _get_client_ip(request) if request else None,
         "user_agent": request.headers.get("User-Agent", "")[:500] if request else None,
+        # Compliance fields (#109)
+        "data_classification": data_classification,
+        "legal_basis": legal_basis,
+        "retention_years": retention_years,
     }
 
     # Log to Python logger
@@ -178,3 +210,133 @@ def _get_client_ip(request: Request) -> str:
     if request.client:
         return request.client.host
     return "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Audit search (reads from JSONL fallback file)
+# ---------------------------------------------------------------------------
+
+
+def search_audit_events(
+    user_sub: str | None = None,
+    event_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    """
+    Search audit events from the JSONL fallback file.
+
+    Provides a queryable interface to audit logs without requiring
+    a PostgreSQL connection (uses the JSONL fallback file).
+
+    Args:
+        user_sub: Filter by user subject identifier
+        event_type: Filter by event type (from AuditEvents constants)
+        from_date: Filter events after this ISO date (inclusive)
+        to_date: Filter events before this ISO date (inclusive)
+        limit: Maximum number of results (default: 100)
+        offset: Number of results to skip (default: 0)
+
+    Returns:
+        List of matching audit event dicts
+    """
+    results: list[dict[str, Any]] = []
+
+    if not _AUDIT_LOG_FILE.exists():
+        return results
+
+    try:
+        with _AUDIT_LOG_FILE.open("r", encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                # Apply filters
+                if user_sub and event.get("user_sub") != user_sub:
+                    continue
+                if event_type and event.get("event_type") != event_type:
+                    continue
+                if from_date:
+                    ts = event.get("timestamp", "")
+                    if ts < from_date:
+                        continue
+                if to_date:
+                    ts = event.get("timestamp", "")
+                    if ts > to_date:
+                        continue
+
+                results.append(event)
+    except Exception as e:
+        logger.warning(f"Failed to search audit events: {e}")
+
+    # Sort by timestamp descending (most recent first)
+    results.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+
+    # Apply pagination
+    return results[offset : offset + limit]
+
+
+# ---------------------------------------------------------------------------
+# GDPR Article 30 Register
+# ---------------------------------------------------------------------------
+
+# Processing activities register for GDPR compliance
+GDPR_PROCESSING_REGISTER: list[dict[str, Any]] = [
+    {
+        "activity": "Digital Pathology Slide Viewing",
+        "purpose": "Clinical diagnosis and treatment",
+        "legal_basis": "legal_obligation",
+        "data_categories": ["health_data", "patient_identifiers"],
+        "data_subjects": ["patients"],
+        "recipients": ["pathologists", "treating_physicians"],
+        "retention_years": 30,
+        "security_measures": ["encryption", "access_control", "audit_trail"],
+    },
+    {
+        "activity": "ML-Assisted Analysis",
+        "purpose": "Computer-aided diagnosis support",
+        "legal_basis": "legitimate_interest",
+        "data_categories": ["health_data", "slide_images"],
+        "data_subjects": ["patients"],
+        "recipients": ["pathologists"],
+        "retention_years": 30,
+        "security_measures": ["encryption", "access_control", "audit_trail", "anonymization"],
+    },
+    {
+        "activity": "Annotation and Reporting",
+        "purpose": "Pathology reporting and documentation",
+        "legal_basis": "legal_obligation",
+        "data_categories": ["health_data", "diagnostic_conclusions"],
+        "data_subjects": ["patients"],
+        "recipients": ["pathologists", "treating_physicians", "health_insurers"],
+        "retention_years": 30,
+        "security_measures": ["encryption", "access_control", "audit_trail"],
+    },
+    {
+        "activity": "Audit Trail Logging",
+        "purpose": "Security monitoring and regulatory compliance",
+        "legal_basis": "legal_obligation",
+        "data_categories": ["access_logs", "user_identifiers"],
+        "data_subjects": ["system_users"],
+        "recipients": ["system_administrators", "auditors"],
+        "retention_years": 10,
+        "security_measures": ["encryption", "integrity_protection", "access_control"],
+    },
+    {
+        "activity": "eHealth Platform Communication",
+        "purpose": "Secure messaging and identity verification",
+        "legal_basis": "legal_obligation",
+        "data_categories": ["practitioner_identifiers", "health_data"],
+        "data_subjects": ["practitioners", "patients"],
+        "recipients": ["ehealth_platform", "other_practitioners"],
+        "retention_years": 10,
+        "security_measures": ["encryption", "saml_authentication", "audit_trail"],
+    },
+]
