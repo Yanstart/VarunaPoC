@@ -311,12 +311,12 @@ class TestDICOMExportService:
         assert result.processing_time_ms >= 0
 
     def test_export_generates_valid_uid(self):
-        """Export generates a UID starting with '1.2.826.0.1.'."""
+        """Export generates a UID with valid DICOM format (2.25. prefix)."""
         service = DICOMExportService()
         result = service.export(slide_id="test_slide_123")
 
-        assert result.dicom_uid.startswith("1.2.826.0.1.")
-        assert len(result.dicom_uid) > len("1.2.826.0.1.")
+        assert result.dicom_uid.startswith("2.25.")
+        assert len(result.dicom_uid) <= 64  # DICOM UID max length
 
     def test_export_uid_is_deterministic(self):
         """Same slide_id produces same DICOM UID."""

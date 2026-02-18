@@ -268,6 +268,46 @@ try:
 except ImportError:
     print("[INFO] Plugin manager disabled")
 
+# DICOMweb endpoints — WADO-RS, STOW-RS, QIDO-RS, SR, annotations
+try:
+    from routes import dicomweb
+
+    app.include_router(dicomweb.router)
+except ImportError:
+    print("[INFO] DICOMweb module disabled")
+
+# Standards: Integration (eHealth BE, HL7v2, APSR)
+try:
+    from routes import integration
+
+    app.include_router(integration.router)
+except ImportError:
+    print("[INFO] Integration module disabled")
+
+# Standards: Terminology (SNOMED CT, LOINC)
+try:
+    from routes import terminology
+
+    app.include_router(terminology.router)
+except ImportError:
+    print("[INFO] Terminology module disabled")
+
+# Standards: Audit API (search, GDPR register)
+try:
+    from routes import audit_api
+
+    app.include_router(audit_api.router)
+except ImportError:
+    print("[INFO] Audit API module disabled")
+
+# Regional standards — ABDM, SS-MIX2, I18n
+try:
+    from routes import regional
+
+    app.include_router(regional.router)
+except ImportError:
+    print("[INFO] Regional module disabled")
+
 
 @app.get("/", tags=["health"])
 async def root():
