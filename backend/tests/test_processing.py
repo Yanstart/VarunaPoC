@@ -374,9 +374,7 @@ class TestAnnotationOutlierService:
             self._make_annotation("ann-outside", cx=-500, cy=-500, size=100),
         ]
 
-        report = service.detect_outliers(
-            annotations, slide_dimensions=(1000, 1000)
-        )
+        report = service.detect_outliers(annotations, slide_dimensions=(1000, 1000))
 
         outlier_ids = [o.annotation_id for o in report.outliers]
         assert "ann-outside" in outlier_ids

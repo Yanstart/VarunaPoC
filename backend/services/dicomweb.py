@@ -82,54 +82,110 @@ def _generate_mock_jpeg_frame(seed: int) -> bytes:
 
     # Minimal valid JPEG: SOI marker, then a trivially small image
     # This is a 1x1 pixel JPEG constructed from raw bytes
-    jpeg_header = bytes([
-        0xFF, 0xD8,  # SOI
-        0xFF, 0xE0,  # APP0
-        0x00, 0x10,  # Length
-        0x4A, 0x46, 0x49, 0x46, 0x00,  # JFIF\0
-        0x01, 0x01,  # Version 1.1
-        0x00,  # Aspect ratio units (0 = no units)
-        0x00, 0x01,  # X density
-        0x00, 0x01,  # Y density
-        0x00, 0x00,  # No thumbnail
-        0xFF, 0xDB,  # DQT
-        0x00, 0x43,  # Length 67
-        0x00,  # Table 0, 8-bit
-    ])
+    jpeg_header = bytes(
+        [
+            0xFF,
+            0xD8,  # SOI
+            0xFF,
+            0xE0,  # APP0
+            0x00,
+            0x10,  # Length
+            0x4A,
+            0x46,
+            0x49,
+            0x46,
+            0x00,  # JFIF\0
+            0x01,
+            0x01,  # Version 1.1
+            0x00,  # Aspect ratio units (0 = no units)
+            0x00,
+            0x01,  # X density
+            0x00,
+            0x01,  # Y density
+            0x00,
+            0x00,  # No thumbnail
+            0xFF,
+            0xDB,  # DQT
+            0x00,
+            0x43,  # Length 67
+            0x00,  # Table 0, 8-bit
+        ]
+    )
     # Quantization table (all 1s for simplicity)
     qt = bytes([1] * 64)
-    sof = bytes([
-        0xFF, 0xC0,  # SOF0
-        0x00, 0x0B,  # Length 11
-        0x08,  # 8 bits precision
-        0x00, 0x01,  # Height 1
-        0x00, 0x01,  # Width 1
-        0x01,  # 1 component
-        0x01,  # Component ID 1
-        0x11,  # Sampling 1x1
-        0x00,  # Quant table 0
-    ])
+    sof = bytes(
+        [
+            0xFF,
+            0xC0,  # SOF0
+            0x00,
+            0x0B,  # Length 11
+            0x08,  # 8 bits precision
+            0x00,
+            0x01,  # Height 1
+            0x00,
+            0x01,  # Width 1
+            0x01,  # 1 component
+            0x01,  # Component ID 1
+            0x11,  # Sampling 1x1
+            0x00,  # Quant table 0
+        ]
+    )
     # Minimal DHT (Huffman table for DC)
-    dht = bytes([
-        0xFF, 0xC4,  # DHT
-        0x00, 0x1F,  # Length 31
-        0x00,  # DC table 0
-        0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01,
-        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0A, 0x0B,
-    ])
+    dht = bytes(
+        [
+            0xFF,
+            0xC4,  # DHT
+            0x00,
+            0x1F,  # Length 31
+            0x00,  # DC table 0
+            0x00,
+            0x01,
+            0x05,
+            0x01,
+            0x01,
+            0x01,
+            0x01,
+            0x01,
+            0x01,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x02,
+            0x03,
+            0x04,
+            0x05,
+            0x06,
+            0x07,
+            0x08,
+            0x09,
+            0x0A,
+            0x0B,
+        ]
+    )
     # SOS + minimal scan data + EOI
-    sos = bytes([
-        0xFF, 0xDA,  # SOS
-        0x00, 0x08,  # Length 8
-        0x01,  # 1 component
-        0x01,  # Component 1
-        0x00,  # DC/AC table 0/0
-        0x00, 0x3F, 0x00,  # Spectral selection
-        color_byte & 0x7F,  # Scan data byte (seed-derived, avoid 0xFF)
-        0xFF, 0xD9,  # EOI
-    ])
+    sos = bytes(
+        [
+            0xFF,
+            0xDA,  # SOS
+            0x00,
+            0x08,  # Length 8
+            0x01,  # 1 component
+            0x01,  # Component 1
+            0x00,  # DC/AC table 0/0
+            0x00,
+            0x3F,
+            0x00,  # Spectral selection
+            color_byte & 0x7F,  # Scan data byte (seed-derived, avoid 0xFF)
+            0xFF,
+            0xD9,  # EOI
+        ]
+    )
 
     return jpeg_header + qt + sof + dht + sos
 
@@ -148,9 +204,7 @@ class DICOMwebService:
         self._studies: Dict[str, Dict[str, Any]] = {}
         self._series: Dict[str, Dict[str, Any]] = {}
         self._instances: Dict[str, Dict[str, Any]] = {}
-        logger.info(
-            "DICOMweb service initialized (pydicom=%s)", self._has_pydicom
-        )
+        logger.info("DICOMweb service initialized (pydicom=%s)", self._has_pydicom)
 
     # =========================================================================
     # WADO-RS: Retrieve
@@ -341,11 +395,27 @@ class DICOMwebService:
                 )
 
                 # Register in memory
-                self._register_instance(
-                    study_uid, series_uid, instance_uid, inst, now
-                )
+                self._register_instance(study_uid, series_uid, instance_uid, inst, now)
 
-                stored_refs.append({
+                stored_refs.append(
+                    {
+                        "study_uid": study_uid,
+                        "series_uid": series_uid,
+                        "instance_uid": instance_uid,
+                        "url": (
+                            f"/api/dicomweb/studies/{study_uid}"
+                            f"/series/{series_uid}"
+                            f"/instances/{instance_uid}"
+                        ),
+                    }
+                )
+        else:
+            # No instances provided, just register an empty study
+            series_uid = _generate_uid(f"series.{study_uid}.default")
+            instance_uid = _generate_uid(f"instance.{study_uid}.default")
+            self._register_instance(study_uid, series_uid, instance_uid, {}, now)
+            stored_refs.append(
+                {
                     "study_uid": study_uid,
                     "series_uid": series_uid,
                     "instance_uid": instance_uid,
@@ -354,24 +424,8 @@ class DICOMwebService:
                         f"/series/{series_uid}"
                         f"/instances/{instance_uid}"
                     ),
-                })
-        else:
-            # No instances provided, just register an empty study
-            series_uid = _generate_uid(f"series.{study_uid}.default")
-            instance_uid = _generate_uid(f"instance.{study_uid}.default")
-            self._register_instance(
-                study_uid, series_uid, instance_uid, {}, now
+                }
             )
-            stored_refs.append({
-                "study_uid": study_uid,
-                "series_uid": series_uid,
-                "instance_uid": instance_uid,
-                "url": (
-                    f"/api/dicomweb/studies/{study_uid}"
-                    f"/series/{series_uid}"
-                    f"/instances/{instance_uid}"
-                ),
-            })
 
         return {
             "status": "success",
@@ -397,9 +451,7 @@ class DICOMwebService:
                 "study_uid": study_uid,
                 "patient_name": metadata.get("patient_name", "ANONYMOUS"),
                 "patient_id": metadata.get("patient_id", "UNKNOWN"),
-                "study_date": metadata.get(
-                    "study_date", timestamp.strftime("%Y%m%d")
-                ),
+                "study_date": metadata.get("study_date", timestamp.strftime("%Y%m%d")),
                 "modality": "SM",
                 "series_uids": [],
                 "created_at": ts_str,
@@ -413,9 +465,7 @@ class DICOMwebService:
                 "series_uid": series_uid,
                 "study_uid": study_uid,
                 "modality": "SM",
-                "series_description": metadata.get(
-                    "series_description", "WSI Series"
-                ),
+                "series_description": metadata.get("series_description", "WSI Series"),
                 "instance_uids": [],
                 "created_at": ts_str,
             }
@@ -464,9 +514,7 @@ class DICOMwebService:
 
         for _study_uid, study in self._studies.items():
             # Apply filters
-            if patient_name and patient_name.upper() not in study.get(
-                "patient_name", ""
-            ).upper():
+            if patient_name and patient_name.upper() not in study.get("patient_name", "").upper():
                 continue
             if patient_id and study.get("patient_id") != patient_id:
                 continue
@@ -534,9 +582,7 @@ class DICOMwebService:
             # Patient Name
             "00100010": {
                 "vr": "PN",
-                "Value": [
-                    {"Alphabetic": study.get("patient_name", "ANONYMOUS")}
-                ],
+                "Value": [{"Alphabetic": study.get("patient_name", "ANONYMOUS")}],
             },
             # Patient ID
             "00100020": {
@@ -560,9 +606,7 @@ class DICOMwebService:
             },
         }
 
-    def _series_to_dicom_json(
-        self, series: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _series_to_dicom_json(self, series: Dict[str, Any]) -> Dict[str, Any]:
         """Convert internal series dict to DICOM JSON format."""
         return {
             # Series Instance UID
@@ -583,16 +627,12 @@ class DICOMwebService:
             # Series Description
             "0008103E": {
                 "vr": "LO",
-                "Value": [
-                    series.get("series_description", "WSI Series")
-                ],
+                "Value": [series.get("series_description", "WSI Series")],
             },
             # Number of Instances
             "00201209": {
                 "vr": "IS",
-                "Value": [
-                    str(len(series.get("instance_uids", [])))
-                ],
+                "Value": [str(len(series.get("instance_uids", [])))],
             },
         }
 
@@ -602,37 +642,37 @@ class DICOMwebService:
         for i in range(3):
             seed_text = f"mock_study_{i}"
             study_uid = _generate_uid(seed_text)
-            mock_studies.append({
-                "0020000D": {
-                    "vr": "UI",
-                    "Value": [study_uid],
-                },
-                "00100010": {
-                    "vr": "PN",
-                    "Value": [{"Alphabetic": f"PATIENT^MOCK_{i}"}],
-                },
-                "00100020": {
-                    "vr": "LO",
-                    "Value": [f"PAT{i:05d}"],
-                },
-                "00080020": {
-                    "vr": "DA",
-                    "Value": ["20250101"],
-                },
-                "00080060": {
-                    "vr": "CS",
-                    "Value": ["SM"],
-                },
-                "00201206": {
-                    "vr": "IS",
-                    "Value": ["1"],
-                },
-            })
+            mock_studies.append(
+                {
+                    "0020000D": {
+                        "vr": "UI",
+                        "Value": [study_uid],
+                    },
+                    "00100010": {
+                        "vr": "PN",
+                        "Value": [{"Alphabetic": f"PATIENT^MOCK_{i}"}],
+                    },
+                    "00100020": {
+                        "vr": "LO",
+                        "Value": [f"PAT{i:05d}"],
+                    },
+                    "00080020": {
+                        "vr": "DA",
+                        "Value": ["20250101"],
+                    },
+                    "00080060": {
+                        "vr": "CS",
+                        "Value": ["SM"],
+                    },
+                    "00201206": {
+                        "vr": "IS",
+                        "Value": ["1"],
+                    },
+                }
+            )
         return mock_studies
 
-    def _generate_mock_series(
-        self, study_uid: str
-    ) -> List[Dict[str, Any]]:
+    def _generate_mock_series(self, study_uid: str) -> List[Dict[str, Any]]:
         """Generate mock series results for a study."""
         series_uid = _generate_uid(f"series.{study_uid}.0")
         return [

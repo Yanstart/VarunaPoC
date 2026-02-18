@@ -62,9 +62,7 @@ async def export_dicom(slide_id: str, anonymize: bool = True):
         }
     except Exception as e:
         logger.error("DICOM export failed for %s: %s", slide_id, e)
-        raise HTTPException(
-            status_code=500, detail=f"DICOM export failed: {e!s}"
-        )
+        raise HTTPException(status_code=500, detail=f"DICOM export failed: {e!s}")
 
 
 @router.get("/dicom/{slide_id}/status")

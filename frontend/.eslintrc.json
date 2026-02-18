@@ -4,6 +4,9 @@
     "es2021": true,
     "node": true
   },
+  "globals": {
+    "OpenSeadragon": "readonly"
+  },
   "extends": [
     "eslint:recommended"
   ],

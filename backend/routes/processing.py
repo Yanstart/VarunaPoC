@@ -96,9 +96,7 @@ class OutlierRequest(BaseModel):
     slide_dimensions: Optional[Tuple[int, int]] = Field(
         None, description="Slide (width, height) in pixels for position checks"
     )
-    mock: bool = Field(
-        False, description="If true, generate sample mock outlier results"
-    )
+    mock: bool = Field(False, description="If true, generate sample mock outlier results")
 
 
 class OutlierScoreResponse(BaseModel):
@@ -143,10 +141,7 @@ async def batch_extract_tiles(
         raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
 
     # Convert request regions to service dataclass
-    regions = [
-        TileRegion(x=r.x, y=r.y, level=r.level, w=r.w, h=r.h)
-        for r in request.regions
-    ]
+    regions = [TileRegion(x=r.x, y=r.y, level=r.level, w=r.w, h=r.h) for r in request.regions]
 
     try:
         service = BatchTileService()
@@ -206,10 +201,7 @@ async def normalize_slide(
                 tiles.append(tile)
         else:
             # Default: create a few mock tiles
-            tiles = [
-                np.random.randint(100, 220, (256, 256, 3), dtype=np.uint8)
-                for _ in range(3)
-            ]
+            tiles = [np.random.randint(100, 220, (256, 256, 3), dtype=np.uint8) for _ in range(3)]
 
         # Normalize
         _normalized_tiles, norm_result = norm_service.normalize_batch(

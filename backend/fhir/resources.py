@@ -51,30 +51,32 @@ def _build_contained_resources(
     specimen_ref_id = f"specimen-{_deterministic_id(slide_id)}"
 
     if patient_id:
-        patient_names = (
-            [{"use": "official", "text": patient_name}] if patient_name else []
+        patient_names = [{"use": "official", "text": patient_name}] if patient_name else []
+        contained.append(
+            {
+                "resourceType": "Patient",
+                "id": patient_ref_id,
+                "identifier": [
+                    {"system": "http://hospital.example.org/patients", "value": patient_id}
+                ],
+                "name": patient_names,
+            }
         )
-        contained.append({
-            "resourceType": "Patient",
-            "id": patient_ref_id,
-            "identifier": [
-                {"system": "http://hospital.example.org/patients", "value": patient_id}
-            ],
-            "name": patient_names,
-        })
 
     if performer_name:
-        contained.append({
-            "resourceType": "Practitioner",
-            "id": practitioner_ref_id,
-            "identifier": [
-                {
-                    "system": "http://hospital.example.org/practitioners",
-                    "value": performer_sub or "unknown",
-                }
-            ],
-            "name": [{"use": "official", "text": performer_name}],
-        })
+        contained.append(
+            {
+                "resourceType": "Practitioner",
+                "id": practitioner_ref_id,
+                "identifier": [
+                    {
+                        "system": "http://hospital.example.org/practitioners",
+                        "value": performer_sub or "unknown",
+                    }
+                ],
+                "name": [{"use": "official", "text": performer_name}],
+            }
+        )
 
     specimen = {
         "resourceType": "Specimen",
@@ -120,10 +122,12 @@ def _build_result_references(
 
     if result_observations:
         for obs in result_observations:
-            refs.append({
-                "reference": f"Observation/{obs.get('id', 'unknown')}",
-                "display": obs.get("code", {}).get("text", "Observation"),
-            })
+            refs.append(
+                {
+                    "reference": f"Observation/{obs.get('id', 'unknown')}",
+                    "display": obs.get("code", {}).get("text", "Observation"),
+                }
+            )
 
     if ml_tags:
         from fhir.profiles import map_ml_tags_to_tumor_markers
@@ -134,10 +138,12 @@ def _build_result_references(
             slide_id=slide_id,
         )
         for marker in markers:
-            refs.append({
-                "reference": f"Observation/{marker['id']}",
-                "display": marker.get("code", {}).get("text", "Tumor marker"),
-            })
+            refs.append(
+                {
+                    "reference": f"Observation/{marker['id']}",
+                    "display": marker.get("code", {}).get("text", "Tumor marker"),
+                }
+            )
 
     return refs or None
 
@@ -183,12 +189,15 @@ def build_diagnostic_report(
     now = _now_iso()
 
     # Build contained resources
-    contained, patient_ref_id, practitioner_ref_id, specimen_ref_id = (
-        _build_contained_resources(
-            slide_id, patient_id, patient_name,
-            performer_name, performer_sub,
-            specimen_type, specimen_collection_method, now,
-        )
+    contained, patient_ref_id, practitioner_ref_id, specimen_ref_id = _build_contained_resources(
+        slide_id,
+        patient_id,
+        patient_name,
+        performer_name,
+        performer_sub,
+        specimen_type,
+        specimen_collection_method,
+        now,
     )
 
     report: dict[str, Any] = {
@@ -229,9 +238,8 @@ def build_diagnostic_report(
                 "display": specimen_type or "Tissue specimen",
             }
         ],
-        "conclusion": conclusion or (
-            f"Digital pathology review. {annotations_count} annotation(s) recorded."
-        ),
+        "conclusion": conclusion
+        or (f"Digital pathology review. {annotations_count} annotation(s) recorded."),
         "media": [
             {
                 "comment": f"Whole Slide Image: {slide_name}",
@@ -262,13 +270,14 @@ def build_diagnostic_report(
 
     # Performer reference
     if performer_name:
-        report["performer"] = [
-            {"reference": f"#{practitioner_ref_id}", "display": performer_name}
-        ]
+        report["performer"] = [{"reference": f"#{practitioner_ref_id}", "display": performer_name}]
 
     # Result observation references
     result_refs = _build_result_references(
-        result_observations, ml_tags, patient_id, slide_id,
+        result_observations,
+        ml_tags,
+        patient_id,
+        slide_id,
     )
     if result_refs:
         report["result"] = result_refs
@@ -305,16 +314,10 @@ def search_diagnostic_reports(
     filtered = reports
 
     if patient_id:
-        filtered = [
-            r for r in filtered
-            if _report_matches_patient(r, patient_id)
-        ]
+        filtered = [r for r in filtered if _report_matches_patient(r, patient_id)]
 
     if status:
-        filtered = [
-            r for r in filtered
-            if r.get("status") == status
-        ]
+        filtered = [r for r in filtered if r.get("status") == status]
 
     return {
         "resourceType": "Bundle",

@@ -127,9 +127,7 @@ class DICOMAnnotationService:
             features = self._generate_mock_features(seed)
 
         # Group features by label
-        groups = self._group_features_by_label(
-            features, annotation_label
-        )
+        groups = self._group_features_by_label(features, annotation_label)
 
         # Convert groups to DICOM annotation groups
         annotation_groups = []
@@ -137,16 +135,12 @@ class DICOMAnnotationService:
         graphic_type_counts: Dict[str, int] = {}
 
         for group_label, group_features in groups.items():
-            dicom_group = self._convert_annotation_group(
-                group_label, group_features, slide_id
-            )
+            dicom_group = self._convert_annotation_group(group_label, group_features, slide_id)
             annotation_groups.append(dicom_group)
 
             for feat_info in dicom_group.get("annotations", []):
                 graphic_type = feat_info.get("graphic_type", "UNKNOWN")
-                graphic_type_counts[graphic_type] = (
-                    graphic_type_counts.get(graphic_type, 0) + 1
-                )
+                graphic_type_counts[graphic_type] = graphic_type_counts.get(graphic_type, 0) + 1
                 total_points += len(feat_info.get("point_coordinates", []))
 
         elapsed = (time.time() - start) * 1000
@@ -236,17 +230,11 @@ class DICOMAnnotationService:
                 "meaning": "Anatomical structure",
             },
             "number_of_annotations": len(annotations),
-            "graphic_type": (
-                annotations[0]["graphic_type"]
-                if annotations
-                else "POLYGON"
-            ),
+            "graphic_type": (annotations[0]["graphic_type"] if annotations else "POLYGON"),
             "annotations": annotations,
         }
 
-    def _convert_feature(
-        self, feature: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def _convert_feature(self, feature: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Convert a single GeoJSON Feature to DICOM annotation format.
 
         Extracts geometry coordinates and maps GeoJSON geometry type
@@ -339,9 +327,7 @@ class DICOMAnnotationService:
                 points.extend(c[:2] for c in ring if len(c) >= 2)
         return points
 
-    def _extract_measurements(
-        self, properties: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def _extract_measurements(self, properties: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extract measurement values from GeoJSON feature properties.
 
         Looks for common measurement properties like area, perimeter,
@@ -363,17 +349,17 @@ class DICOMAnnotationService:
 
         for key, meta in measurement_keys.items():
             if key in properties:
-                measurements.append({
-                    "name": meta["meaning"],
-                    "value": float(properties[key]),
-                    "unit": meta["unit"],
-                })
+                measurements.append(
+                    {
+                        "name": meta["meaning"],
+                        "value": float(properties[key]),
+                        "unit": meta["unit"],
+                    }
+                )
 
         return measurements
 
-    def _map_label_to_property_type(
-        self, label: str
-    ) -> Dict[str, str]:
+    def _map_label_to_property_type(self, label: str) -> Dict[str, str]:
         """Map an annotation label to a DICOM Annotation Property Type code.
 
         Args:
@@ -414,19 +400,20 @@ class DICOMAnnotationService:
                 "meaning": "Mitotic figure",
             },
         }
-        return mapping.get(label.lower(), {
-            "code_value": "404684003",
-            "coding_scheme": "SCT",
-            "meaning": f"Finding ({label})",
-        })
+        return mapping.get(
+            label.lower(),
+            {
+                "code_value": "404684003",
+                "coding_scheme": "SCT",
+                "meaning": f"Finding ({label})",
+            },
+        )
 
     # =========================================================================
     # Mock Data Generation
     # =========================================================================
 
-    def _generate_mock_features(
-        self, seed: int
-    ) -> List[Dict[str, Any]]:
+    def _generate_mock_features(self, seed: int) -> List[Dict[str, Any]]:
         """Generate mock GeoJSON features from a seed.
 
         Creates a small set of deterministic features for testing.
@@ -469,22 +456,26 @@ class DICOMAnnotationService:
                 h = (s % 300) + 100
                 geometry = {
                     "type": "Polygon",
-                    "coordinates": [[
-                        [cx, cy],
-                        [cx + w, cy],
-                        [cx + w, cy + h],
-                        [cx, cy + h],
-                        [cx, cy],
-                    ]],
+                    "coordinates": [
+                        [
+                            [cx, cy],
+                            [cx + w, cy],
+                            [cx + w, cy + h],
+                            [cx, cy + h],
+                            [cx, cy],
+                        ]
+                    ],
                 }
 
-            features.append({
-                "type": "Feature",
-                "geometry": geometry,
-                "properties": {
-                    "label": label,
-                    "confidence": round(0.5 + (s % 50) / 100.0, 3),
-                },
-            })
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": geometry,
+                    "properties": {
+                        "label": label,
+                        "confidence": round(0.5 + (s % 50) / 100.0, 3),
+                    },
+                }
+            )
 
         return features

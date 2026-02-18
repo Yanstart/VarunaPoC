@@ -390,9 +390,7 @@ class TestDetectVentanaBIF:
 
         import openslide
 
-        mock_os_cls.side_effect = openslide.OpenSlideError(
-            'Bad direction attribute "LEFT"'
-        )
+        mock_os_cls.side_effect = openslide.OpenSlideError('Bad direction attribute "LEFT"')
 
         fd = FormatDetector()
         result = fd.detect_format(bif)

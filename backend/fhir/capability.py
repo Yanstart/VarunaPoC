@@ -53,9 +53,7 @@ def build_capability_statement(
         "rest": [
             {
                 "mode": "server",
-                "documentation": (
-                    "RESTful FHIR server for digital pathology diagnostic reports."
-                ),
+                "documentation": ("RESTful FHIR server for digital pathology diagnostic reports."),
                 "security": {
                     "cors": True,
                     "service": [
@@ -73,9 +71,7 @@ def build_capability_statement(
                             "text": "OAuth2 using SMART-on-FHIR profile",
                         }
                     ],
-                    "description": (
-                        "Supports SMART on FHIR EHR launch and standalone launch."
-                    ),
+                    "description": ("Supports SMART on FHIR EHR launch and standalone launch."),
                 },
                 "resource": [
                     {
@@ -117,14 +113,10 @@ def build_capability_statement(
                     {
                         "type": "Patient",
                         "profile": (
-                            "http://hl7.org/fhir/us/core/StructureDefinition"
-                            "/us-core-patient"
+                            "http://hl7.org/fhir/us/core/StructureDefinition" "/us-core-patient"
                         ),
                         "supportedProfile": [
-                            (
-                                "http://hl7.org/fhir/ca/core/StructureDefinition"
-                                "/profile-patient"
-                            ),
+                            ("http://hl7.org/fhir/ca/core/StructureDefinition" "/profile-patient"),
                         ],
                         "interaction": [
                             {"code": "read"},
@@ -133,8 +125,7 @@ def build_capability_statement(
                     {
                         "type": "Observation",
                         "profile": (
-                            "http://hl7.org/fhir/us/mcode/StructureDefinition"
-                            "/mcode-tumor-marker"
+                            "http://hl7.org/fhir/us/mcode/StructureDefinition" "/mcode-tumor-marker"
                         ),
                         "interaction": [
                             {"code": "read"},

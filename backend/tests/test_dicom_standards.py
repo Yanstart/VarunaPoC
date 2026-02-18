@@ -122,9 +122,7 @@ class TestDICOMExportService:
         from services.dicom_export import DICOMExportService
 
         svc = DICOMExportService()
-        result = svc.export(
-            "slide_named", patient_name="Jane Doe", anonymize=False
-        )
+        result = svc.export("slide_named", patient_name="Jane Doe", anonymize=False)
 
         assert result.metadata["patient"]["patient_name"] == "Jane Doe"
 
@@ -192,9 +190,7 @@ class TestDICOMwebWADORS:
         from services.dicomweb import DICOMwebService
 
         svc = DICOMwebService()
-        metadata = svc.retrieve_instance_metadata(
-            "1.2.3.4", "1.2.3.5", "1.2.3.6"
-        )
+        metadata = svc.retrieve_instance_metadata("1.2.3.4", "1.2.3.5", "1.2.3.6")
 
         assert isinstance(metadata, list)
         assert len(metadata) == 1
@@ -307,9 +303,7 @@ class TestDICOMwebSTOWRS:
             {"series_uid": "1.2.3.10", "instance_uid": "1.2.3.100"},
             {"series_uid": "1.2.3.10", "instance_uid": "1.2.3.101"},
         ]
-        result = svc.store_instances(
-            study_uid="1.2.3.50", instances_data=instances
-        )
+        result = svc.store_instances(study_uid="1.2.3.50", instances_data=instances)
 
         assert result["stored_count"] == 2
         assert result["stored_instances"][0]["instance_uid"] == "1.2.3.100"
@@ -322,18 +316,14 @@ class TestDICOMwebSTOWRS:
         svc = DICOMwebService()
         svc.store_instances(
             study_uid="1.2.3.777",
-            instances_data=[
-                {"patient_name": "TESTPATIENT", "patient_id": "TP001"}
-            ],
+            instances_data=[{"patient_name": "TESTPATIENT", "patient_id": "TP001"}],
         )
 
         results = svc.search_studies(patient_id="TP001")
         assert len(results) >= 1
 
         # Check the study UID is in results
-        study_uids = [
-            r["0020000D"]["Value"][0] for r in results
-        ]
+        study_uids = [r["0020000D"]["Value"][0] for r in results]
         assert "1.2.3.777" in study_uids
 
 
@@ -529,9 +519,7 @@ class TestDICOMSR:
 
         # Check for SCOORD in children
         scoord_items = [
-            child
-            for child in groups[0]["content_items"]
-            if child.get("value_type") == "SCOORD"
+            child for child in groups[0]["content_items"] if child.get("value_type") == "SCOORD"
         ]
         assert len(scoord_items) == 1
         assert scoord_items[0]["graphic_type"] == "POLYLINE"
@@ -647,9 +635,7 @@ class TestDICOMAnnotations:
         from services.dicom_annotations import DICOMAnnotationService
 
         svc = DICOMAnnotationService()
-        result = svc.convert_geojson_to_dicom(
-            "slide_ann_01", self._sample_geojson()
-        )
+        result = svc.convert_geojson_to_dicom("slide_ann_01", self._sample_geojson())
 
         assert result["instance_uid"].startswith("2.25.")
         assert result["sop_class_uid"] == "1.2.840.10008.5.1.4.1.1.91.1"
@@ -662,9 +648,7 @@ class TestDICOMAnnotations:
         from services.dicom_annotations import DICOMAnnotationService
 
         svc = DICOMAnnotationService()
-        result = svc.convert_geojson_to_dicom(
-            "slide_grp", self._sample_geojson()
-        )
+        result = svc.convert_geojson_to_dicom("slide_grp", self._sample_geojson())
 
         groups = result["annotation_groups"]
         labels = {g["annotation_group_label"] for g in groups}
@@ -683,9 +667,7 @@ class TestDICOMAnnotations:
                     "type": "Feature",
                     "geometry": {
                         "type": "Polygon",
-                        "coordinates": [
-                            [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]
-                        ],
+                        "coordinates": [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]],
                     },
                     "properties": {"label": "region"},
                 },
@@ -754,9 +736,7 @@ class TestDICOMAnnotations:
         from services.dicom_annotations import DICOMAnnotationService
 
         svc = DICOMAnnotationService()
-        result = svc.convert_geojson_to_dicom(
-            "slide_stats", self._sample_geojson()
-        )
+        result = svc.convert_geojson_to_dicom("slide_stats", self._sample_geojson())
 
         stats = result["conversion_stats"]
         assert stats["total_features"] == 3
@@ -824,12 +804,8 @@ class TestDICOMAnnotations:
         from services.dicom_annotations import DICOMAnnotationService
 
         svc = DICOMAnnotationService()
-        r1 = svc.convert_geojson_to_dicom(
-            "slide_det_uid", self._sample_geojson()
-        )
-        r2 = svc.convert_geojson_to_dicom(
-            "slide_det_uid", self._sample_geojson()
-        )
+        r1 = svc.convert_geojson_to_dicom("slide_det_uid", self._sample_geojson())
+        r2 = svc.convert_geojson_to_dicom("slide_det_uid", self._sample_geojson())
         assert r1["instance_uid"] == r2["instance_uid"]
 
 
@@ -859,9 +835,7 @@ class TestUIDGeneration:
         for seed in ["test", "slide_123", "a.b.c"]:
             uid = _generate_uid(seed)
             for char in uid:
-                assert char in "0123456789.", (
-                    f"Invalid character '{char}' in UID: {uid}"
-                )
+                assert char in "0123456789.", f"Invalid character '{char}' in UID: {uid}"
 
     def test_uid_starts_with_2_25(self):
         """UIDs use the 2.25. OID prefix."""
@@ -893,9 +867,7 @@ class TestDICOMwebRoutes:
 
     def test_wado_rs_metadata(self):
         """GET instance metadata returns 200 with DICOM JSON."""
-        resp = self.client.get(
-            "/api/dicomweb/studies/1.2.3/series/1.2.4/instances/1.2.5"
-        )
+        resp = self.client.get("/api/dicomweb/studies/1.2.3/series/1.2.4/instances/1.2.5")
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)
@@ -904,8 +876,7 @@ class TestDICOMwebRoutes:
     def test_wado_rs_frame(self):
         """GET frame returns 200 with multipart content."""
         resp = self.client.get(
-            "/api/dicomweb/studies/1.2.3/series/1.2.4"
-            "/instances/1.2.5/frames/1"
+            "/api/dicomweb/studies/1.2.3/series/1.2.4" "/instances/1.2.5/frames/1"
         )
         assert resp.status_code == 200
         assert "multipart/related" in resp.headers["content-type"]
@@ -913,8 +884,7 @@ class TestDICOMwebRoutes:
     def test_wado_rs_frame_invalid_number(self):
         """GET frame with number < 1 returns 400."""
         resp = self.client.get(
-            "/api/dicomweb/studies/1.2.3/series/1.2.4"
-            "/instances/1.2.5/frames/0"
+            "/api/dicomweb/studies/1.2.3/series/1.2.4" "/instances/1.2.5/frames/0"
         )
         assert resp.status_code == 400
 
@@ -941,9 +911,7 @@ class TestDICOMwebRoutes:
 
     def test_qido_rs_search_series(self):
         """GET search series returns 200."""
-        resp = self.client.get(
-            "/api/dicomweb/studies/1.2.3.999/series"
-        )
+        resp = self.client.get("/api/dicomweb/studies/1.2.3.999/series")
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)

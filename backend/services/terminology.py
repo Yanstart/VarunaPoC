@@ -309,8 +309,7 @@ class TerminologyService:
             "status": "active",
             "content": "fragment",
             "description": (
-                "Subset of SNOMED CT codes used by VarunaPoC for "
-                "digital pathology annotations."
+                "Subset of SNOMED CT codes used by VarunaPoC for " "digital pathology annotations."
             ),
             "valueSet": "http://varuna.local/fhir/ValueSet/snomed-pathology",
             "count": len(concepts),
@@ -356,8 +355,7 @@ class TerminologyService:
             "status": "active",
             "content": "fragment",
             "description": (
-                "Subset of LOINC codes used by VarunaPoC for "
-                "pathology laboratory procedures."
+                "Subset of LOINC codes used by VarunaPoC for " "pathology laboratory procedures."
             ),
             "count": len(concepts),
             "concept": concepts,

@@ -133,8 +133,7 @@ class OMETIFFReader(ISlideReader):
         """Open an OME-TIFF file."""
         if not _HAS_TIFFFILE:
             raise RuntimeError(
-                "OMETIFFReader requires the tifffile package. "
-                "Install with: pip install tifffile"
+                "OMETIFFReader requires the tifffile package. " "Install with: pip install tifffile"
             )
 
         if not Path(path).exists():
@@ -179,9 +178,7 @@ class OMETIFFReader(ISlideReader):
             raise RuntimeError("Slide not open")
 
         if level < 0 or level >= len(self._levels):
-            raise ValueError(
-                f"Level {level} out of range [0, {len(self._levels) - 1}]"
-            )
+            raise ValueError(f"Level {level} out of range [0, {len(self._levels) - 1}]")
 
         try:
             data = self._levels[level].asarray()  # type: ignore[union-attr]
@@ -273,11 +270,7 @@ class OMETIFFReader(ISlideReader):
         thumb = img[::step_y, ::step_x]
 
         # Convert to RGB
-        thumb_rgb = (
-            np.stack([thumb, thumb, thumb], axis=-1)
-            if thumb.ndim == 2
-            else thumb[:, :, :3]
-        )
+        thumb_rgb = np.stack([thumb, thumb, thumb], axis=-1) if thumb.ndim == 2 else thumb[:, :, :3]
 
         return thumb_rgb.astype(np.uint8)
 

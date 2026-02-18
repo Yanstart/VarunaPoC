@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # Models
 # ---------------------------------------------------------------------------
 
+
 class SMARTConfiguration(BaseModel):
     """SMART on FHIR .well-known/smart-configuration response."""
 
@@ -81,6 +82,7 @@ class SMARTLaunchContext(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _deterministic_id(seed: str, prefix: str = "mock") -> str:
     """Génère un identifiant déterministe à partir d'un seed (pour le mode mock)."""

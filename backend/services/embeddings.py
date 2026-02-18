@@ -97,8 +97,7 @@ class EmbeddingService:
 
         if model not in self.SUPPORTED_MODELS:
             raise ValueError(
-                f"Unknown model: {model}. "
-                f"Supported: {list(self.SUPPORTED_MODELS.keys())}"
+                f"Unknown model: {model}. " f"Supported: {list(self.SUPPORTED_MODELS.keys())}"
             )
 
         model_info = self.SUPPORTED_MODELS[model]

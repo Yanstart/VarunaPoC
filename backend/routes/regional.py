@@ -73,11 +73,13 @@ def get_i18n_service() -> I18nService:
 
 class ABHAValidationRequest(BaseModel):
     """Requête de validation d'un numéro ABHA."""
+
     abha_number: str = Field(..., description="Numéro ABHA à 14 chiffres")
 
 
 class FHIRBundleRequest(BaseModel):
     """Requête de génération de bundle FHIR ABDM."""
+
     abha_number: str = Field(..., description="Numéro ABHA du patient")
     slide_id: str = Field(..., description="Identifiant de la lame")
     diagnosis: Optional[str] = Field(None, description="Diagnostic textuel")
@@ -85,22 +87,23 @@ class FHIRBundleRequest(BaseModel):
 
 class ConsentRequest(BaseModel):
     """Requête de création de consentement ABDM."""
+
     patient_abha: str = Field(..., description="Numéro ABHA du patient")
     hiu_id: str = Field(..., description="Identifiant du HIU")
     purpose: str = Field("CAREMGT", description="Motif du consentement")
-    hi_types: Optional[List[str]] = Field(
-        None, description="Types d'informations de santé"
-    )
+    hi_types: Optional[List[str]] = Field(None, description="Types d'informations de santé")
 
 
 class ConsentCallbackRequest(BaseModel):
     """Requête de callback de consentement."""
+
     consent_id: str = Field(..., description="Identifiant du consentement")
     status: str = Field(..., description="Statut (GRANTED ou DENIED)")
 
 
 class DataRequestBody(BaseModel):
     """Requête de données via consentement ABDM."""
+
     consent_id: str = Field(..., description="Identifiant du consentement")
     slide_id: str = Field(..., description="Identifiant de la lame")
 
@@ -112,11 +115,13 @@ class DataRequestBody(BaseModel):
 
 class SSMIX2ParseRequest(BaseModel):
     """Requête de parsing d'un message HL7 SS-MIX2."""
+
     raw_message: str = Field(..., description="Message HL7 v2.5 brut")
 
 
 class SSMIX2ExtractPathRequest(BaseModel):
     """Requête d'extraction de métadonnées depuis un chemin SS-MIX2."""
+
     path: str = Field(..., description="Chemin SS-MIX2 complet")
 
 

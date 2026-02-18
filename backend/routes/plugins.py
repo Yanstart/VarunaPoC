@@ -96,9 +96,7 @@ async def activate_plugin(name: str):
 
     success = manager.activate(name)
     if not success:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to activate plugin '{name}'"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to activate plugin '{name}'")
 
     return {"status": "activated", "name": name}
 
@@ -125,9 +123,7 @@ async def deactivate_plugin(name: str):
 
     success = manager.deactivate(name)
     if not success:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to deactivate plugin '{name}'"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to deactivate plugin '{name}'")
 
     return {"status": "deactivated", "name": name}
 

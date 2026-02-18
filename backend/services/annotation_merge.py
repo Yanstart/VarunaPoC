@@ -254,9 +254,7 @@ class AnnotationMergeService:
 
         return list(annotations)
 
-    def _intersection(
-        self, annotations: list[dict], conflicts: list[MergeConflict]
-    ) -> list[dict]:
+    def _intersection(self, annotations: list[dict], conflicts: list[MergeConflict]) -> list[dict]:
         """Keep only annotations that are involved in at least one conflict."""
         if not conflicts:
             return []

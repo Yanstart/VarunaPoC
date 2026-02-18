@@ -43,10 +43,7 @@ class TestCapabilityStatement:
         from fhir.capability import build_capability_statement
 
         cs = build_capability_statement()
-        dr_resource = next(
-            r for r in cs["rest"][0]["resource"]
-            if r["type"] == "DiagnosticReport"
-        )
+        dr_resource = next(r for r in cs["rest"][0]["resource"] if r["type"] == "DiagnosticReport")
         search_names = [p["name"] for p in dr_resource["searchParam"]]
         assert "patient" in search_names
         assert "status" in search_names
@@ -57,11 +54,7 @@ class TestCapabilityStatement:
         cs = build_capability_statement()
         security = cs["rest"][0]["security"]
         assert security["cors"] is True
-        service_codes = [
-            c["code"]
-            for svc in security["service"]
-            for c in svc.get("coding", [])
-        ]
+        service_codes = [c["code"] for svc in security["service"] for c in svc.get("coding", [])]
         assert "SMART-on-FHIR" in service_codes
 
     def test_capability_statement_custom_base_url(self):
@@ -105,9 +98,7 @@ class TestDiagnosticReport:
             performer_sub="dr-martin-uuid",
         )
         contained = report.get("contained", [])
-        practitioner_resources = [
-            c for c in contained if c["resourceType"] == "Practitioner"
-        ]
+        practitioner_resources = [c for c in contained if c["resourceType"] == "Practitioner"]
         assert len(practitioner_resources) == 1
         assert practitioner_resources[0]["name"][0]["text"] == "Dr. Martin"
 
@@ -201,15 +192,9 @@ class TestDiagnosticReportSearch:
         from fhir.resources import build_diagnostic_report
 
         return [
-            build_diagnostic_report(
-                slide_id="s1", patient_id="P001", status="preliminary"
-            ),
-            build_diagnostic_report(
-                slide_id="s2", patient_id="P002", status="final"
-            ),
-            build_diagnostic_report(
-                slide_id="s3", patient_id="P001", status="final"
-            ),
+            build_diagnostic_report(slide_id="s1", patient_id="P001", status="preliminary"),
+            build_diagnostic_report(slide_id="s2", patient_id="P002", status="final"),
+            build_diagnostic_report(slide_id="s3", patient_id="P001", status="final"),
         ]
 
     def test_search_by_patient(self):
@@ -232,9 +217,7 @@ class TestDiagnosticReportSearch:
         from fhir.resources import search_diagnostic_reports
 
         reports = self._make_reports()
-        bundle = search_diagnostic_reports(
-            reports, patient_id="P001", status="final"
-        )
+        bundle = search_diagnostic_reports(reports, patient_id="P001", status="final")
         assert bundle["total"] == 1
 
     def test_search_no_results(self):
@@ -299,9 +282,7 @@ class TestSMARTConfiguration:
     def test_smart_config_custom_base_url(self):
         from fhir.smart import get_smart_configuration
 
-        config = get_smart_configuration(
-            base_url="https://hospital.example.org/fhir"
-        )
+        config = get_smart_configuration(base_url="https://hospital.example.org/fhir")
         assert config["authorization_endpoint"].startswith("https://hospital")
         assert config["token_endpoint"].startswith("https://hospital")
 
@@ -361,10 +342,13 @@ class TestPatientContextSMART:
     def test_smart_launch_source(self):
         from fhir.patient_context import get_patient_context, store_smart_context
 
-        store_smart_context("launch-test-1", {
-            "patient_id": "smart-P001",
-            "encounter_id": "enc-001",
-        })
+        store_smart_context(
+            "launch-test-1",
+            {
+                "patient_id": "smart-P001",
+                "encounter_id": "enc-001",
+            },
+        )
         ctx = get_patient_context(smart_launch_id="launch-test-1")
         assert ctx.patient_id == "smart-P001"
         assert ctx.encounter_id == "enc-001"
@@ -373,10 +357,13 @@ class TestPatientContextSMART:
     def test_smart_overrides_url_params(self):
         from fhir.patient_context import get_patient_context, store_smart_context
 
-        store_smart_context("launch-test-2", {
-            "patient_id": "smart-P002",
-            "encounter_id": "enc-002",
-        })
+        store_smart_context(
+            "launch-test-2",
+            {
+                "patient_id": "smart-P002",
+                "encounter_id": "enc-002",
+            },
+        )
         ctx = get_patient_context(
             patient_id="url-P999",
             smart_launch_id="launch-test-2",
@@ -443,10 +430,7 @@ class TestUSCorePatient:
             race_code="2106-3",
             race_display="White",
         )
-        race_ext = [
-            e for e in p.get("extension", [])
-            if "us-core-race" in e["url"]
-        ]
+        race_ext = [e for e in p.get("extension", []) if "us-core-race" in e["url"]]
         assert len(race_ext) == 1
         omb = race_ext[0]["extension"][0]
         assert omb["valueCoding"]["code"] == "2106-3"
@@ -459,10 +443,7 @@ class TestUSCorePatient:
             ethnicity_code="2186-5",
             ethnicity_display="Not Hispanic or Latino",
         )
-        eth_ext = [
-            e for e in p.get("extension", [])
-            if "us-core-ethnicity" in e["url"]
-        ]
+        eth_ext = [e for e in p.get("extension", []) if "us-core-ethnicity" in e["url"]]
         assert len(eth_ext) == 1
 
     def test_us_core_patient_birth_date(self):
@@ -891,13 +872,9 @@ class TestMLTagsToTumorMarkers:
         from fhir.profiles import map_ml_tags_to_tumor_markers
 
         tags = {"ki67": 0.35, "her2": 2.0}
-        markers = map_ml_tags_to_tumor_markers(
-            tags=tags, patient_id="P001", slide_id="slide-abc"
-        )
+        markers = map_ml_tags_to_tumor_markers(tags=tags, patient_id="P001", slide_id="slide-abc")
         assert len(markers) == 2
-        marker_codes = [
-            m["code"]["coding"][0]["code"] for m in markers
-        ]
+        marker_codes = [m["code"]["coding"][0]["code"] for m in markers]
         assert "85319-2" in marker_codes  # ki67
         assert "85318-4" in marker_codes  # her2
 
@@ -905,20 +882,14 @@ class TestMLTagsToTumorMarkers:
         from fhir.profiles import map_ml_tags_to_tumor_markers
 
         tags = {"er": "positive", "pr": "negative"}
-        markers = map_ml_tags_to_tumor_markers(
-            tags=tags, patient_id="P001", slide_id="slide-abc"
-        )
+        markers = map_ml_tags_to_tumor_markers(tags=tags, patient_id="P001", slide_id="slide-abc")
         assert len(markers) == 2
 
         # Check interpretation codes
-        er_marker = next(
-            m for m in markers if m["code"]["coding"][0]["code"] == "85337-4"
-        )
+        er_marker = next(m for m in markers if m["code"]["coding"][0]["code"] == "85337-4")
         assert er_marker["interpretation"][0]["coding"][0]["code"] == "POS"
 
-        pr_marker = next(
-            m for m in markers if m["code"]["coding"][0]["code"] == "85339-0"
-        )
+        pr_marker = next(m for m in markers if m["code"]["coding"][0]["code"] == "85339-0")
         assert pr_marker["interpretation"][0]["coding"][0]["code"] == "NEG"
 
     def test_map_ki67_high_interpretation(self):
@@ -947,9 +918,7 @@ class TestMLTagsToTumorMarkers:
         from fhir.profiles import map_ml_tags_to_tumor_markers
 
         tags = {"ki67": 0.35, "unknown_tag": 1.0, "cell_count": 500}
-        markers = map_ml_tags_to_tumor_markers(
-            tags=tags, patient_id="P001", slide_id="slide-abc"
-        )
+        markers = map_ml_tags_to_tumor_markers(tags=tags, patient_id="P001", slide_id="slide-abc")
         assert len(markers) == 1  # Only ki67
 
     def test_map_deterministic_ids(self):
@@ -966,7 +935,5 @@ class TestMLTagsToTumorMarkers:
     def test_map_empty_tags(self):
         from fhir.profiles import map_ml_tags_to_tumor_markers
 
-        markers = map_ml_tags_to_tumor_markers(
-            tags={}, patient_id="P001", slide_id="slide-abc"
-        )
+        markers = map_ml_tags_to_tumor_markers(tags={}, patient_id="P001", slide_id="slide-abc")
         assert markers == []

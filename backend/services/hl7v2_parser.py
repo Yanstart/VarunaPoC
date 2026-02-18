@@ -406,9 +406,7 @@ class HL7v2Parser:
             Message ACK HL7 v2 en texte
         """
         now = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
-        ack_id = hashlib.sha256(
-            f"{parse_result.message_control_id}{now}".encode()
-        ).hexdigest()[:16]
+        ack_id = hashlib.sha256(f"{parse_result.message_control_id}{now}".encode()).hexdigest()[:16]
 
         msh = (
             f"MSH|^~\\&|VarunaPoC|CHU_UCL_NAMUR|"

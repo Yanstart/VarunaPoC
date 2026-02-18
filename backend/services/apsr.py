@@ -278,13 +278,9 @@ class APSRBuilder:
                 f"<paragraph>Clinical Diagnosis: {xml_escape(info.clinical_diagnosis)}</paragraph>"
             )
         if info.procedure_type:
-            parts.append(
-                f"<paragraph>Procedure: {xml_escape(info.procedure_type)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Procedure: {xml_escape(info.procedure_type)}</paragraph>")
         if info.specimen_type:
-            parts.append(
-                f"<paragraph>Specimen: {xml_escape(info.specimen_type)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Specimen: {xml_escape(info.specimen_type)}</paragraph>")
         if not parts:
             parts.append("<paragraph>No clinical information provided.</paragraph>")
         return "\n          ".join(parts)
@@ -293,21 +289,15 @@ class APSRBuilder:
         """Build macroscopic description section body."""
         parts = []
         if macro.specimen_size:
-            parts.append(
-                f"<paragraph>Size: {xml_escape(macro.specimen_size)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Size: {xml_escape(macro.specimen_size)}</paragraph>")
         if macro.specimen_weight:
-            parts.append(
-                f"<paragraph>Weight: {xml_escape(macro.specimen_weight)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Weight: {xml_escape(macro.specimen_weight)}</paragraph>")
         if macro.gross_description:
             parts.append(
                 f"<paragraph>Description: {xml_escape(macro.gross_description)}</paragraph>"
             )
         if macro.sections_count > 0:
-            parts.append(
-                f"<paragraph>Sections: {macro.sections_count}</paragraph>"
-            )
+            parts.append(f"<paragraph>Sections: {macro.sections_count}</paragraph>")
         if not parts:
             parts.append("<paragraph>No macroscopic description provided.</paragraph>")
         return "\n          ".join(parts)
@@ -320,13 +310,9 @@ class APSRBuilder:
                 f"<paragraph>Histological Type: {xml_escape(micro.histological_type)}</paragraph>"
             )
         if micro.grade:
-            parts.append(
-                f"<paragraph>Grade: {xml_escape(micro.grade)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Grade: {xml_escape(micro.grade)}</paragraph>")
         if micro.margins:
-            parts.append(
-                f"<paragraph>Margins: {xml_escape(micro.margins)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Margins: {xml_escape(micro.margins)}</paragraph>")
         if micro.lymphovascular_invasion:
             parts.append(
                 "<paragraph>Lymphovascular Invasion: "
@@ -346,9 +332,7 @@ class APSRBuilder:
             for ml_res in micro.ml_results_summary:
                 model = ml_res.get("model", "Unknown")
                 result = ml_res.get("result", "N/A")
-                parts.append(
-                    f"  <item>{xml_escape(model)}: {xml_escape(str(result))}</item>"
-                )
+                parts.append(f"  <item>{xml_escape(model)}: {xml_escape(str(result))}</item>")
             parts.append("</list>")
         if not parts:
             parts.append("<paragraph>No microscopic description provided.</paragraph>")
@@ -376,13 +360,9 @@ class APSRBuilder:
                 parts.append(f"  <item>{xml_escape(code)} - {xml_escape(display)}</item>")
             parts.append("</list>")
         if diag.staging:
-            parts.append(
-                f"<paragraph>Staging: {xml_escape(diag.staging)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Staging: {xml_escape(diag.staging)}</paragraph>")
         if diag.comment:
-            parts.append(
-                f"<paragraph>Comment: {xml_escape(diag.comment)}</paragraph>"
-            )
+            parts.append(f"<paragraph>Comment: {xml_escape(diag.comment)}</paragraph>")
         if not parts:
             parts.append("<paragraph>No diagnosis provided.</paragraph>")
         return "\n          ".join(parts)

@@ -64,9 +64,7 @@ def decode_japanese_text(data: bytes, encoding: str = "shift_jis") -> str:
         encoding_lower = "iso-2022-jp"
 
     # Essayer l'encodage demandé d'abord
-    try_encodings = [encoding_lower] + [
-        e for e in SUPPORTED_ENCODINGS if e != encoding_lower
-    ]
+    try_encodings = [encoding_lower] + [e for e in SUPPORTED_ENCODINGS if e != encoding_lower]
 
     for enc in try_encodings:
         try:

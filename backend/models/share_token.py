@@ -27,9 +27,7 @@ class SharePermission(enum.StrEnum):
 class ShareToken(Base):
     __tablename__ = "share_tokens"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     slide_id: Mapped[str] = mapped_column(String(500), nullable=False)
     created_by: Mapped[str | None] = mapped_column(String(200), nullable=True)

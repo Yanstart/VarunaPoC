@@ -362,9 +362,7 @@ class EHealthSTSClient:
             raise NotImplementedError(msg)
 
         now = datetime.now(UTC)
-        message_id = self._deterministic_id(
-            f"{sender_ssin}{recipient_ssin}{subject}"
-        )
+        message_id = self._deterministic_id(f"{sender_ssin}{recipient_ssin}{subject}")
 
         return EhBoxMessage(
             message_id=message_id,

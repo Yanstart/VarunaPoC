@@ -62,9 +62,7 @@ async def extract_embeddings(slide_id: str, model: str = "uni"):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("Embedding extraction failed for %s: %s", slide_id, e)
-        raise HTTPException(
-            status_code=500, detail=f"Embedding extraction failed: {e!s}"
-        )
+        raise HTTPException(status_code=500, detail=f"Embedding extraction failed: {e!s}")
 
 
 @router.get("/models")

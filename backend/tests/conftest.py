@@ -86,10 +86,15 @@ def client():
     with TestClient(app) as c:
         yield c
 
-    # Dispose the engine to reset connection pool state
-    from core.database import engine
+    # Dispose the engine to reset connection pool state.
+    # The lifespan shutdown already calls close_db(), but we dispose
+    # again to ensure no pool state leaks between tests.
+    try:
+        from core.database import engine
 
-    _run_async(engine.dispose())
+        _run_async(engine.dispose())
+    except Exception:
+        pass  # DB module not available in CI — nothing to clean
 
 
 @pytest.fixture

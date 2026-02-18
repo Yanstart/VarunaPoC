@@ -66,9 +66,7 @@ class DICOMSRService:
 
     def __init__(self) -> None:
         self._has_pydicom = HAS_PYDICOM
-        logger.info(
-            "DICOM SR service initialized (pydicom=%s)", self._has_pydicom
-        )
+        logger.info("DICOM SR service initialized (pydicom=%s)", self._has_pydicom)
 
     def create_measurement_report(
         self,
@@ -189,48 +187,54 @@ class DICOMSRService:
         items = []
 
         # Language of Content Item and Value
-        items.append({
-            "relationship_type": "HAS CONCEPT MOD",
-            "value_type": "CODE",
-            "concept_name": {
-                "code_value": "121049",
-                "coding_scheme": "DCM",
-                "meaning": "Language of Content Item and Value",
-            },
-            "code": {
-                "code_value": "eng",
-                "coding_scheme": "RFC5646",
-                "meaning": "English",
-            },
-        })
+        items.append(
+            {
+                "relationship_type": "HAS CONCEPT MOD",
+                "value_type": "CODE",
+                "concept_name": {
+                    "code_value": "121049",
+                    "coding_scheme": "DCM",
+                    "meaning": "Language of Content Item and Value",
+                },
+                "code": {
+                    "code_value": "eng",
+                    "coding_scheme": "RFC5646",
+                    "meaning": "English",
+                },
+            }
+        )
 
         # Observer Type = Device (AI algorithm)
-        items.append({
-            "relationship_type": "HAS OBS CONTEXT",
-            "value_type": "CODE",
-            "concept_name": {
-                "code_value": "121005",
-                "coding_scheme": "DCM",
-                "meaning": "Observer Type",
-            },
-            "code": {
-                "code_value": "121007",
-                "coding_scheme": "DCM",
-                "meaning": "Device",
-            },
-        })
+        items.append(
+            {
+                "relationship_type": "HAS OBS CONTEXT",
+                "value_type": "CODE",
+                "concept_name": {
+                    "code_value": "121005",
+                    "coding_scheme": "DCM",
+                    "meaning": "Observer Type",
+                },
+                "code": {
+                    "code_value": "121007",
+                    "coding_scheme": "DCM",
+                    "meaning": "Device",
+                },
+            }
+        )
 
         # Algorithm Identification
-        items.append({
-            "relationship_type": "HAS OBS CONTEXT",
-            "value_type": "TEXT",
-            "concept_name": {
-                "code_value": "111001",
-                "coding_scheme": "DCM",
-                "meaning": "Algorithm Name",
-            },
-            "text_value": f"{model_name} v{model_version}",
-        })
+        items.append(
+            {
+                "relationship_type": "HAS OBS CONTEXT",
+                "value_type": "TEXT",
+                "concept_name": {
+                    "code_value": "111001",
+                    "coding_scheme": "DCM",
+                    "meaning": "Algorithm Name",
+                },
+                "text_value": f"{model_name} v{model_version}",
+            }
+        )
 
         # Measurement Groups (one per detection) - TID 1501
         for i, det in enumerate(detections):
@@ -271,77 +275,87 @@ class DICOMSRService:
         children = []
 
         # Tracking Identifier
-        children.append({
-            "relationship_type": "HAS OBS CONTEXT",
-            "value_type": "TEXT",
-            "concept_name": {
-                "code_value": "112039",
-                "coding_scheme": "DCM",
-                "meaning": "Tracking Identifier",
-            },
-            "text_value": f"{label}_{index}",
-        })
+        children.append(
+            {
+                "relationship_type": "HAS OBS CONTEXT",
+                "value_type": "TEXT",
+                "concept_name": {
+                    "code_value": "112039",
+                    "coding_scheme": "DCM",
+                    "meaning": "Tracking Identifier",
+                },
+                "text_value": f"{label}_{index}",
+            }
+        )
 
         # Tracking UID
-        children.append({
-            "relationship_type": "HAS OBS CONTEXT",
-            "value_type": "UIDREF",
-            "concept_name": {
-                "code_value": "112040",
-                "coding_scheme": "DCM",
-                "meaning": "Tracking Unique Identifier",
-            },
-            "uid_value": tracking_uid,
-        })
+        children.append(
+            {
+                "relationship_type": "HAS OBS CONTEXT",
+                "value_type": "UIDREF",
+                "concept_name": {
+                    "code_value": "112040",
+                    "coding_scheme": "DCM",
+                    "meaning": "Tracking Unique Identifier",
+                },
+                "uid_value": tracking_uid,
+            }
+        )
 
         # Finding (coded concept for what was detected)
-        children.append({
-            "relationship_type": "CONTAINS",
-            "value_type": "CODE",
-            "concept_name": {
-                "code_value": "121071",
-                "coding_scheme": "DCM",
-                "meaning": "Finding",
-            },
-            "code": finding_code,
-        })
+        children.append(
+            {
+                "relationship_type": "CONTAINS",
+                "value_type": "CODE",
+                "concept_name": {
+                    "code_value": "121071",
+                    "coding_scheme": "DCM",
+                    "meaning": "Finding",
+                },
+                "code": finding_code,
+            }
+        )
 
         # Spatial Coordinates (bounding box as POLYLINE)
         x, y, w, h = bbox
-        children.append({
-            "relationship_type": "CONTAINS",
-            "value_type": "SCOORD",
-            "concept_name": {
-                "code_value": "111030",
-                "coding_scheme": "DCM",
-                "meaning": "Image Region",
-            },
-            "graphic_type": "POLYLINE",
-            "graphic_data": [
-                [x, y],
-                [x + w, y],
-                [x + w, y + h],
-                [x, y + h],
-                [x, y],  # Close polygon
-            ],
-        })
+        children.append(
+            {
+                "relationship_type": "CONTAINS",
+                "value_type": "SCOORD",
+                "concept_name": {
+                    "code_value": "111030",
+                    "coding_scheme": "DCM",
+                    "meaning": "Image Region",
+                },
+                "graphic_type": "POLYLINE",
+                "graphic_data": [
+                    [x, y],
+                    [x + w, y],
+                    [x + w, y + h],
+                    [x, y + h],
+                    [x, y],  # Close polygon
+                ],
+            }
+        )
 
         # Confidence Score as NUM
-        children.append({
-            "relationship_type": "CONTAINS",
-            "value_type": "NUM",
-            "concept_name": {
-                "code_value": "111001",
-                "coding_scheme": "DCM",
-                "meaning": "Algorithm Score",
-            },
-            "numeric_value": confidence,
-            "unit": {
-                "code_value": "1",
-                "coding_scheme": "UCUM",
-                "meaning": "no units",
-            },
-        })
+        children.append(
+            {
+                "relationship_type": "CONTAINS",
+                "value_type": "NUM",
+                "concept_name": {
+                    "code_value": "111001",
+                    "coding_scheme": "DCM",
+                    "meaning": "Algorithm Score",
+                },
+                "numeric_value": confidence,
+                "unit": {
+                    "code_value": "1",
+                    "coding_scheme": "UCUM",
+                    "meaning": "no units",
+                },
+            }
+        )
 
         return {
             "relationship_type": "CONTAINS",
@@ -377,45 +391,51 @@ class DICOMSRService:
         children = []
 
         # Finding (diagnosis code)
-        children.append({
-            "relationship_type": "CONTAINS",
-            "value_type": "CODE",
-            "concept_name": {
-                "code_value": "121071",
-                "coding_scheme": "DCM",
-                "meaning": "Finding",
-            },
-            "code": finding_code,
-        })
+        children.append(
+            {
+                "relationship_type": "CONTAINS",
+                "value_type": "CODE",
+                "concept_name": {
+                    "code_value": "121071",
+                    "coding_scheme": "DCM",
+                    "meaning": "Finding",
+                },
+                "code": finding_code,
+            }
+        )
 
         # Probability as NUM
-        children.append({
-            "relationship_type": "CONTAINS",
-            "value_type": "NUM",
-            "concept_name": {
-                "code_value": "111001",
-                "coding_scheme": "DCM",
-                "meaning": "Algorithm Score",
-            },
-            "numeric_value": probability,
-            "unit": {
-                "code_value": "1",
-                "coding_scheme": "UCUM",
-                "meaning": "no units",
-            },
-        })
+        children.append(
+            {
+                "relationship_type": "CONTAINS",
+                "value_type": "NUM",
+                "concept_name": {
+                    "code_value": "111001",
+                    "coding_scheme": "DCM",
+                    "meaning": "Algorithm Score",
+                },
+                "numeric_value": probability,
+                "unit": {
+                    "code_value": "1",
+                    "coding_scheme": "UCUM",
+                    "meaning": "no units",
+                },
+            }
+        )
 
         # Region description
-        children.append({
-            "relationship_type": "HAS PROPERTIES",
-            "value_type": "TEXT",
-            "concept_name": {
-                "code_value": "121106",
-                "coding_scheme": "DCM",
-                "meaning": "Comment",
-            },
-            "text_value": f"Region: {region}",
-        })
+        children.append(
+            {
+                "relationship_type": "HAS PROPERTIES",
+                "value_type": "TEXT",
+                "concept_name": {
+                    "code_value": "121106",
+                    "coding_scheme": "DCM",
+                    "meaning": "Comment",
+                },
+                "text_value": f"Region: {region}",
+            }
+        )
 
         return {
             "relationship_type": "CONTAINS",
@@ -432,41 +452,41 @@ class DICOMSRService:
     # Mock Data Generation
     # =========================================================================
 
-    def _generate_mock_detections(
-        self, seed: int
-    ) -> List[Dict[str, Any]]:
+    def _generate_mock_detections(self, seed: int) -> List[Dict[str, Any]]:
         """Generate mock detection results from a seed."""
         labels = ["mitosis", "tumor", "necrosis", "lymphocyte"]
         count = (seed % 4) + 2  # 2-5 detections
         detections = []
         for i in range(count):
             s = seed + i * 7919  # Prime step for variety
-            detections.append({
-                "label": labels[i % len(labels)],
-                "confidence": round(0.5 + (s % 50) / 100.0, 3),
-                "bbox": [
-                    (s * 13) % 90000,
-                    (s * 17) % 70000,
-                    (s % 500) + 100,
-                    (s % 500) + 100,
-                ],
-            })
+            detections.append(
+                {
+                    "label": labels[i % len(labels)],
+                    "confidence": round(0.5 + (s % 50) / 100.0, 3),
+                    "bbox": [
+                        (s * 13) % 90000,
+                        (s * 17) % 70000,
+                        (s % 500) + 100,
+                        (s % 500) + 100,
+                    ],
+                }
+            )
         return detections
 
-    def _generate_mock_classifications(
-        self, seed: int
-    ) -> List[Dict[str, Any]]:
+    def _generate_mock_classifications(self, seed: int) -> List[Dict[str, Any]]:
         """Generate mock classification results from a seed."""
         diagnoses = ["malignant", "benign", "uncertain"]
         count = (seed % 2) + 1  # 1-2 classifications
         classifications = []
         for i in range(count):
             s = seed + i * 6271
-            classifications.append({
-                "diagnosis": diagnoses[s % len(diagnoses)],
-                "probability": round(0.4 + (s % 60) / 100.0, 3),
-                "region": f"region_{i}",
-            })
+            classifications.append(
+                {
+                    "diagnosis": diagnoses[s % len(diagnoses)],
+                    "probability": round(0.4 + (s % 60) / 100.0, 3),
+                    "region": f"region_{i}",
+                }
+            )
         return classifications
 
     # =========================================================================
@@ -504,15 +524,16 @@ class DICOMSRService:
                 "meaning": "Lymphocyte",
             },
         }
-        return mapping.get(label, {
-            "code_value": "404684003",
-            "coding_scheme": "SCT",
-            "meaning": f"Finding ({label})",
-        })
+        return mapping.get(
+            label,
+            {
+                "code_value": "404684003",
+                "coding_scheme": "SCT",
+                "meaning": f"Finding ({label})",
+            },
+        )
 
-    def _map_diagnosis_to_snomed(
-        self, diagnosis: str
-    ) -> Dict[str, str]:
+    def _map_diagnosis_to_snomed(self, diagnosis: str) -> Dict[str, str]:
         """Map a diagnosis label to a SNOMED-CT concept code.
 
         Args:
@@ -538,8 +559,11 @@ class DICOMSRService:
                 "meaning": "Uncertain behavior neoplasm",
             },
         }
-        return mapping.get(diagnosis, {
-            "code_value": "404684003",
-            "coding_scheme": "SCT",
-            "meaning": f"Finding ({diagnosis})",
-        })
+        return mapping.get(
+            diagnosis,
+            {
+                "code_value": "404684003",
+                "coding_scheme": "SCT",
+                "meaning": f"Finding ({diagnosis})",
+            },
+        )

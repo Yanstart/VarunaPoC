@@ -89,8 +89,7 @@ class OMEZarrReader(ISlideReader):
         """Open an OME-Zarr dataset."""
         if not _HAS_ZARR:
             raise RuntimeError(
-                "OMEZarrReader requires the zarr package. "
-                "Install with: pip install zarr"
+                "OMEZarrReader requires the zarr package. " "Install with: pip install zarr"
             )
 
         zarr_path = Path(path)
@@ -120,9 +119,7 @@ class OMEZarrReader(ISlideReader):
                 if ds_path and ds_path in store:
                     self._arrays.append(store[ds_path])
                 elif ds_path:
-                    logger.warning(
-                        f"Dataset path '{ds_path}' not found in Zarr store"
-                    )
+                    logger.warning(f"Dataset path '{ds_path}' not found in Zarr store")
         elif hasattr(store, "shape"):
             # No multiscales, root is an array
             self._arrays = [store]
@@ -137,10 +134,7 @@ class OMEZarrReader(ISlideReader):
             raise RuntimeError(msg)
 
         self._path = path
-        logger.info(
-            f"OMEZarrReader opened: {zarr_path.name} "
-            f"({len(self._arrays)} levels)"
-        )
+        logger.info(f"OMEZarrReader opened: {zarr_path.name} " f"({len(self._arrays)} levels)")
 
     def close(self) -> None:
         """Close the OME-Zarr dataset."""
@@ -157,9 +151,7 @@ class OMEZarrReader(ISlideReader):
             raise RuntimeError("Dataset not open")
 
         if level < 0 or level >= len(self._arrays):
-            raise ValueError(
-                f"Level {level} out of range [0, {len(self._arrays) - 1}]"
-            )
+            raise ValueError(f"Level {level} out of range [0, {len(self._arrays) - 1}]")
 
         arr = self._arrays[level]
         x, y = location
@@ -178,9 +170,7 @@ class OMEZarrReader(ISlideReader):
             raise RuntimeError(f"Failed to read zarr array: {e}") from e
 
     @staticmethod
-    def _extract_rgb_region(
-        data: np.ndarray, x: int, y: int, w: int, h: int
-    ) -> np.ndarray:
+    def _extract_rgb_region(data: np.ndarray, x: int, y: int, w: int, h: int) -> np.ndarray:
         """Extract an RGB region from array data of various shapes."""
         shape = data.shape
 
@@ -279,11 +269,7 @@ class OMEZarrReader(ISlideReader):
         thumb = img[::step_y, ::step_x]
 
         # Convert to RGB
-        thumb_rgb = (
-            np.stack([thumb, thumb, thumb], axis=-1)
-            if thumb.ndim == 2
-            else thumb[:, :, :3]
-        )
+        thumb_rgb = np.stack([thumb, thumb, thumb], axis=-1) if thumb.ndim == 2 else thumb[:, :, :3]
 
         return thumb_rgb.astype(np.uint8)
 

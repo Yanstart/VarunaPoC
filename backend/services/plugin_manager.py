@@ -88,9 +88,7 @@ class PluginManager:
         info = plugin.get_info()
         self._plugins[info.name] = plugin
         self._plugin_info[info.name] = info
-        logger.info(
-            "Registered plugin: %s v%s (%s)", info.name, info.version, info.plugin_type
-        )
+        logger.info("Registered plugin: %s v%s (%s)", info.name, info.version, info.plugin_type)
 
     def unregister(self, name: str) -> bool:
         """Unregister a plugin by name. Returns True if found and removed."""

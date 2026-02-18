@@ -103,9 +103,7 @@ class TestABDMService:
             e for e in bundle["entry"] if e["resource"]["resourceType"] == "Patient"
         )
         identifiers = patient_entry["resource"]["identifier"]
-        assert any(
-            i["system"] == "https://healthid.abdm.gov.in" for i in identifiers
-        )
+        assert any(i["system"] == "https://healthid.abdm.gov.in" for i in identifiers)
 
     def test_create_consent(self, service):
         consent = service.create_consent(
@@ -373,9 +371,7 @@ class TestSSMIX2Service:
         assert "MSG001" in path
 
     def test_extract_from_path(self, service):
-        metadata = service.extract_from_path(
-            "/ssmix2/storage/PAT001/20240115/ADT/MSG001"
-        )
+        metadata = service.extract_from_path("/ssmix2/storage/PAT001/20240115/ADT/MSG001")
         assert metadata["patientId"] == "PAT001"
         assert metadata["orderDate"] == "20240115"
         assert metadata["dataType"] == "ADT"
@@ -504,20 +500,26 @@ class TestI18nService:
         """Vérifie qu'il y a au moins 30 traductions par locale."""
         for locale in SUPPORTED_LOCALES:
             count = service.get_translation_count(locale)
-            assert count >= 30, (
-                f"Locale {locale} n'a que {count} traductions (minimum: 30)"
-            )
+            assert count >= 30, f"Locale {locale} n'a que {count} traductions (minimum: 30)"
 
     def test_translation_categories(self, service):
         """Vérifie que les catégories principales sont couvertes."""
         categories = [
-            "app.", "nav.", "slide.", "panel.", "btn.",
-            "error.", "search.", "worklist.", "folder.", "case.",
+            "app.",
+            "nav.",
+            "slide.",
+            "panel.",
+            "btn.",
+            "error.",
+            "search.",
+            "worklist.",
+            "folder.",
+            "case.",
         ]
         for locale in SUPPORTED_LOCALES:
             keys = service.translations[locale].keys()
             for category in categories:
                 matching = [k for k in keys if k.startswith(category)]
-                assert len(matching) > 0, (
-                    f"Locale {locale} n'a aucune traduction pour la catégorie {category}"
-                )
+                assert (
+                    len(matching) > 0
+                ), f"Locale {locale} n'a aucune traduction pour la catégorie {category}"

@@ -80,9 +80,7 @@ class BatchTileService:
             ValueError: If regions exceed MAX_REGIONS.
         """
         if len(regions) > self.MAX_REGIONS:
-            raise ValueError(
-                f"Too many regions: {len(regions)} exceeds maximum {self.MAX_REGIONS}"
-            )
+            raise ValueError(f"Too many regions: {len(regions)} exceeds maximum {self.MAX_REGIONS}")
 
         start = time.time()
 

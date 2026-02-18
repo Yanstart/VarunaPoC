@@ -24,12 +24,8 @@ from typing import Any
 # Profile URLs (canonical)
 # ---------------------------------------------------------------------------
 
-US_CORE_PATIENT_PROFILE = (
-    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
-)
-CA_CORE_PATIENT_PROFILE = (
-    "http://hl7.org/fhir/ca/core/StructureDefinition/profile-patient"
-)
+US_CORE_PATIENT_PROFILE = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+CA_CORE_PATIENT_PROFILE = "http://hl7.org/fhir/ca/core/StructureDefinition/profile-patient"
 US_CORE_DIAGNOSTIC_REPORT_PROFILE = (
     "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-note"
 )
@@ -39,14 +35,13 @@ MCODE_CANCER_CONDITION_PROFILE = (
 MCODE_TNM_STAGE_GROUP_PROFILE = (
     "http://hl7.org/fhir/us/mcode/StructureDefinition/mcode-tnm-stage-group"
 )
-MCODE_TUMOR_MARKER_PROFILE = (
-    "http://hl7.org/fhir/us/mcode/StructureDefinition/mcode-tumor-marker"
-)
+MCODE_TUMOR_MARKER_PROFILE = "http://hl7.org/fhir/us/mcode/StructureDefinition/mcode-tumor-marker"
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _deterministic_id(seed: str) -> str:
     """Génère un identifiant déterministe à partir d'un seed."""
@@ -60,6 +55,7 @@ def _now_iso() -> str:
 # ---------------------------------------------------------------------------
 # US Core Patient
 # ---------------------------------------------------------------------------
+
 
 def build_us_core_patient(
     patient_id: str,
@@ -125,43 +121,47 @@ def build_us_core_patient(
 
     # US Core race extension (required if known)
     if race_code:
-        patient.setdefault("extension", []).append({
-            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
-            "extension": [
-                {
-                    "url": "ombCategory",
-                    "valueCoding": {
-                        "system": "urn:oid:2.16.840.1.113883.6.238",
-                        "code": race_code,
-                        "display": race_display or race_code,
+        patient.setdefault("extension", []).append(
+            {
+                "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+                "extension": [
+                    {
+                        "url": "ombCategory",
+                        "valueCoding": {
+                            "system": "urn:oid:2.16.840.1.113883.6.238",
+                            "code": race_code,
+                            "display": race_display or race_code,
+                        },
                     },
-                },
-                {
-                    "url": "text",
-                    "valueString": race_display or race_code,
-                },
-            ],
-        })
+                    {
+                        "url": "text",
+                        "valueString": race_display or race_code,
+                    },
+                ],
+            }
+        )
 
     # US Core ethnicity extension (required if known)
     if ethnicity_code:
-        patient.setdefault("extension", []).append({
-            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
-            "extension": [
-                {
-                    "url": "ombCategory",
-                    "valueCoding": {
-                        "system": "urn:oid:2.16.840.1.113883.6.238",
-                        "code": ethnicity_code,
-                        "display": ethnicity_display or ethnicity_code,
+        patient.setdefault("extension", []).append(
+            {
+                "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+                "extension": [
+                    {
+                        "url": "ombCategory",
+                        "valueCoding": {
+                            "system": "urn:oid:2.16.840.1.113883.6.238",
+                            "code": ethnicity_code,
+                            "display": ethnicity_display or ethnicity_code,
+                        },
                     },
-                },
-                {
-                    "url": "text",
-                    "valueString": ethnicity_display or ethnicity_code,
-                },
-            ],
-        })
+                    {
+                        "url": "text",
+                        "valueString": ethnicity_display or ethnicity_code,
+                    },
+                ],
+            }
+        )
 
     return patient
 
@@ -169,6 +169,7 @@ def build_us_core_patient(
 # ---------------------------------------------------------------------------
 # CA Core Patient
 # ---------------------------------------------------------------------------
+
 
 def build_ca_core_patient(
     patient_id: str,
@@ -212,24 +213,28 @@ def build_ca_core_patient(
             health_number_jurisdiction,
             f"https://fhir.infoway-inforoute.ca/NamingSystem/ca-{health_number_jurisdiction.lower()}-patient-hcn",
         )
-        identifiers.append({
-            "type": {
-                "coding": [
-                    {
-                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
-                        "code": "JHN",
-                        "display": "Jurisdictional health number",
-                    }
-                ]
-            },
-            "system": system,
-            "value": health_number,
-        })
+        identifiers.append(
+            {
+                "type": {
+                    "coding": [
+                        {
+                            "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                            "code": "JHN",
+                            "display": "Jurisdictional health number",
+                        }
+                    ]
+                },
+                "system": system,
+                "value": health_number,
+            }
+        )
     else:
-        identifiers.append({
-            "system": "http://hospital.example.ca/patients",
-            "value": patient_id,
-        })
+        identifiers.append(
+            {
+                "system": "http://hospital.example.ca/patients",
+                "value": patient_id,
+            }
+        )
 
     patient: dict[str, Any] = {
         "resourceType": "Patient",
@@ -258,6 +263,7 @@ def build_ca_core_patient(
 # ---------------------------------------------------------------------------
 # mCODE CancerCondition (#114)
 # ---------------------------------------------------------------------------
+
 
 def build_cancer_condition(
     condition_id: str,
@@ -304,10 +310,7 @@ def build_cancer_condition(
         "verificationStatus": {
             "coding": [
                 {
-                    "system": (
-                        "http://terminology.hl7.org/CodeSystem"
-                        "/condition-ver-status"
-                    ),
+                    "system": ("http://terminology.hl7.org/CodeSystem" "/condition-ver-status"),
                     "code": "confirmed",
                     "display": "Confirmed",
                 }
@@ -317,10 +320,7 @@ def build_cancer_condition(
             {
                 "coding": [
                     {
-                        "system": (
-                            "http://terminology.hl7.org/CodeSystem"
-                            "/condition-category"
-                        ),
+                        "system": ("http://terminology.hl7.org/CodeSystem" "/condition-category"),
                         "code": "encounter-diagnosis",
                         "display": "Encounter Diagnosis",
                     }
@@ -373,6 +373,7 @@ def build_cancer_condition(
 # mCODE TNMStageGroup (#114)
 # ---------------------------------------------------------------------------
 
+
 def build_tnm_stage_group(
     observation_id: str,
     patient_id: str,
@@ -415,10 +416,7 @@ def build_tnm_stage_group(
             {
                 "coding": [
                     {
-                        "system": (
-                            "http://terminology.hl7.org/CodeSystem"
-                            "/observation-category"
-                        ),
+                        "system": ("http://terminology.hl7.org/CodeSystem" "/observation-category"),
                         "code": "laboratory",
                         "display": "Laboratory",
                     }
@@ -474,9 +472,7 @@ def build_tnm_stage_group(
                         {
                             "system": "http://loinc.org",
                             "code": "21906-3",
-                            "display": (
-                                "Regional lymph nodes.clinical [Class] Cancer"
-                            ),
+                            "display": ("Regional lymph nodes.clinical [Class] Cancer"),
                         }
                     ]
                 },
@@ -568,11 +564,14 @@ def build_tumor_marker_test(
         Ressource FHIR R4 Observation conforme mCODE TumorMarkerTest.
     """
     marker_key = marker_name.lower()
-    loinc_info = TUMOR_MARKER_LOINC_MAP.get(marker_key, {
-        "code": "85319-2",
-        "display": f"Tumor marker: {marker_name}",
-        "unit": "",
-    })
+    loinc_info = TUMOR_MARKER_LOINC_MAP.get(
+        marker_key,
+        {
+            "code": "85319-2",
+            "display": f"Tumor marker: {marker_name}",
+            "unit": "",
+        },
+    )
 
     obs: dict[str, Any] = {
         "resourceType": "Observation",
@@ -586,10 +585,7 @@ def build_tumor_marker_test(
             {
                 "coding": [
                     {
-                        "system": (
-                            "http://terminology.hl7.org/CodeSystem"
-                            "/observation-category"
-                        ),
+                        "system": ("http://terminology.hl7.org/CodeSystem" "/observation-category"),
                         "code": "laboratory",
                         "display": "Laboratory",
                     }
@@ -630,8 +626,7 @@ def build_tumor_marker_test(
                 "coding": [
                     {
                         "system": (
-                            "http://terminology.hl7.org/CodeSystem"
-                            "/v3-ObservationInterpretation"
+                            "http://terminology.hl7.org/CodeSystem" "/v3-ObservationInterpretation"
                         ),
                         "code": interpretation_code,
                         "display": interpretation_display or interpretation_code,
@@ -709,6 +704,7 @@ def map_ml_tags_to_tumor_markers(
 # ---------------------------------------------------------------------------
 # Validation helpers
 # ---------------------------------------------------------------------------
+
 
 def validate_us_core_patient(patient: dict[str, Any]) -> list[str]:
     """

@@ -59,8 +59,7 @@ def _make_mock_reader(name, score, open_succeeds=True):
 
         def get_metadata(self):
             return SlideMetadata(
-                width=100, height=100, level_count=1,
-                level_dimensions=[(100, 100)]
+                width=100, height=100, level_count=1, level_dimensions=[(100, 100)]
             )
 
         def get_thumbnail(self, size):  # noqa: ARG002
@@ -132,8 +131,7 @@ class TestISlideReaderABC:
 
             def get_metadata(self):
                 return SlideMetadata(
-                    width=100, height=100, level_count=1,
-                    level_dimensions=[(100, 100)]
+                    width=100, height=100, level_count=1, level_dimensions=[(100, 100)]
                 )
 
             def get_thumbnail(self, size):  # noqa: ARG002
@@ -227,9 +225,7 @@ class TestOpenSlideReaderMocked:
         mock_slide = MagicMock()
         mock_slide.dimensions = (100000, 80000)
         mock_slide.level_count = 3
-        mock_slide.level_dimensions = [
-            (100000, 80000), (50000, 40000), (25000, 20000)
-        ]
+        mock_slide.level_dimensions = [(100000, 80000), (50000, 40000), (25000, 20000)]
         mock_slide.level_downsamples = [1.0, 2.0, 4.0]
         mock_slide.properties = {
             "openslide.vendor": "aperio",
@@ -276,6 +272,7 @@ class TestOpenSlideReaderMocked:
         mock_slide = self._create_mock_openslide()
 
         from PIL import Image
+
         test_image = Image.new("RGBA", (256, 256), (128, 64, 32, 255))
         mock_slide.read_region.return_value = test_image
 
@@ -611,12 +608,9 @@ class TestOMEZarrReader:
         """_is_ome_zarr detects valid OME-Zarr directories."""
         with tempfile.TemporaryDirectory(suffix=".zarr") as tmpdir:
             zattrs = Path(tmpdir) / ".zattrs"
-            zattrs.write_text(json.dumps({
-                "multiscales": [{
-                    "datasets": [{"path": "0"}],
-                    "version": "0.4"
-                }]
-            }))
+            zattrs.write_text(
+                json.dumps({"multiscales": [{"datasets": [{"path": "0"}], "version": "0.4"}]})
+            )
             assert _is_ome_zarr(tmpdir) is True
 
     def test_is_ome_zarr_without_multiscales(self):
@@ -679,8 +673,7 @@ class TestContextManagerProtocol:
 
             def get_metadata(self):
                 return SlideMetadata(
-                    width=100, height=100, level_count=1,
-                    level_dimensions=[(100, 100)]
+                    width=100, height=100, level_count=1, level_dimensions=[(100, 100)]
                 )
 
             def get_thumbnail(self, size):  # noqa: ARG002
@@ -729,8 +722,7 @@ class TestContextManagerProtocol:
 
             def get_metadata(self):
                 return SlideMetadata(
-                    width=100, height=100, level_count=1,
-                    level_dimensions=[(100, 100)]
+                    width=100, height=100, level_count=1, level_dimensions=[(100, 100)]
                 )
 
             def get_thumbnail(self, size):  # noqa: ARG002
@@ -791,10 +783,7 @@ class TestSlideMetadata:
 
     def test_optional_fields_default_none(self):
         """Test that optional fields default to None."""
-        meta = SlideMetadata(
-            width=100, height=100, level_count=1,
-            level_dimensions=[(100, 100)]
-        )
+        meta = SlideMetadata(width=100, height=100, level_count=1, level_dimensions=[(100, 100)])
         assert meta.mpp_x is None
         assert meta.mpp_y is None
         assert meta.objective_power is None
@@ -803,19 +792,13 @@ class TestSlideMetadata:
 
     def test_default_properties_empty_dict(self):
         """Test that properties defaults to empty dict."""
-        meta = SlideMetadata(
-            width=100, height=100, level_count=1,
-            level_dimensions=[(100, 100)]
-        )
+        meta = SlideMetadata(width=100, height=100, level_count=1, level_dimensions=[(100, 100)])
         assert meta.properties == {}
         assert isinstance(meta.properties, dict)
 
     def test_nd_defaults(self):
         """Test N-dimensional fields default to 1."""
-        meta = SlideMetadata(
-            width=100, height=100, level_count=1,
-            level_dimensions=[(100, 100)]
-        )
+        meta = SlideMetadata(width=100, height=100, level_count=1, level_dimensions=[(100, 100)])
         assert meta.channels == 1
         assert meta.z_levels == 1
         assert meta.timepoints == 1
@@ -823,9 +806,13 @@ class TestSlideMetadata:
     def test_ome_fields(self):
         """Test OME N-dimensional fields can be set."""
         meta = SlideMetadata(
-            width=1024, height=1024, level_count=1,
+            width=1024,
+            height=1024,
+            level_count=1,
             level_dimensions=[(1024, 1024)],
-            channels=3, z_levels=10, timepoints=5,
+            channels=3,
+            z_levels=10,
+            timepoints=5,
         )
         assert meta.channels == 3
         assert meta.z_levels == 10
@@ -837,10 +824,7 @@ class TestSlideMetadata:
             width=100000,
             height=80000,
             level_count=4,
-            level_dimensions=[
-                (100000, 80000), (50000, 40000),
-                (25000, 20000), (12500, 10000)
-            ],
+            level_dimensions=[(100000, 80000), (50000, 40000), (25000, 20000), (12500, 10000)],
             mpp_x=0.25,
             mpp_y=0.25,
             objective_power=40,
@@ -858,14 +842,8 @@ class TestSlideMetadata:
 
     def test_properties_independence(self):
         """Test that properties dict is independent between instances."""
-        meta1 = SlideMetadata(
-            width=100, height=100, level_count=1,
-            level_dimensions=[(100, 100)]
-        )
-        meta2 = SlideMetadata(
-            width=200, height=200, level_count=1,
-            level_dimensions=[(200, 200)]
-        )
+        meta1 = SlideMetadata(width=100, height=100, level_count=1, level_dimensions=[(100, 100)])
+        meta2 = SlideMetadata(width=200, height=200, level_count=1, level_dimensions=[(200, 200)])
         meta1.properties["key"] = "value"
         assert "key" not in meta2.properties
 

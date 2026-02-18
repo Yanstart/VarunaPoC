@@ -206,7 +206,9 @@ class AnnotationOutlierService:
 
             if elapsed < self.MIN_ANNOTATION_TIME_S:
                 ann_id = self._get_id(ann)
-                reason = f"Annotation time {elapsed:.2f}s below minimum {self.MIN_ANNOTATION_TIME_S}s"
+                reason = (
+                    f"Annotation time {elapsed:.2f}s below minimum {self.MIN_ANNOTATION_TIME_S}s"
+                )
                 self._add_outlier(outlier_map, ann_id, 0.8, reason, "timing")
 
     def _inconsistency_outliers(

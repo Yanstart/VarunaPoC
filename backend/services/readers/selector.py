@@ -57,9 +57,7 @@ class ReaderSelector:
             TypeError: If reader_cls is not a subclass of ISlideReader.
         """
         if not (isinstance(reader_cls, type) and issubclass(reader_cls, ISlideReader)):
-            raise TypeError(
-                f"{reader_cls} must be a subclass of ISlideReader"
-            )
+            raise TypeError(f"{reader_cls} must be a subclass of ISlideReader")
         if reader_cls not in self._readers:
             self._readers.append(reader_cls)
             logger.debug(f"Registered reader: {reader_cls.__name__}")
@@ -93,9 +91,7 @@ class ReaderSelector:
             if score <= 0:
                 continue
 
-            logger.info(
-                f"Trying {cls.__name__} (score={score}) for {path}"
-            )
+            logger.info(f"Trying {cls.__name__} (score={score}) for {path}")
 
             try:
                 reader = cls()
@@ -103,9 +99,7 @@ class ReaderSelector:
                 logger.info(f"SUCCESS: Opened with {cls.__name__}")
                 return reader
             except Exception as e:
-                logger.warning(
-                    f"Reader {cls.__name__} failed for {path}: {e}"
-                )
+                logger.warning(f"Reader {cls.__name__} failed for {path}: {e}")
                 errors.append(f"{cls.__name__} (score={score}): {e}")
                 continue
 
@@ -113,13 +107,11 @@ class ReaderSelector:
         if errors:
             error_detail = "\n  ".join(errors)
             raise NoCompatibleReaderError(
-                f"No reader can open: {path}\n"
-                f"Attempted readers:\n  {error_detail}"
+                f"No reader can open: {path}\n" f"Attempted readers:\n  {error_detail}"
             )
 
         raise NoCompatibleReaderError(
-            f"No reader can open: {path} "
-            f"(no registered reader supports this format)"
+            f"No reader can open: {path} " f"(no registered reader supports this format)"
         )
 
 

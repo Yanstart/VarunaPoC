@@ -82,9 +82,7 @@ class ConsentArtifact:
         self.hip_id = hip_id
         self.hiu_id = hiu_id
         self.purpose = purpose
-        self.date_range_from = date_range_from or (now - timedelta(days=365)).strftime(
-            "%Y-%m-%d"
-        )
+        self.date_range_from = date_range_from or (now - timedelta(days=365)).strftime("%Y-%m-%d")
         self.date_range_to = date_range_to or now.strftime("%Y-%m-%d")
         self.expiry = (now + timedelta(days=expiry_days)).isoformat()
         self.hi_types = hi_types or [
@@ -209,9 +207,7 @@ class ABDMService:
             raise ValueError(msg)
 
         now = datetime.now(tz=timezone.utc).isoformat()
-        bundle_id = hashlib.sha256(
-            f"{abha_number}:{slide_id}:{now}".encode()
-        ).hexdigest()[:16]
+        bundle_id = hashlib.sha256(f"{abha_number}:{slide_id}:{now}".encode()).hexdigest()[:16]
 
         patient_ref = f"Patient/{abha_number}"
         report_id = f"DiagnosticReport/{bundle_id}"
@@ -221,9 +217,7 @@ class ABDMService:
             "id": bundle_id,
             "meta": {
                 "lastUpdated": now,
-                "profile": [
-                    f"{ABDM_FHIR_SERVER}/StructureDefinition/DiagnosticReportBundle"
-                ],
+                "profile": [f"{ABDM_FHIR_SERVER}/StructureDefinition/DiagnosticReportBundle"],
             },
             "type": "document",
             "timestamp": now,

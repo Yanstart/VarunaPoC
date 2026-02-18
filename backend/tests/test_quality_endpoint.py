@@ -86,18 +86,16 @@ class TestQualityService:
         for i in range(20):
             result = self.service.assess_quality(f"/slides/slide_{i}.svs")
             for artifact in result.artifacts:
-                assert artifact.type in ARTIFACT_TYPES, (
-                    f"Unknown artifact type: {artifact.type}"
-                )
+                assert artifact.type in ARTIFACT_TYPES, f"Unknown artifact type: {artifact.type}"
 
     def test_artifacts_have_valid_severity(self):
         """All artifact severities must be valid."""
         for i in range(20):
             result = self.service.assess_quality(f"/slides/slide_{i}.svs")
             for artifact in result.artifacts:
-                assert artifact.severity in SEVERITY_LEVELS, (
-                    f"Unknown severity: {artifact.severity}"
-                )
+                assert (
+                    artifact.severity in SEVERITY_LEVELS
+                ), f"Unknown severity: {artifact.severity}"
 
     def test_artifacts_have_valid_bbox(self):
         """Artifact bbox must be [x1, y1, x2, y2] with valid coords."""

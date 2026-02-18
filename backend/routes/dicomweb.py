@@ -102,12 +102,8 @@ class SRRequest(BaseModel):
         None,
         description="Résultats de classification ML (diagnosis, probability)",
     )
-    model_name: str = Field(
-        "VarunaPoC-ML", description="Nom du modèle ML"
-    )
-    model_version: str = Field(
-        "1.0", description="Version du modèle ML"
-    )
+    model_name: str = Field("VarunaPoC-ML", description="Nom du modèle ML")
+    model_version: str = Field("1.0", description="Version du modèle ML")
 
 
 class AnnotationRequest(BaseModel):
@@ -117,12 +113,8 @@ class AnnotationRequest(BaseModel):
         ...,
         description="FeatureCollection GeoJSON avec annotations",
     )
-    annotation_label: str = Field(
-        "annotation", description="Label par défaut pour les annotations"
-    )
-    patient_name: str = Field(
-        "ANONYMOUS", description="Nom du patient DICOM"
-    )
+    annotation_label: str = Field("annotation", description="Label par défaut pour les annotations")
+    patient_name: str = Field("ANONYMOUS", description="Nom du patient DICOM")
 
 
 # =========================================================================
@@ -154,9 +146,7 @@ async def retrieve_instance_metadata(
     service = _get_dicomweb_service()
 
     try:
-        metadata = service.retrieve_instance_metadata(
-            study_uid, series_uid, instance_uid
-        )
+        metadata = service.retrieve_instance_metadata(study_uid, series_uid, instance_uid)
         return JSONResponse(
             content=metadata,
             media_type="application/dicom+json",
@@ -170,8 +160,7 @@ async def retrieve_instance_metadata(
 
 
 @router.get(
-    "/studies/{study_uid}/series/{series_uid}"
-    "/instances/{instance_uid}/frames/{frame_number}",
+    "/studies/{study_uid}/series/{series_uid}" "/instances/{instance_uid}/frames/{frame_number}",
 )
 async def retrieve_frame(
     study_uid: str,
@@ -202,17 +191,15 @@ async def retrieve_frame(
     service = _get_dicomweb_service()
 
     try:
-        frame_data = service.retrieve_frame(
-            study_uid, series_uid, instance_uid, frame_number
-        )
+        frame_data = service.retrieve_frame(study_uid, series_uid, instance_uid, frame_number)
         # Return as multipart/related with single JPEG part
         # For simplicity in mock mode, return as image/jpeg
         boundary = "dicom-frame-boundary"
         body = (
-            f"--{boundary}\r\n"
-            f"Content-Type: image/jpeg\r\n"
-            f"\r\n"
-        ).encode() + frame_data + f"\r\n--{boundary}--\r\n".encode()
+            (f"--{boundary}\r\n" f"Content-Type: image/jpeg\r\n" f"\r\n").encode()
+            + frame_data
+            + f"\r\n--{boundary}--\r\n".encode()
+        )
 
         return Response(
             content=body,
@@ -329,9 +316,7 @@ async def search_studies(
 @router.get("/studies/{study_uid}/series")
 async def search_series(
     study_uid: str,
-    modality: Optional[str] = Query(
-        None, alias="Modality", description="Filtrer par modalité"
-    ),
+    modality: Optional[str] = Query(None, alias="Modality", description="Filtrer par modalité"),
     limit: int = Query(50, description="Nombre maximum de résultats"),
     offset: int = Query(0, description="Décalage pour pagination"),
 ):
@@ -412,9 +397,7 @@ async def create_structured_report(slide_id: str, request: SRRequest):
 
 
 @router.post("/annotations/{slide_id}")
-async def convert_annotations(
-    slide_id: str, request: AnnotationRequest
-):
+async def convert_annotations(slide_id: str, request: AnnotationRequest):
     """Convertir des annotations GeoJSON en format DICOM Supplement 222/223.
 
     Prend une FeatureCollection GeoJSON et la convertit en structure

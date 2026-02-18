@@ -21,10 +21,35 @@ env:
 
 jobs:
   # ============================================
+  # Path Filtering (skip unchanged components on PRs)
+  # ============================================
+  changes:
+    name: Detect Changes
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
+    outputs:
+      backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
+      frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
+  # ============================================
   # Backend CI
   # ============================================
   backend-lint:
     name: Backend - Lint
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
@@ -60,6 +85,8 @@ jobs:
 
   backend-test:
     name: Backend - Test
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
@@ -103,6 +130,8 @@ jobs:
 
   backend-docker:
     name: Backend - Docker Build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
@@ -125,6 +154,9 @@ jobs:
             type=registry,ref=localhost:5000/varuna/backend:buildcache
           cache-to: type=local,dest=/tmp/.buildx-cache-new/backend,mode=max
 
+      - name: Cleanup stale containers
+        run: docker rm -f test-backend 2>/dev/null || true
+
       - name: Test backend container
         run: |
           docker run -d --name test-backend \
@@ -137,12 +169,10 @@ jobs:
           # Health check
           curl -f http://localhost:8000/api/health || exit 1
 
-          # Stop container
-          docker stop test-backend
-
-      - name: Rotate Docker build cache
+      - name: Cleanup
         if: always()
         run: |
+          docker rm -f test-backend 2>/dev/null || true
           rm -rf /tmp/.buildx-cache/backend
           mv /tmp/.buildx-cache-new/backend /tmp/.buildx-cache/backend 2>/dev/null || true
 
@@ -151,6 +181,8 @@ jobs:
   # ============================================
   frontend-lint:
     name: Frontend - Lint
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
@@ -176,6 +208,8 @@ jobs:
 
   frontend-build:
     name: Frontend - Build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
@@ -208,6 +242,8 @@ jobs:
 
   frontend-docker:
     name: Frontend - Docker Build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
@@ -230,6 +266,9 @@ jobs:
             type=registry,ref=localhost:5000/varuna/frontend:buildcache
           cache-to: type=local,dest=/tmp/.buildx-cache-new/frontend,mode=max
 
+      - name: Cleanup stale containers
+        run: docker rm -f test-frontend 2>/dev/null || true
+
       - name: Test frontend container
         run: |
           docker run -d --name test-frontend \
@@ -242,12 +281,10 @@ jobs:
           # Health check
           curl -f http://localhost:80/ || exit 1
 
-          # Stop container
-          docker stop test-frontend
-
-      - name: Rotate Docker build cache
+      - name: Cleanup
         if: always()
         run: |
+          docker rm -f test-frontend 2>/dev/null || true
           rm -rf /tmp/.buildx-cache/frontend
           mv /tmp/.buildx-cache-new/frontend /tmp/.buildx-cache/frontend 2>/dev/null || true
 
@@ -262,6 +299,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Cleanup stale containers
+        run: docker rm -f backend frontend 2>/dev/null || true
 
       - name: Start backend container
         run: |
@@ -297,9 +337,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: |
-          docker stop backend frontend || true
-          docker rm backend frontend || true
+        run: docker rm -f backend frontend 2>/dev/null || true
 
   # ============================================
   # E2E - Playwright Browser Tests
@@ -356,6 +394,9 @@ jobs:
           cd backend
           docker build -t varuna-backend:e2e-test .
 
+      - name: Cleanup stale containers
+        run: docker rm -f e2e-backend 2>/dev/null || true
+
       - name: Start backend container
         run: |
           docker run -d --name e2e-backend \
@@ -403,9 +444,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: |
-          docker stop e2e-backend || true
-          docker rm e2e-backend || true
+        run: docker rm -f e2e-backend 2>/dev/null || true
 
   # ============================================
   # CI Status Check (required for PR merge)
@@ -413,6 +452,7 @@ jobs:
   ci-status:
     name: CI Status
     needs:
+      - changes
       - backend-lint
       - backend-test
       - backend-docker
@@ -431,4 +471,4 @@ jobs:
             echo "One or more CI jobs failed"
             exit 1
           fi
-          echo "All CI checks passed"
+          echo "All CI checks passed (skipped jobs are OK — path filtering)"

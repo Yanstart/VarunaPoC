@@ -95,9 +95,7 @@ class DICOMExportService:
 
             self._has_dicom = True
         except ImportError:
-            logger.info(
-                "pydicom/highdicom not installed -- DICOM export in mock mode"
-            )
+            logger.info("pydicom/highdicom not installed -- DICOM export in mock mode")
 
     @property
     def has_dicom(self) -> bool:
@@ -160,8 +158,7 @@ class DICOMExportService:
             # Real mode: would open slide, tile it, create DICOM dataset
             # For now, still returns mock but with full metadata structure
             logger.info(
-                "DICOM export: pydicom available but real export "
-                "not yet implemented for %s",
+                "DICOM export: pydicom available but real export " "not yet implemented for %s",
                 slide_id,
             )
 
@@ -302,9 +299,7 @@ class DICOMExportService:
                 "specimen_description_sequence": [
                     {
                         "specimen_identifier": slide_id,
-                        "specimen_uid": _generate_uid(
-                            f"specimen.{slide_id}"
-                        ),
+                        "specimen_uid": _generate_uid(f"specimen.{slide_id}"),
                         "specimen_preparation_sequence": [],
                     }
                 ],

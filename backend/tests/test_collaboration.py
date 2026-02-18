@@ -48,9 +48,7 @@ class TestSharingService:
 
     def test_expired_share_returns_none(self):
         """Validate returns None for an expired share token."""
-        link = self.service.create_share(
-            slide_id="slide_003", permission="view", expires_hours=1
-        )
+        link = self.service.create_share(slide_id="slide_003", permission="view", expires_hours=1)
         # Manually set expires_at to the past
         link.expires_at = datetime.now(UTC) - timedelta(hours=1)
 

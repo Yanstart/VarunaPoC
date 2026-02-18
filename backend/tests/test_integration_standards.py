@@ -190,8 +190,12 @@ class TestTerminologyService:
 
         svc = TerminologyService()
         expected_labels = [
-            "Tumeur", "Nécrose", "Inflammation",
-            "Stroma", "Tissu sain", "Artefact",
+            "Tumeur",
+            "Nécrose",
+            "Inflammation",
+            "Stroma",
+            "Tissu sain",
+            "Artefact",
         ]
         for label in expected_labels:
             assert label in SNOMED_MAPPINGS, f"Missing SNOMED mapping for {label}"
@@ -522,12 +526,24 @@ class TestAuditSearch:
         log_file = tmp_path / "audit.jsonl"
 
         events = [
-            {"id": "1", "timestamp": "2026-02-18T10:00:00Z", "user_sub": "dr-martin",
-             "event_type": "SLIDE_VIEWED"},
-            {"id": "2", "timestamp": "2026-02-18T11:00:00Z", "user_sub": "dr-dupont",
-             "event_type": "SLIDE_VIEWED"},
-            {"id": "3", "timestamp": "2026-02-18T12:00:00Z", "user_sub": "dr-martin",
-             "event_type": "FHIR_READ"},
+            {
+                "id": "1",
+                "timestamp": "2026-02-18T10:00:00Z",
+                "user_sub": "dr-martin",
+                "event_type": "SLIDE_VIEWED",
+            },
+            {
+                "id": "2",
+                "timestamp": "2026-02-18T11:00:00Z",
+                "user_sub": "dr-dupont",
+                "event_type": "SLIDE_VIEWED",
+            },
+            {
+                "id": "3",
+                "timestamp": "2026-02-18T12:00:00Z",
+                "user_sub": "dr-martin",
+                "event_type": "FHIR_READ",
+            },
         ]
 
         with (
@@ -659,9 +675,14 @@ class TestGDPRRegister:
         from auth.audit import GDPR_PROCESSING_REGISTER
 
         required_fields = [
-            "activity", "purpose", "legal_basis",
-            "data_categories", "data_subjects", "recipients",
-            "retention_years", "security_measures",
+            "activity",
+            "purpose",
+            "legal_basis",
+            "data_categories",
+            "data_subjects",
+            "recipients",
+            "retention_years",
+            "security_measures",
         ]
         for activity in GDPR_PROCESSING_REGISTER:
             for field in required_fields:
