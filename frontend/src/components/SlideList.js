@@ -26,7 +26,7 @@ export function createSlideList(slides, onClick) {
     const container = document.createElement('div');
 
     if (slides.length === 0) {
-        container.innerHTML = '<p class="empty">No slides found in /Slides directory</p>';
+        container.innerHTML = '<p class="empty">Aucune lame trouv\u00e9e dans le r\u00e9pertoire /Slides</p>';
         return container;
     }
 

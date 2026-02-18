@@ -314,6 +314,27 @@ jobs:
           cd frontend
           npx playwright install --with-deps chromium
 
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Start frontend preview server
+        run: |
+          cd frontend
+          npx vite preview --port 5173 &
+          # Wait for the preview server to be ready
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:5173/ > /dev/null 2>&1; then
+              echo "Frontend preview server is ready"
+              exit 0
+            fi
+            echo "Waiting for frontend... ($i/15)"
+            sleep 1
+          done
+          echo "Frontend failed to start"
+          exit 1
+
       - name: Build backend Docker image
         run: |
           cd backend

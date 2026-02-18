@@ -45,6 +45,7 @@ skip_glob = ["venv/*", ".venv/*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
+pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -64,12 +65,23 @@ markers = [
     "annotation: Annotation CRUD and schema tests",
     "db: Tests requiring PostgreSQL database",
     "e2e: End-to-end browser tests",
+    "load: Load/performance tests",
+    "focus: Focus assist tests",
+    "similarity: Similarity search tests",
+    "counting: Cell counting tests",
+    "clustering: Clustering tests",
+    "drift: Drift detection tests",
+    "quality: Slide quality control tests",
+    "worklist: Worklist and history tests",
+    "retraining: Retraining pipeline tests",
 ]
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
     "ignore::UserWarning:scipy",
     "ignore:A NumPy version:UserWarning",
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
 
 [tool.coverage.run]

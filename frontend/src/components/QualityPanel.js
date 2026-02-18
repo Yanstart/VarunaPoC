@@ -79,15 +79,15 @@ class QualityPanel {
 
         this.element.innerHTML = `
             <div class="quality-panel__header">
-                <span class="quality-panel__title">Quality Metrics</span>
+                <span class="quality-panel__title">Métriques de qualité</span>
                 <span class="quality-panel__toggle">&#9660;</span>
             </div>
             <div class="quality-panel__body">
                 ${!hasAnnotators
         ? `<div class="quality-panel__empty">
                         ${this.annotators.length === 0
-        ? 'No annotators on this slide'
-        : 'Need at least 2 annotators'}
+        ? 'Aucun annotateur sur cette lame'
+        : 'Au moins 2 annotateurs requis'}
                        </div>`
         : this._renderContent()
 }
@@ -140,7 +140,7 @@ class QualityPanel {
                 </div>
             </div>
             <button class="quality-panel__compute-btn" ${this.isLoading ? 'disabled' : ''}>
-                ${this.isLoading ? 'Computing...' : 'Compute Agreement'}
+                ${this.isLoading ? 'Calcul en cours...' : 'Calculer les métriques'}
             </button>
             ${this.kappaResult ? this._renderKappa() : ''}
             ${this.confusionResult ? this._renderConfusionMatrix() : ''}
@@ -156,15 +156,15 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Cohen's Kappa</div>
+                <div class="quality-panel__section-title">Score Kappa</div>
                 <div class="quality-panel__kappa quality-panel__kappa--${cssClass}">
                     <span class="quality-panel__kappa-value">${r.kappa.toFixed(3)}</span>
                     <span class="quality-panel__kappa-label">${r.interpretation}</span>
                 </div>
                 <div class="quality-panel__match-info">
-                    Matched: <span>${r.n_matched}</span> |
-                    Unmatched A: <span>${r.n_unmatched_a}</span> |
-                    Unmatched B: <span>${r.n_unmatched_b}</span>
+                    Appari\u00e9s : <span>${r.n_matched}</span> |
+                    Non appari\u00e9s A : <span>${r.n_unmatched_a}</span> |
+                    Non appari\u00e9s B : <span>${r.n_unmatched_b}</span>
                 </div>
             </div>
         `;
@@ -185,7 +185,7 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Confusion Matrix</div>
+                <div class="quality-panel__section-title">Matrice de confusion</div>
                 <table class="quality-panel__matrix">
                     <tr><th></th>${headerCells}</tr>
                     ${rows}
@@ -201,15 +201,15 @@ class QualityPanel {
         const rows = r.metrics.map(m => `
             <div class="quality-panel__f1-row">
                 <span class="quality-panel__f1-label">${m.label}</span>
-                <span class="quality-panel__f1-value" title="Precision">${m.precision.toFixed(2)}</span>
-                <span class="quality-panel__f1-value" title="Recall">${m.recall.toFixed(2)}</span>
+                <span class="quality-panel__f1-value" title="Précision">${m.precision.toFixed(2)}</span>
+                <span class="quality-panel__f1-value" title="Rappel">${m.recall.toFixed(2)}</span>
                 <span class="quality-panel__f1-value" title="F1">${m.f1.toFixed(2)}</span>
             </div>
         `).join('');
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Per-Label Metrics</div>
+                <div class="quality-panel__section-title">M\u00e9triques par \u00e9tiquette</div>
                 <div class="quality-panel__f1-row" style="color: #666; font-size: 10px;">
                     <span class="quality-panel__f1-label">Label</span>
                     <span class="quality-panel__f1-value">P</span>
@@ -233,7 +233,7 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">IoU Distribution</div>
+                <div class="quality-panel__section-title">Distribution IoU</div>
                 <div class="quality-panel__histogram">${bars}</div>
                 <div class="quality-panel__hist-labels">
                     <span>0.0</span>
@@ -241,8 +241,8 @@ class QualityPanel {
                     <span>1.0</span>
                 </div>
                 <div class="quality-panel__iou-stats">
-                    <span>Mean: <span class="quality-panel__iou-stat-value">${r.mean.toFixed(3)}</span></span>
-                    <span>Median: <span class="quality-panel__iou-stat-value">${r.median.toFixed(3)}</span></span>
+                    <span>Moyenne : <span class="quality-panel__iou-stat-value">${r.mean.toFixed(3)}</span></span>
+                    <span>M\u00e9diane : <span class="quality-panel__iou-stat-value">${r.median.toFixed(3)}</span></span>
                 </div>
             </div>
         `;
@@ -255,7 +255,7 @@ class QualityPanel {
                     <input type="checkbox"
                            class="quality-panel__disagree-checkbox"
                            ${this.showDisagreements ? 'checked' : ''}>
-                    Show Disagreements on Slide
+                    Superposition des désaccords
                 </label>
             </div>
         `;

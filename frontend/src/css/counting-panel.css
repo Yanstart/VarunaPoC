@@ -151,3 +151,26 @@
 .counting-panel__conf-label--medium { color: #ff9800; }
 .counting-panel__conf-label--low { color: #ff6b6b; }
 .counting-panel__conf-label--none { color: #666; }
+
+/* Summary header */
+.counting-panel__summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #333);
+}
+
+.counting-panel__total-big {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+}
+
+.counting-panel__total-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #999);
+    text-transform: lowercase;
+}

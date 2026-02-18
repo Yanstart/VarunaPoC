@@ -23,7 +23,7 @@ import { createSlideList } from './SlideList.js';
  * @param {Function} onSlideSelect - Callback appelé quand une lame est sélectionnée
  * @returns {HTMLElement} Container du browser
  */
-export function createFolderBrowser(onSlideSelect) {
+export function createFolderBrowser(onSlideSelect, onViewToggle) {
     const container = document.createElement('div');
     container.className = 'folder-browser';
 
@@ -46,6 +46,20 @@ export function createFolderBrowser(onSlideSelect) {
                    accept=".svs,.tif,.tiff,.ndpi,.vms,.vmu,.scn,.mrxs,.bif,.svslide,.czi" multiple />
         </div>
     `;
+
+    // Toggle button to switch to case view (Wave 3)
+    if (onViewToggle) {
+        const toolbar = header.querySelector('.home-toolbar');
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'view-toggle-btn';
+        toggleBtn.textContent = 'Mes cas';
+        toggleBtn.title = 'Basculer vers la vue par cas';
+        toggleBtn.addEventListener('click', () => {
+            localStorage.setItem('varuna_home_view', 'cases');
+            onViewToggle('cases');
+        });
+        toolbar.appendChild(toggleBtn);
+    }
 
     // Breadcrumb (fil d'Ariane) avec bouton retour
     const breadcrumb = document.createElement('div');

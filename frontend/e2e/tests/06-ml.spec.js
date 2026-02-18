@@ -15,9 +15,10 @@ test.describe('ML Panel', () => {
         await page.goto('/');
         await page.waitForSelector('.folder-browser');
 
-        // Navigate to viewer
+        // Navigate to viewer (wait for page transition + metadata load)
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
-        await page.locator('#viewer').waitFor({ timeout: 10_000 });
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#info')).toContainText('Information', { timeout: 10_000 });
     });
 
     test('ML button is visible in viewer header', async ({ page }) => {
@@ -44,8 +45,13 @@ test.describe('ML Panel', () => {
         // Open ML panel
         await page.locator('#ml-btn').click();
 
+        // Expand the collapsed accordion by clicking the header
+        const mlHeader = page.locator('.ml-panel__header');
+        await expect(mlHeader).toBeVisible({ timeout: 5_000 });
+        await mlHeader.dispatchEvent('click');
+
         // Should have predict and heatmap buttons
-        await expect(page.locator('.ml-panel__btn--predict')).toBeVisible();
-        await expect(page.locator('.ml-panel__btn--heatmap')).toBeVisible();
+        await expect(page.locator('.ml-panel__btn--predict')).toBeVisible({ timeout: 5_000 });
+        await expect(page.locator('.ml-panel__btn--heatmap')).toBeVisible({ timeout: 5_000 });
     });
 });

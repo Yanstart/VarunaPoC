@@ -20,6 +20,9 @@ import { annotationStore } from '../services/AnnotationStore.js';
 
 const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle'];
 
+/** localStorage key for last-used overflow tool */
+const LAST_TOOL_KEY = 'varuna_last_tool';
+
 const TOOL_ICONS = {
     select: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>',
     rectangle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>',
@@ -30,13 +33,25 @@ const TOOL_ICONS = {
 };
 
 const TOOL_LABELS = {
-    select: 'Select (V)',
+    select: 'S\u00e9lection (V)',
     rectangle: 'Rectangle (R)',
-    polygon: 'Polygon (P)',
+    polygon: 'Polygone (P)',
     point: 'Point (M)',
-    freehand: 'Freehand (F)',
-    circle: 'Circle (C)',
+    freehand: 'Main lev\u00e9e (F)',
+    circle: 'Cercle (C)',
 };
+
+/**
+ * Predefined pathology annotation labels with colors
+ */
+const PREDEFINED_LABELS = [
+    { id: 'tumeur', name: 'Tumeur', color: '#e74c3c' },
+    { id: 'benin', name: 'B\u00e9nin', color: '#2ecc71' },
+    { id: 'necrose', name: 'N\u00e9crose', color: '#95a5a6' },
+    { id: 'inflammation', name: 'Inflammation', color: '#f39c12' },
+    { id: 'a_confirmer', name: '\u00c0 confirmer', color: '#3498db' },
+    { id: 'stroma', name: 'Stroma', color: '#9b59b6' },
+];
 
 class DrawingTools {
     /**
@@ -51,6 +66,15 @@ class DrawingTools {
         this.activeTool = 'select';
         this.isDrawing = false;
 
+        // Restore last-used overflow tool from localStorage
+        const lastTool = this._getLastTool();
+        this.primaryTools = ['select', lastTool || 'rectangle'];
+        this.overflowOpen = false;
+
+        // Label state
+        this.selectedLabel = null;
+        this.customLabelMode = false;
+
         // Drawing state
         this._drawPoints = [];
         this._drawStartSlide = null;
@@ -58,6 +82,8 @@ class DrawingTools {
 
         // DOM
         this.element = null;
+        this.overflowMenu = null;
+        this.labelSelector = null;
 
         /** @type {Array<Function>} Unsubscribe functions for event listeners */
         this._unsubscribers = [];
@@ -74,42 +100,223 @@ class DrawingTools {
     _createToolbar() {
         this.element = document.createElement('div');
         this.element.className = 'drawing-tools';
+        this._renderToolbar();
+    }
 
-        for (const tool of TOOLS) {
+    /**
+     * Render toolbar content (primary tools + more button + overflow).
+     * Uses static TOOL_ICONS constant (no user input) for SVG rendering.
+     * @private
+     */
+    _renderToolbar() {
+        // Clear existing content
+        while (this.element.firstChild) {
+            this.element.removeChild(this.element.firstChild);
+        }
+
+        // Primary tool buttons
+        for (const tool of this.primaryTools) {
             const btn = document.createElement('button');
             btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
             btn.dataset.tool = tool;
             btn.title = TOOL_LABELS[tool];
+            // TOOL_ICONS is a static constant defined in this module, not user input
             btn.innerHTML = TOOL_ICONS[tool];
-
             btn.addEventListener('click', () => this._setTool(tool));
             this.element.appendChild(btn);
         }
 
+        // "More" button (+ overflow)
+        const moreBtn = document.createElement('button');
+        moreBtn.className = 'drawing-tools__btn drawing-tools__btn--more';
+        moreBtn.title = 'Plus d\'outils';
+        moreBtn.textContent = '+';
+        moreBtn.addEventListener('click', () => this._toggleOverflow());
+        this.element.appendChild(moreBtn);
+
+        // Overflow container with remaining tools
+        const overflowTools = TOOLS.filter(t => !this.primaryTools.includes(t));
+        this.overflowMenu = document.createElement('div');
+        this.overflowMenu.className = 'drawing-tools__overflow';
+        this.overflowMenu.style.display = 'none';
+
+        for (const tool of overflowTools) {
+            const btn = document.createElement('button');
+            btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
+            btn.dataset.tool = tool;
+            btn.title = TOOL_LABELS[tool];
+            // TOOL_ICONS is a static constant defined in this module, not user input
+            btn.innerHTML = TOOL_ICONS[tool];
+            btn.addEventListener('click', () => this._setTool(tool));
+            this.overflowMenu.appendChild(btn);
+        }
+
+        this.element.appendChild(this.overflowMenu);
+
         // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'drawing-tools__btn drawing-tools__btn--danger';
-        deleteBtn.title = 'Delete Selected (Del)';
+        deleteBtn.title = 'Supprimer la s\u00e9lection (Del)';
+        // Static SVG icon, not user input — safe constant, no user data
         deleteBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg>';
         deleteBtn.addEventListener('click', () => this._deleteSelected());
         this.element.appendChild(deleteBtn);
+
+        // Label selector (visible when a drawing tool is active)
+        this.labelSelector = this._buildLabelSelector();
+        this.element.appendChild(this.labelSelector);
+        this._updateLabelSelectorVisibility();
+    }
+
+    /**
+     * Build the label selector dropdown with predefined pathology labels
+     * @returns {HTMLElement}
+     * @private
+     */
+    _buildLabelSelector() {
+        const container = document.createElement('div');
+        container.className = 'drawing-tools__label-selector';
+
+        // Predefined label buttons
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'drawing-tools__label-group';
+
+        // "No label" button
+        const noneBtn = document.createElement('button');
+        noneBtn.className = 'drawing-tools__label-btn is-active';
+        noneBtn.dataset.labelId = '';
+        noneBtn.title = 'Sans \u00e9tiquette';
+        noneBtn.textContent = '\u2013';
+        noneBtn.style.borderColor = '#666';
+        noneBtn.addEventListener('click', () => this._selectLabel(null));
+        btnGroup.appendChild(noneBtn);
+
+        for (const label of PREDEFINED_LABELS) {
+            const btn = document.createElement('button');
+            btn.className = 'drawing-tools__label-btn';
+            btn.dataset.labelId = label.id;
+            btn.title = label.name;
+            btn.textContent = label.name.charAt(0);
+            btn.style.borderColor = label.color;
+            btn.style.color = label.color;
+            btn.addEventListener('click', () => this._selectLabel(label));
+            btnGroup.appendChild(btn);
+        }
+
+        container.appendChild(btnGroup);
+
+        // Custom label text input
+        const customRow = document.createElement('div');
+        customRow.className = 'drawing-tools__custom-label';
+
+        const customInput = document.createElement('input');
+        customInput.className = 'drawing-tools__custom-input';
+        customInput.type = 'text';
+        customInput.placeholder = '\u00c9tiquette personnalis\u00e9e...';
+        customInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && customInput.value.trim()) {
+                const customLabel = {
+                    id: 'custom_' + customInput.value.trim().toLowerCase().replace(/\s+/g, '_'),
+                    name: customInput.value.trim(),
+                    color: '#4a9eff',
+                };
+                this._selectLabel(customLabel);
+                // Highlight none of the predefined buttons
+                container.querySelectorAll('.drawing-tools__label-btn').forEach(b =>
+                    b.classList.remove('is-active'),
+                );
+            }
+        });
+        customRow.appendChild(customInput);
+        container.appendChild(customRow);
+
+        return container;
+    }
+
+    /**
+     * Select a label for new annotations
+     * @param {Object|null} label - Label object {id, name, color} or null
+     * @private
+     */
+    _selectLabel(label) {
+        this.selectedLabel = label;
+        annotationStore.activeLabel = label ? label.id : null;
+
+        // Update button states
+        if (this.labelSelector) {
+            this.labelSelector.querySelectorAll('.drawing-tools__label-btn').forEach(btn => {
+                const btnLabelId = btn.dataset.labelId;
+                const isActive = label ? (btnLabelId === label.id) : (btnLabelId === '');
+                btn.classList.toggle('is-active', isActive);
+            });
+            // Clear custom input when selecting predefined
+            const customInput = this.labelSelector.querySelector('.drawing-tools__custom-input');
+            if (customInput && label && !label.id.startsWith('custom_')) {
+                customInput.value = '';
+            }
+        }
+    }
+
+    /**
+     * Show/hide label selector based on active tool
+     * @private
+     */
+    _updateLabelSelectorVisibility() {
+        if (!this.labelSelector) {return;}
+        const isDrawTool = this.activeTool !== 'select';
+        this.labelSelector.style.display = isDrawTool ? 'flex' : 'none';
     }
 
     _setTool(toolName) {
         this.activeTool = toolName;
         annotationStore.setTool(toolName);
 
-        // Update toolbar UI
-        this.element.querySelectorAll('.drawing-tools__btn').forEach(btn => {
-            btn.classList.toggle('is-active', btn.dataset.tool === toolName);
-        });
+        // If a tool from overflow is selected, promote it to primary slot
+        if (toolName !== 'select' && !this.primaryTools.includes(toolName)) {
+            this.primaryTools[1] = toolName;
+            this._saveLastTool(toolName);
+            this._rebuild();
+        } else {
+            // Update toolbar UI
+            this.element.querySelectorAll('.drawing-tools__btn').forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.tool === toolName);
+            });
+        }
+
+        // Close overflow menu after selection
+        this.overflowOpen = false;
+        if (this.overflowMenu) {
+            this.overflowMenu.style.display = 'none';
+        }
 
         // Toggle OSD mouse navigation
         const isDrawTool = toolName !== 'select';
         this.viewer.setMouseNavEnabled(!isDrawTool);
 
+        // Show/hide label selector
+        this._updateLabelSelectorVisibility();
+
         // Cancel current drawing
         this._cancelDrawing();
+    }
+
+    /**
+     * Toggle overflow menu visibility
+     * @private
+     */
+    _toggleOverflow() {
+        this.overflowOpen = !this.overflowOpen;
+        if (this.overflowMenu) {
+            this.overflowMenu.style.display = this.overflowOpen ? 'flex' : 'none';
+        }
+    }
+
+    /**
+     * Rebuild the toolbar (after primary tool change)
+     * @private
+     */
+    _rebuild() {
+        this._renderToolbar();
     }
 
     // ==========================================
@@ -289,6 +496,7 @@ class DrawingTools {
             geometry: { type: 'Polygon', coordinates },
             geometry_type: 'rectangle',
             annotation_type: 'manual',
+            label_id: this.selectedLabel ? this.selectedLabel.id : undefined,
         });
 
         eventBus.emit(Events.DRAWING_END, { tool: 'rectangle' });
@@ -341,6 +549,7 @@ class DrawingTools {
             geometry: { type: 'Polygon', coordinates: [coords] },
             geometry_type: 'polygon',
             annotation_type: 'manual',
+            label_id: this.selectedLabel ? this.selectedLabel.id : undefined,
         });
 
         this._drawPoints = [];
@@ -356,6 +565,7 @@ class DrawingTools {
             geometry: { type: 'Point', coordinates: [coords.x, coords.y] },
             geometry_type: 'point',
             annotation_type: 'manual',
+            label_id: this.selectedLabel ? this.selectedLabel.id : undefined,
         });
         eventBus.emit(Events.DRAWING_END, { tool: 'point' });
     }
@@ -398,6 +608,7 @@ class DrawingTools {
             geometry: { type: 'Polygon', coordinates: [coords] },
             geometry_type: 'freehand',
             annotation_type: 'manual',
+            label_id: this.selectedLabel ? this.selectedLabel.id : undefined,
         });
 
         this._drawPoints = [];
@@ -458,6 +669,7 @@ class DrawingTools {
             geometry: { type: 'Polygon', coordinates: [coords] },
             geometry_type: 'circle',
             annotation_type: 'manual',
+            label_id: this.selectedLabel ? this.selectedLabel.id : undefined,
             properties: { center: [start.x, start.y], radius },
         });
 
@@ -467,6 +679,36 @@ class DrawingTools {
     // ==========================================
     // UTILITIES
     // ==========================================
+
+    /**
+     * Get the last-used tool from localStorage
+     * @returns {string|null}
+     * @private
+     */
+    _getLastTool() {
+        try {
+            const tool = localStorage.getItem(LAST_TOOL_KEY);
+            if (tool && TOOLS.includes(tool) && tool !== 'select') {
+                return tool;
+            }
+        } catch (_e) {
+            // localStorage may be unavailable
+        }
+        return null;
+    }
+
+    /**
+     * Save the last-used tool to localStorage
+     * @param {string} toolName
+     * @private
+     */
+    _saveLastTool(toolName) {
+        try {
+            localStorage.setItem(LAST_TOOL_KEY, toolName);
+        } catch (_e) {
+            // localStorage may be unavailable
+        }
+    }
 
     _clearPreview() {
         const group = this.annotationLayer.getPreviewGroup();

@@ -22,7 +22,10 @@ import { DetectionPanel } from './DetectionPanel.js';
 import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
 import { QualityPanel } from './QualityPanel.js';
+import { FocusAssistPanel } from './FocusAssistPanel.js';
+import { SimilarityPanel } from './SimilarityPanel.js';
 import { annotationStore } from '../services/AnnotationStore.js';
+import { apiService } from '../services/ApiService.js';
 
 /**
  * ViewerPanel class - Panel wrapper for a single viewer
@@ -51,7 +54,7 @@ class ViewerPanel {
          * @type {Object}
          */
         this.options = {
-            title: 'Slide Viewer',
+            title: 'Visualiseur de lame',
             showHeader: true,
             showClose: true,
             onSlideSelect: null,
@@ -138,6 +141,18 @@ class ViewerPanel {
         this.detectionPanel = null;
 
         /**
+         * Focus Assist panel component
+         * @type {FocusAssistPanel|null}
+         */
+        this.focusAssistPanel = null;
+
+        /**
+         * Similarity panel component
+         * @type {SimilarityPanel|null}
+         */
+        this.similarityPanel = null;
+
+        /**
          * Layer manager component
          * @type {LayerManager|null}
          */
@@ -154,6 +169,15 @@ class ViewerPanel {
          * @type {QualityPanel|null}
          */
         this.qualityPanel = null;
+
+        /**
+         * Magnification bar element
+         * @type {HTMLElement|null}
+         */
+        this.magBar = null;
+
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
 
         // Build the panel
         this._build();
@@ -210,21 +234,21 @@ class ViewerPanel {
         // Select slide button
         const selectBtn = document.createElement('button');
         selectBtn.className = 'viewer-panel-action';
-        selectBtn.title = 'Select slide';
+        selectBtn.title = 'Sélectionner une lame';
         selectBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
         selectBtn.addEventListener('click', () => this._onSelectSlide());
 
         // Reset view button
         const resetBtn = document.createElement('button');
         resetBtn.className = 'viewer-panel-action';
-        resetBtn.title = 'Reset view';
+        resetBtn.title = 'Réinitialiser la vue';
         resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
         resetBtn.addEventListener('click', () => this.resetView());
 
         // ML Analysis button
         const mlBtn = document.createElement('button');
         mlBtn.className = 'viewer-panel-action viewer-panel-action--ml';
-        mlBtn.title = 'ML Analysis';
+        mlBtn.title = 'Analyse IA';
         mlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
         mlBtn.addEventListener('click', () => this._toggleMLPanel());
 
@@ -236,7 +260,7 @@ class ViewerPanel {
         if (this.options.showClose) {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'viewer-panel-action';
-            closeBtn.title = 'Close panel';
+            closeBtn.title = 'Fermer le panneau';
             closeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
             closeBtn.addEventListener('click', () => this._onClose());
             actions.appendChild(closeBtn);
@@ -261,8 +285,8 @@ class ViewerPanel {
         emptyState.className = 'viewer-empty-state';
         emptyState.innerHTML = `
             <div class="viewer-empty-icon">+</div>
-            <div class="viewer-empty-text">No slide loaded</div>
-            <button class="viewer-empty-action">Select Slide</button>
+            <div class="viewer-empty-text">Aucune lame chargée</div>
+            <button class="viewer-empty-action">Sélectionner une lame</button>
         `;
 
         const selectBtn = emptyState.querySelector('.viewer-empty-action');
@@ -270,6 +294,12 @@ class ViewerPanel {
 
         this.viewerContainer.appendChild(emptyState);
         this.viewerContainer.classList.add('is-empty');
+
+        // Magnification bar
+        this.magBar = document.createElement('div');
+        this.magBar.className = 'magnification-bar';
+        this.magBar.textContent = '\u00d71';
+        this.viewerContainer.appendChild(this.magBar);
 
         this.element.appendChild(this.viewerContainer);
     }
@@ -344,6 +374,28 @@ class ViewerPanel {
         eventBus.on(Events.SYNC_DISABLED, () => {
             this.setSynced(false);
         });
+
+        // Magnification bar updates on viewport change
+        this._unsubscribers.push(
+            eventBus.on(Events.VIEWER_VIEWPORT_CHANGE, (data) => {
+                if (data.viewerId === this.viewer?.id) {
+                    this._updateMagnification();
+                }
+            }),
+        );
+    }
+
+    /**
+     * Update magnification bar display
+     * @private
+     */
+    _updateMagnification() {
+        if (!this.viewer || !this.magBar) {
+            return;
+        }
+        const mag = this.viewer.getOpticalMagnification();
+        this.magBar.textContent = '\u00d7' + mag;
+        this.magBar.classList.toggle('magnification-bar--diagnostic', mag >= 10);
     }
 
     /**
@@ -396,10 +448,30 @@ class ViewerPanel {
             });
         }
 
-        // Toggle visibility (both panels share the same toggle)
+        // Create focus assist panel if not exists
+        if (!this.focusAssistPanel) {
+            this.focusAssistPanel = new FocusAssistPanel(this.viewerContainer, {
+                slideId: this.slideId,
+            });
+        }
+
+        // Create similarity panel if not exists
+        if (!this.similarityPanel) {
+            this.similarityPanel = new SimilarityPanel(this.viewerContainer, {
+                slideId: this.slideId,
+            });
+        }
+
+        // Toggle visibility (all ML panels share the same toggle)
         this.mlPanel.element.classList.toggle('is-hidden');
         if (this.detectionPanel.element) {
             this.detectionPanel.element.classList.toggle('is-hidden');
+        }
+        if (this.focusAssistPanel.element) {
+            this.focusAssistPanel.element.classList.toggle('is-hidden');
+        }
+        if (this.similarityPanel.element) {
+            this.similarityPanel.element.classList.toggle('is-hidden');
         }
 
         // Update button state
@@ -488,6 +560,16 @@ class ViewerPanel {
             this.detectionPanel.setSlide(slideId);
         }
 
+        // Notify focus assist panel if it exists
+        if (this.focusAssistPanel) {
+            this.focusAssistPanel.setSlide(slideId);
+        }
+
+        // Notify similarity panel if it exists
+        if (this.similarityPanel) {
+            this.similarityPanel.setSlide(slideId);
+        }
+
         // Notify quality panel if it exists
         if (this.qualityPanel) {
             this.qualityPanel.setSlide(slideId);
@@ -497,7 +579,51 @@ class ViewerPanel {
         // Do NOT emit it again here - double emission causes MLPanel.setSlide() to be called
         // twice, resetting prediction state and making heatmap non-reactivable.
 
+
+        // Auto-tag: fetch and display slide tags
+        this._loadSlideTags(slideId);
         console.warn(`[ViewerPanel] Loaded slide "${slideId}" in panel "${this.id}"`);
+    }
+
+    /**
+     * Load and display auto-detected tags for the current slide
+     * @param {string} slideId
+     * @private
+     */
+    async _loadSlideTags(slideId) {
+        try {
+            const result = await apiService.getSlideTags(slideId);
+            this._renderTagBadge(result.tags);
+        } catch (err) {
+            console.warn('[ViewerPanel] Tag fetch failed:', err);
+        }
+    }
+
+    /**
+     * Render tag badge in the viewer header
+     * @param {Object} tags - Tags object with organ, stain, etc.
+     * @private
+     */
+    _renderTagBadge(tags) {
+        // Remove existing badge
+        const existing = this.element.querySelector('.viewer-panel-tags');
+        if (existing) {
+            existing.remove();
+        }
+
+        const parts = [tags.organ, tags.stain, tags.pathology].filter(Boolean);
+        if (parts.length === 0) {
+            return;
+        }
+
+        const badge = document.createElement('div');
+        badge.className = 'viewer-panel-tags';
+        badge.textContent = parts.join(' \u2014 ');
+
+        const header = this.element.querySelector('.viewer-panel-header');
+        if (header) {
+            header.appendChild(badge);
+        }
     }
 
     /**
@@ -585,6 +711,10 @@ class ViewerPanel {
     destroy() {
         console.warn(`[ViewerPanel] Destroying panel "${this.id}"`);
 
+        // Unsubscribe from event listeners
+        this._unsubscribers.forEach(unsubscribe => unsubscribe());
+        this._unsubscribers = [];
+
         // Destroy ML panel
         if (this.mlPanel) {
             this.mlPanel.destroy();
@@ -609,6 +739,14 @@ class ViewerPanel {
         if (this.detectionPanel) {
             this.detectionPanel.destroy();
             this.detectionPanel = null;
+        }
+        if (this.focusAssistPanel) {
+            this.focusAssistPanel.destroy();
+            this.focusAssistPanel = null;
+        }
+        if (this.similarityPanel) {
+            this.similarityPanel.destroy();
+            this.similarityPanel = null;
         }
         if (this.layerManager) {
             this.layerManager.destroy();

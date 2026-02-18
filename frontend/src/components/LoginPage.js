@@ -33,13 +33,13 @@ export class LoginPage {
                         <path d="M8 2h8"/>
                     </svg>
                     <h1 class="login-title">VarunaPoC</h1>
-                    <p class="login-subtitle">Digital Pathology Viewer</p>
+                    <p class="login-subtitle">Visualiseur de pathologie num\u00e9rique</p>
                 </div>
 
                 <div class="login-content">
                     <p class="login-description">
-                        Sign in with your hospital account to access the slide viewer,
-                        annotations, and ML analysis tools.
+                        Connectez-vous avec votre compte hospitalier pour acc\u00e9der au
+                        visualiseur de lames, aux annotations et aux outils d\u2019analyse IA.
                     </p>
 
                     <button class="login-button" id="login-btn">
@@ -48,18 +48,18 @@ export class LoginPage {
                             <polyline points="10 17 15 12 10 7"/>
                             <line x1="15" y1="12" x2="3" y2="12"/>
                         </svg>
-                        Sign in with Hospital Account
+                        Se connecter avec le compte hospitalier
                     </button>
 
                     <p class="login-hint">
-                        Authentication is managed by your hospital's identity provider.
+                        L\u2019authentification est g\u00e9r\u00e9e par le fournisseur d\u2019identit\u00e9 de votre h\u00f4pital.
                     </p>
                 </div>
 
                 <div class="login-footer">
                     <span>CHU UCL Namur</span>
                     <span class="login-separator">|</span>
-                    <span>Secure Access</span>
+                    <span>Acc\u00e8s s\u00e9curis\u00e9</span>
                 </div>
             </div>
         `;

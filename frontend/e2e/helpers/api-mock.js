@@ -50,9 +50,9 @@ export async function mockSlidesApi(page, mockData) {
 
     // Also mock /api/slides (recursive list for slide picker)
     await page.route('**/api/slides', (route) => {
-        if (route.request().url().includes('/browse')) return route.fallback();
-        if (route.request().url().includes('/by-name')) return route.fallback();
-        if (route.request().url().match(/\/api\/slides\/[^/]+\//)) return route.fallback();
+        if (route.request().url().includes('/browse')) { return route.fallback(); }
+        if (route.request().url().includes('/by-name')) { return route.fallback(); }
+        if (route.request().url().match(/\/api\/slides\/[^/]+\//)) { return route.fallback(); }
 
         return route.fulfill({
             status: 200,
@@ -106,7 +106,7 @@ export async function mockSlideOverview(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockTiles(page) {
-    await page.route('**/api/slides/*/tile/**', (route) =>
+    await page.route('**/api/slides/*/tiles/**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'image/jpeg',
@@ -126,15 +126,25 @@ export async function mockTiles(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockDzi(page) {
-    await page.route('**/api/slides/*/dzi', (route) =>
+    await page.route('**/api/slides/*/dzi**', (route) =>
         route.fulfill({
             status: 200,
-            contentType: 'application/xml',
-            body: `<?xml version="1.0" encoding="UTF-8"?>
-<Image xmlns="http://schemas.microsoft.com/deepzoom/2008"
-       Format="jpeg" Overlap="0" TileSize="256">
-    <Size Height="40000" Width="50000"/>
-</Image>`,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                width: 50000,
+                height: 40000,
+                tile_size: 256,
+                overlap: 0,
+                levels: 5,
+                level_dimensions: [
+                    [50000, 40000],
+                    [25000, 20000],
+                    [12500, 10000],
+                    [6250, 5000],
+                    [3125, 2500],
+                ],
+                level_downsamples: [1, 2, 4, 8, 16],
+            }),
         }),
     );
 }
@@ -340,6 +350,285 @@ export async function mockQualityMetrics(page) {
 }
 
 /**
+ * Mock ML focus zones endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLFocusZones(page) {
+    await page.route('**/api/ml/focus/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                slide_id: 'test-slide-001',
+                zones: [
+                    { rank: 1, score: 0.95, centroid: [25000, 20000], bbox: [24000, 19000, 26000, 21000], area_px: 4000000 },
+                    { rank: 2, score: 0.82, centroid: [35000, 15000], bbox: [34000, 14000, 36000, 16000], area_px: 2000000 },
+                    { rank: 3, score: 0.67, centroid: [10000, 30000], bbox: [9000, 29000, 11000, 31000], area_px: 1500000 },
+                ],
+                model_id: 'ctranspath',
+                total_zones_above_threshold: 3,
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML measurement endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLMeasurement(page) {
+    await page.route('**/api/ml/measure/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                slide_id: 'test-slide-001',
+                measurements: [
+                    { region_id: 0, label: 'Tumeur', feret_diameter_mm: 12.4, area_mm2: 45.2, perimeter_mm: 28.1, bbox_mm: [6.0, 4.75, 6.5, 5.25] },
+                    { region_id: 1, label: 'Tumeur', feret_diameter_mm: 8.7, area_mm2: 22.8, perimeter_mm: 19.4, bbox_mm: [8.5, 3.5, 9.0, 4.0] },
+                ],
+                mpp: 0.25,
+                unit: 'mm',
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML feedback endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLFeedback(page) {
+    await page.route('**/api/ml/feedback/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                correction_id: 'corr-001',
+                status: 'recorded',
+                stats: { confirmed: 1, rejected: 0, refined: 0, relabeled: 0 },
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML tags endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLTags(page) {
+    await page.route('**/api/ml/tags/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                slide_id: 'test-slide-001',
+                tags: { organ: 'Prostate', stain: 'H&E', pathology: null },
+                source: 'filename',
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML models list endpoint (Wave 2)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLModels(page) {
+    await page.route('**/api/ml/models', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [
+                    { model_id: 'ctranspath', model_name: 'CTransPath', status: 'loaded' },
+                    { model_id: 'phikon-v2', model_name: 'Phikon v2', status: 'available' },
+                ],
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock ML similarity search endpoint (Wave 3)
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockMLSimilarity(page) {
+    await page.route('**/api/ml/similar/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                query_slide_id: 'test-slide-001',
+                results: [
+                    { slide_id: 'slide-002', score: 0.94, name: 'Case_B_HE.svs', overview_url: '/api/slides/slide-002/overview' },
+                    { slide_id: 'slide-003', score: 0.87, name: 'Case_C_HE.svs', overview_url: '/api/slides/slide-003/overview' },
+                ],
+                index_size: 50,
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock cell counting endpoint.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockCellCounting(page) {
+    await page.route('**/api/ml/count/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                total_cells: 1247,
+                positive: 312,
+                negative: 935,
+                ratio: 0.25,
+                percentage: '25.0%',
+                processing_time_ms: 2800,
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock clustering endpoint.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockClustering(page) {
+    await page.route('**/api/ml/cluster/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                clusters: [
+                    { id: 0, color: '#e74c3c', label: 'Cluster A', tile_count: 18, centroid_embedding: [] },
+                    { id: 1, color: '#2ecc71', label: 'Cluster B', tile_count: 22, centroid_embedding: [] },
+                    { id: 2, color: '#3498db', label: 'Cluster C', tile_count: 14, centroid_embedding: [] },
+                    { id: 3, color: '#f39c12', label: 'Cluster D', tile_count: 10, centroid_embedding: [] },
+                ],
+                tile_assignments: [
+                    { x: 0, y: 0, cluster_id: 0 },
+                    { x: 1, y: 0, cluster_id: 1 },
+                    { x: 0, y: 1, cluster_id: 2 },
+                    { x: 1, y: 1, cluster_id: 3 },
+                ],
+                processing_time_ms: 1500,
+                metadata: { mode: 'mock', grid_size: 8, model_id: 'unknown' },
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock slide quality endpoint (Wave 4).
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockSlideQuality(page) {
+    await page.route('**/api/ml/quality/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                overall_score: 0.85,
+                quality_label: 'Bonne',
+                artifacts: [
+                    { type: 'fold', severity: 'minor', bbox: [1000, 2000, 1500, 2500], area_percent: 2.1 },
+                ],
+                recommendation: 'Qualité suffisante pour diagnostic',
+                processing_time_ms: 450,
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock drift report endpoints (Wave 4).
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockDriftReport(page) {
+    await page.route('**/api/ml/drift/*', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                model_id: 'ctranspath',
+                report_date: '2026-02-17T12:00:00Z',
+                metrics: [
+                    { metric_name: 'mmd', value: 0.08, threshold: 0.10, is_drifted: false, window_size: 100 },
+                    { metric_name: 'ks_statistic', value: 0.12, threshold: 0.15, is_drifted: false, window_size: 100 },
+                ],
+                overall_drifted: false,
+                recommendation: 'No action needed',
+                processing_time_ms: 320,
+            }),
+        }),
+    );
+
+    await page.route('**/api/ml/drift', (route) => {
+        // Only match exact /api/ml/drift (not /api/ml/drift/xxx)
+        const url = route.request().url();
+        if (url.match(/\/api\/ml\/drift\/[^/]+/)) return route.fallback();
+        return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                reports: [{
+                    model_id: 'ctranspath',
+                    report_date: '2026-02-17T12:00:00Z',
+                    metrics: [
+                        { metric_name: 'mmd', value: 0.08, threshold: 0.10, is_drifted: false, window_size: 100 },
+                        { metric_name: 'ks_statistic', value: 0.12, threshold: 0.15, is_drifted: false, window_size: 100 },
+                    ],
+                    overall_drifted: false,
+                    recommendation: 'No action needed',
+                    processing_time_ms: 320,
+                }],
+            }),
+        });
+    });
+}
+
+/**
+ * Mock /api/slides/worklist endpoint
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockWorklist(page) {
+    await page.route('**/api/slides/worklist', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                items: [
+                    { slide_id: 'test-slide-001', slide_name: 'HE_prostate_2024.svs', case_path: '/Cases/Patient_001', status: 'pending', assigned_date: '2026-02-15T10:00:00Z', is_new: true },
+                    { slide_id: 'test-slide-002', slide_name: 'HE_breast_2024.svs', case_path: '/Cases/Patient_002', status: 'in_progress', assigned_date: '2026-02-14T09:00:00Z', is_new: false },
+                ],
+                counts: { pending: 1, in_progress: 1, completed: 0 },
+            }),
+        }),
+    );
+}
+
+/**
+ * Mock /api/slides/history endpoint
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockHistory(page) {
+    await page.route('**/api/slides/history**', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                items: [
+                    { slide_id: 'test-slide-001', slide_name: 'HE_prostate_2024.svs', viewed_at: '2026-02-17T11:30:00Z', view_count: 3 },
+                ],
+                total: 1,
+            }),
+        }),
+    );
+}
+
+/**
  * Setup all common mocks for a standard test scenario.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
@@ -353,4 +642,16 @@ export async function setupFullMocks(page, mockData) {
     await mockDzi(page);
     await mockTiles(page);
     await mockAnnotations(page, mockData);
+    await mockMLTags(page);
+    await mockMLFocusZones(page);
+    await mockMLMeasurement(page);
+    await mockMLFeedback(page);
+    await mockMLModels(page);
+    await mockMLSimilarity(page);
+    await mockCellCounting(page);
+    await mockClustering(page);
+    await mockSlideQuality(page);
+    await mockDriftReport(page);
+    await mockWorklist(page);
+    await mockHistory(page);
 }

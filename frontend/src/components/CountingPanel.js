@@ -64,7 +64,7 @@ class CountingPanel {
         if (total === 0 && !stats) {
             this.element.innerHTML = `
                 <div class="counting-panel__empty">
-                    No annotations yet
+                    Aucune annotation
                 </div>
             `;
             return;
@@ -86,7 +86,7 @@ class CountingPanel {
         const unlabeledHtml = data.unlabeled > 0
             ? `<div class="counting-panel__row">
                     <span class="counting-panel__dot counting-panel__dot--none"></span>
-                    <span class="counting-panel__name">Unlabeled</span>
+                    <span class="counting-panel__name">Sans étiquette</span>
                     <span class="counting-panel__count">${data.unlabeled}</span>
                 </div>`
             : '';
@@ -106,41 +106,45 @@ class CountingPanel {
                 <span class="counting-panel__title">Annotations</span>
                 <span class="counting-panel__total">${data.total}</span>
             </div>
+            <div class="counting-panel__summary">
+                <span class="counting-panel__total-big">${data.total}</span>
+                <span class="counting-panel__total-label">${data.total === 1 ? 'annotation' : 'annotations'}</span>
+            </div>
             <div class="counting-panel__body">
                 ${byLabelHtml || unlabeledHtml ? `
                     <div class="counting-panel__section">
-                        <div class="counting-panel__section-title">By Label</div>
+                        <div class="counting-panel__section-title">Par étiquette</div>
                         ${byLabelHtml}
                         ${unlabeledHtml}
                     </div>
                 ` : ''}
                 ${byTypeHtml ? `
                     <div class="counting-panel__section">
-                        <div class="counting-panel__section-title">By Type</div>
+                        <div class="counting-panel__section-title">Par type</div>
                         ${byTypeHtml}
                     </div>
                 ` : ''}
                 ${confTotal > 0 ? `
                     <div class="counting-panel__section">
-                        <div class="counting-panel__section-title">Confidence</div>
+                        <div class="counting-panel__section-title">Confiance</div>
                         <div class="counting-panel__conf-bar">
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--high"
                                  style="width: ${confTotal ? (conf.high / confTotal * 100) : 0}%"
-                                 title="High: ${conf.high}"></div>
+                                 title="\u00c9lev\u00e9e : ${conf.high}"></div>
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--medium"
                                  style="width: ${confTotal ? (conf.medium / confTotal * 100) : 0}%"
-                                 title="Medium: ${conf.medium}"></div>
+                                 title="Moyenne : ${conf.medium}"></div>
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--low"
                                  style="width: ${confTotal ? (conf.low / confTotal * 100) : 0}%"
-                                 title="Low: ${conf.low}"></div>
+                                 title="Faible : ${conf.low}"></div>
                             <div class="counting-panel__conf-seg counting-panel__conf-seg--none"
                                  style="width: ${confTotal ? (conf.unscored / confTotal * 100) : 0}%"
-                                 title="Unscored: ${conf.unscored}"></div>
+                                 title="Non \u00e9valu\u00e9e : ${conf.unscored}"></div>
                         </div>
                         <div class="counting-panel__conf-legend">
-                            ${conf.high ? `<span class="counting-panel__conf-label counting-panel__conf-label--high">${conf.high} high</span>` : ''}
-                            ${conf.medium ? `<span class="counting-panel__conf-label counting-panel__conf-label--medium">${conf.medium} med</span>` : ''}
-                            ${conf.low ? `<span class="counting-panel__conf-label counting-panel__conf-label--low">${conf.low} low</span>` : ''}
+                            ${conf.high ? `<span class="counting-panel__conf-label counting-panel__conf-label--high">${conf.high} élevée</span>` : ''}
+                            ${conf.medium ? `<span class="counting-panel__conf-label counting-panel__conf-label--medium">${conf.medium} moyenne</span>` : ''}
+                            ${conf.low ? `<span class="counting-panel__conf-label counting-panel__conf-label--low">${conf.low} faible</span>` : ''}
                             ${conf.unscored ? `<span class="counting-panel__conf-label counting-panel__conf-label--none">${conf.unscored} n/a</span>` : ''}
                         </div>
                     </div>

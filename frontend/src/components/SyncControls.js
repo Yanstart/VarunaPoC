@@ -59,7 +59,7 @@ class SyncControls {
          * Current sync state
          * @type {boolean}
          */
-        this.syncEnabled = false;
+        this.syncEnabled = true;
 
         /**
          * Current layout
@@ -89,7 +89,7 @@ class SyncControls {
         const status = document.createElement('div');
         status.className = 'sync-status';
         status.id = 'sync-status';
-        status.textContent = 'Sync: Off';
+        status.textContent = 'Sync : On';
 
         this.element.appendChild(layoutSelector);
         this.element.appendChild(syncSection);
@@ -97,6 +97,12 @@ class SyncControls {
 
         // Add to container
         this.container.appendChild(this.element);
+
+        // Apply initial sync state (default ON)
+        this._updateSyncUI();
+        if (this.syncEnabled && this.options.onSyncToggle) {
+            this.options.onSyncToggle(true);
+        }
     }
 
     /**
@@ -110,9 +116,9 @@ class SyncControls {
 
         // Layout options to show
         const layouts = [
-            { preset: 'SINGLE', cols: 1, rows: 1, title: 'Single view' },
-            { preset: 'SIDE_BY_SIDE', cols: 2, rows: 1, title: 'Side by side' },
-            { preset: 'GRID_2X2', cols: 2, rows: 2, title: '2x2 Grid' },
+            { preset: 'SINGLE', cols: 1, rows: 1, title: 'Vue unique' },
+            { preset: 'SIDE_BY_SIDE', cols: 2, rows: 1, title: 'C\u00f4te \u00e0 c\u00f4te' },
+            { preset: 'GRID_2X2', cols: 2, rows: 2, title: 'Grille 2\u00d72' },
         ];
 
         layouts.forEach(layout => {
@@ -165,12 +171,12 @@ class SyncControls {
         // Label
         const label = document.createElement('span');
         label.className = 'sync-label';
-        label.textContent = 'Sync Views';
+        label.textContent = 'Synchroniser';
 
         // Button
         this.syncButton = document.createElement('button');
         this.syncButton.className = CSSClasses.SYNC_BUTTON;
-        this.syncButton.title = 'Toggle synchronization';
+        this.syncButton.title = 'Activer/d\u00e9sactiver la synchronisation';
         this.syncButton.innerHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -237,10 +243,10 @@ class SyncControls {
     _updateSyncUI() {
         if (this.syncEnabled) {
             this.syncButton.classList.add(CSSClasses.ACTIVE);
-            this.element.querySelector('#sync-status').textContent = 'Sync: On';
+            this.element.querySelector('#sync-status').textContent = 'Sync : On';
         } else {
             this.syncButton.classList.remove(CSSClasses.ACTIVE);
-            this.element.querySelector('#sync-status').textContent = 'Sync: Off';
+            this.element.querySelector('#sync-status').textContent = 'Sync : Off';
         }
     }
 

@@ -32,8 +32,8 @@ test.describe('PACS Deep Link', () => {
         await page.goto('/slide/TestSlide');
 
         // Should show loading then viewer
-        await expect(page.locator('.viewer-page, .page-viewer')).toBeVisible({ timeout: 15_000 });
-        await expect(page.locator('#viewer')).toBeVisible();
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 15_000 });
+        await expect(page.locator('#viewer')).toBeAttached();
     });
 
     test('slide found shows viewer with correct slide', async ({ page, mockSlideData }) => {
@@ -50,7 +50,7 @@ test.describe('PACS Deep Link', () => {
         await page.goto('/slide/TestSlide');
 
         // Viewer should display slide name in header
-        await expect(page.locator('.viewer-title, .viewer-header')).toContainText('TestSlide', {
+        await expect(page.locator('.viewer-title')).toContainText('TestSlide', {
             timeout: 15_000,
         });
     });

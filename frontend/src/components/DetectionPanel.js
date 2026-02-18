@@ -31,11 +31,16 @@ class DetectionPanel {
         this.slideId = options.slideId || null;
 
         // State
+        this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_detection_open') !== 'true'; } catch (_) { return true; } })();
         this.isDetecting = false;
         this.threshold = 0.5;
         this.minArea = 100;
         this.predictionClass = 'tissue';
         this.detectionResult = null;
+        this.measurementResult = null;
+
+        /** @type {Map<number, string>} Feedback status per detection index */
+        this.feedbackStatus = new Map();
 
         /** @type {string|null} Selected label ID for classification */
         this.selectedLabelId = null;
@@ -57,8 +62,37 @@ class DetectionPanel {
     _create() {
         this.element = document.createElement('div');
         this.element.className = 'detection-panel';
+
+        // Create collapsible header
+        const header = document.createElement('div');
+        header.className = 'detection-panel__header detection-panel__header--collapsible';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'detection-panel__title';
+        titleSpan.textContent = 'Détection automatique';
+
+        const chevron = document.createElement('span');
+        chevron.className = 'detection-panel__chevron';
+        chevron.textContent = '\u25B6';
+
+        header.appendChild(titleSpan);
+        header.appendChild(chevron);
+        header.addEventListener('click', () => this._toggleCollapse());
+        this.element.appendChild(header);
+
+        // Create body container
+        this._body = document.createElement('div');
+        this._body.className = 'detection-panel__body';
+        this.element.appendChild(this._body);
+
         this._renderIdle();
         this.container.appendChild(this.element);
+
+        // Apply initial collapse state (collapsed by default, persisted via localStorage)
+        this._body.style.display = this.isCollapsed ? 'none' : 'block';
+        if (!this.isCollapsed) {
+            chevron.textContent = '\u25BC';
+        }
     }
 
     /**
@@ -75,9 +109,9 @@ class DetectionPanel {
 
         return `
             <div class="detection-panel__control detection-panel__label-select">
-                <label>Classification Label</label>
+                <label>Étiquette de classification</label>
                 <select class="detection-panel__select">
-                    <option value="">-- No label --</option>
+                    <option value="">-- Sans étiquette --</option>
                     ${options}
                 </select>
             </div>
@@ -102,21 +136,21 @@ class DetectionPanel {
     // ==========================================
 
     _renderIdle() {
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Auto-Detection</h4>
+                <h4>Détection automatique</h4>
                 <p class="detection-panel__desc">
-                    Detect regions of interest using ML heatmap analysis.
+                    Détection des régions d'intérêt par analyse IA.
                 </p>
 
                 <div class="detection-panel__control">
-                    <label>Threshold: <span class="detection-panel__value">${this.threshold}</span></label>
+                    <label>Seuil : <span class="detection-panel__value">${this.threshold}</span></label>
                     <input type="range" class="detection-panel__slider"
                         min="0.1" max="0.95" step="0.05" value="${this.threshold}">
                 </div>
 
                 <div class="detection-panel__control">
-                    <label>Min Area: <span class="detection-panel__value">${this.minArea} px</span></label>
+                    <label>Surface min. : <span class="detection-panel__value">${this.minArea} px</span></label>
                     <input type="range" class="detection-panel__slider"
                         min="10" max="1000" step="10" value="${this.minArea}">
                 </div>
@@ -127,7 +161,7 @@ class DetectionPanel {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    Detect Regions
+                    Détecter les régions
                 </button>
             </div>
         `;
@@ -158,12 +192,12 @@ class DetectionPanel {
     // ==========================================
 
     _renderLoading() {
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Auto-Detection</h4>
+                <h4>Détection automatique</h4>
                 <div class="detection-panel__loading">
                     <div class="detection-panel__spinner"></div>
-                    <span>Detecting regions...</span>
+                    <span>Détection en cours...</span>
                 </div>
             </div>
         `;
@@ -185,39 +219,39 @@ class DetectionPanel {
         // Confidence distribution
         const confDist = this._computeConfidenceDistribution(features);
 
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Detection Results</h4>
+                <h4>Résultats de détection</h4>
 
                 <div class="detection-panel__count-summary">
                     <div class="count-summary__total">
                         <span class="count-summary__number">${total}</span>
-                        <span class="count-summary__label">regions detected</span>
+                        <span class="count-summary__label">régions détectées</span>
                     </div>
                     <div class="count-summary__breakdown">
                         <div class="count-summary__bar">
                             <div class="count-summary__segment count-summary__segment--high"
                                  style="width: ${total ? (confDist.high / total * 100) : 0}%"
-                                 title="High confidence (>=0.8): ${confDist.high}"></div>
+                                 title="Confiance \u00e9lev\u00e9e (\u22650.8) : ${confDist.high}"></div>
                             <div class="count-summary__segment count-summary__segment--medium"
                                  style="width: ${total ? (confDist.medium / total * 100) : 0}%"
-                                 title="Medium confidence (0.5-0.8): ${confDist.medium}"></div>
+                                 title="Confiance moyenne (0.5-0.8) : ${confDist.medium}"></div>
                             <div class="count-summary__segment count-summary__segment--low"
                                  style="width: ${total ? (confDist.low / total * 100) : 0}%"
-                                 title="Low confidence (<0.5): ${confDist.low}"></div>
+                                 title="Confiance faible (<0.5) : ${confDist.low}"></div>
                         </div>
                         <div class="count-summary__legend">
-                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} high</span>
-                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} med</span>
-                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} low</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} élevée</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} moyenne</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} faible</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="detection-panel__stats">
-                    <span class="stat stat--total">${pendingCount} pending</span>
-                    <span class="stat stat--accepted">${acceptedCount} accepted</span>
-                    <span class="stat stat--rejected">${rejectedCount} rejected</span>
+                    <span class="stat stat--total">${pendingCount} en attente</span>
+                    <span class="stat stat--accepted">${acceptedCount} acceptée</span>
+                    <span class="stat stat--rejected">${rejectedCount} rejetée</span>
                 </div>
 
                 ${this._buildLabelSelector()}
@@ -229,13 +263,13 @@ class DetectionPanel {
                 <div class="detection-panel__actions">
                     <button class="detection-panel__btn detection-panel__btn--confirm"
                         ${acceptedCount === 0 && pendingCount === 0 ? 'disabled' : ''}>
-                        Confirm ${acceptedCount > 0 ? acceptedCount : 'All'} Annotations
+                        Tout confirmer ${acceptedCount > 0 ? acceptedCount : ''}
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--secondary">
-                        Accept All
+                        Tout accepter
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--danger">
-                        Discard All
+                        Tout rejeter
                     </button>
                 </div>
             </div>
@@ -255,6 +289,15 @@ class DetectionPanel {
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.dataset.index);
                 this._toggleReject(idx);
+            });
+        });
+
+        // Feedback buttons (confirm/reject ML prediction)
+        this.element.querySelectorAll('.feedback-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.feedbackIndex);
+                const type = btn.dataset.feedbackType;
+                this._submitFeedback(idx, type);
             });
         });
 
@@ -292,6 +335,25 @@ class DetectionPanel {
         return { high, medium, low };
     }
 
+    /**
+     * Create a confidence badge element
+     * @param {number|null|undefined} confidence - Confidence value (0-1)
+     * @returns {string} HTML string for the badge
+     * @private
+     */
+    _getConfidenceBadge(confidence) {
+        if (confidence === null || confidence === undefined) {
+            return '<span class="detection-badge detection-badge--unknown" title="Confiance inconnue">?</span>';
+        }
+        if (confidence >= 0.8) {
+            return `<span class="detection-badge detection-badge--high" title="Confiance élevée">${Math.round(confidence * 100)}%</span>`;
+        }
+        if (confidence >= 0.5) {
+            return `<span class="detection-badge detection-badge--medium" title="Confiance moyenne">${Math.round(confidence * 100)}%</span>`;
+        }
+        return `<span class="detection-badge detection-badge--low" title="Confiance faible">${Math.round(confidence * 100)}%</span>`;
+    }
+
     _renderDetectionItem(feature, index) {
         const confidence = (feature.properties?.confidence || 0).toFixed(2);
         const area = Math.round(feature.properties?.area_px || 0);
@@ -300,26 +362,42 @@ class DetectionPanel {
         const confLevel = feature.properties?.confidence >= 0.8 ? 'high'
             : feature.properties?.confidence >= 0.5 ? 'medium' : 'low';
 
+        const measurement = this.measurementResult?.measurements?.[index];
+        const dimensionHtml = measurement
+            ? `<span class="detection-item__dimension">${measurement.feret_diameter_mm} mm</span>`
+            : '';
+
         return `
             <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''}">
                 <div class="detection-item__info">
-                    <span class="detection-item__label">Region ${index + 1}</span>
+                    <span class="detection-item__label">R\u00e9gion ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}${dimensionHtml}</span>
                     <span class="detection-item__meta">
                         <span class="detection-item__conf detection-item__conf--${confLevel}">${confidence}</span>
                          | ${area} px
                     </span>
                 </div>
                 <div class="detection-item__actions">
-                    <button class="detection-item__accept ${isAccepted ? 'is-active' : ''}" data-index="${index}" title="Accept">
+                    <button class="detection-item__accept ${isAccepted ? 'is-active' : ''}" data-index="${index}" title="Accepter">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"/>
                         </svg>
                     </button>
-                    <button class="detection-item__reject ${isRejected ? 'is-active' : ''}" data-index="${index}" title="Reject">
+                    <button class="detection-item__reject ${isRejected ? 'is-active' : ''}" data-index="${index}" title="Rejeter">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                         </svg>
                     </button>
+                </div>
+                <div class="detection-item__feedback">
+                    ${this.feedbackStatus.has(index)
+        ? `<span class="feedback-badge feedback-badge--${this.feedbackStatus.get(index)}">${
+            this.feedbackStatus.get(index) === 'confirmed' ? '\u2714 Confirm\u00e9'
+                : this.feedbackStatus.get(index) === 'rejected' ? '\u2718 Rejet\u00e9'
+                    : '\u270E Corrig\u00e9'
+        }</span>`
+        : `<button class="feedback-btn feedback-btn--confirm" data-feedback-index="${index}" data-feedback-type="confirmed" title="Confirmer la pr\u00e9diction IA">Confirmer</button>
+           <button class="feedback-btn feedback-btn--correct" data-feedback-index="${index}" data-feedback-type="refined" title="Corriger / re-\u00e9tiqueter">Corriger</button>
+           <button class="feedback-btn feedback-btn--reject" data-feedback-index="${index}" data-feedback-type="rejected" title="Rejeter la pr\u00e9diction IA">Rejeter</button>`}
                 </div>
             </div>
         `;
@@ -350,6 +428,16 @@ class DetectionPanel {
             // All pending by default (not accepted, not rejected)
             this.accepted.clear();
             this.rejected.clear();
+
+            // Fetch measurements for dimension display
+            try {
+                this.measurementResult = await apiService.getMeasurement(this.slideId, {
+                    threshold: this.threshold,
+                });
+            } catch (e) {
+                console.warn('[DetectionPanel] Measurement fetch failed:', e);
+                this.measurementResult = null;
+            }
 
             this._renderPreview();
             eventBus.emit(Events.DETECTION_COMPLETE, {
@@ -419,12 +507,12 @@ class DetectionPanel {
     }
 
     _renderError(message) {
-        this.element.innerHTML = `
+        this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Auto-Detection</h4>
+                <h4>Détection automatique</h4>
                 <div class="detection-panel__error">
-                    <p>Detection failed: ${message}</p>
-                    <button class="detection-panel__btn detection-panel__btn--secondary">Retry</button>
+                    <p>Erreur lors de la détection : ${message}</p>
+                    <button class="detection-panel__btn detection-panel__btn--secondary">Réessayer</button>
                 </div>
             </div>
         `;
@@ -434,11 +522,72 @@ class DetectionPanel {
         });
     }
 
+    /**
+     * Submit pathologist feedback for a detection
+     * @param {number} index - Detection index
+     * @param {string} correctionType - 'confirmed', 'rejected', or 'refined'
+     * @private
+     */
+    async _submitFeedback(index, correctionType) {
+        if (!this.detectionResult || this.feedbackStatus.has(index)) {
+            return;
+        }
+
+        const features = this.detectionResult.geojson?.features || [];
+        const feature = features[index];
+        if (!feature) {
+            return;
+        }
+
+        const annotationId = feature.properties?.annotation_id || feature.properties?.id;
+        if (!annotationId) {
+            console.warn('[DetectionPanel] No annotation ID for feedback at index', index);
+            // Still mark locally for UX
+            this.feedbackStatus.set(index, correctionType);
+            this._renderPreview();
+            return;
+        }
+
+        try {
+            await apiService.submitFeedback(this.slideId, {
+                original_annotation_id: annotationId,
+                correction_type: correctionType,
+                notes: null,
+            });
+            this.feedbackStatus.set(index, correctionType);
+        } catch (e) {
+            console.warn('[DetectionPanel] Feedback submission failed:', e);
+            // Mark locally anyway for UX feedback
+            this.feedbackStatus.set(index, correctionType);
+        }
+
+        this._renderPreview();
+    }
+
     _resetState() {
         this.detectionResult = null;
+        this.measurementResult = null;
+        this.feedbackStatus = new Map();
         this.accepted.clear();
         this.rejected.clear();
         annotationStore.clearDetectionPreview();
+    }
+
+    /**
+     * Toggle collapse state of the panel
+     * @private
+     */
+    _toggleCollapse() {
+        this.isCollapsed = !this.isCollapsed;
+        const body = this.element.querySelector('.detection-panel__body');
+        const chevron = this.element.querySelector('.detection-panel__chevron');
+        if (body) {
+            body.style.display = this.isCollapsed ? 'none' : 'block';
+        }
+        if (chevron) {
+            chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
+        try { localStorage.setItem('varuna_panel_detection_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }
 
     destroy() {

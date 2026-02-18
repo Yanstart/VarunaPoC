@@ -19,7 +19,7 @@ test.describe('Compare Mode', () => {
 
         // Should show compare page
         await expect(page.locator('.compare-page')).toBeVisible({ timeout: 10_000 });
-        await expect(page.locator('.compare-title')).toHaveText('Compare Mode');
+        await expect(page.locator('.compare-title')).toHaveText('Mode comparaison');
     });
 
     test('compare layout shows viewer panels', async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('Compare Mode', () => {
 
         // Should have a compare container with viewer panels
         await expect(page.locator('#compare-container')).toBeVisible();
-        await expect(page.locator('.compare-layout, .viewer-panel')).toBeVisible({ timeout: 5_000 });
+        await expect(page.locator('.compare-layout')).toBeVisible({ timeout: 5_000 });
     });
 
     test('sync controls are visible', async ({ page }) => {

@@ -102,6 +102,18 @@ export const Events = Object.freeze({
     DETECTION_CONFIRM: 'detection:confirm',
     DETECTION_REJECT: 'detection:reject',
 
+    // Cell counting events (Wave 4)
+    CELL_COUNTING_START: 'cellCounting:start',
+    CELL_COUNTING_COMPLETE: 'cellCounting:complete',
+    CELL_COUNTING_ERROR: 'cellCounting:error',
+
+    // Clustering events (Wave 4)
+    CLUSTERING_START: 'clustering:start',
+    CLUSTERING_COMPLETE: 'clustering:complete',
+    CLUSTERING_ERROR: 'clustering:error',
+    CLUSTERING_OVERLAY_TOGGLE: 'clustering:overlayToggle',
+    CLUSTERING_OVERLAY_OPACITY: 'clustering:overlayOpacity',
+
     // Auth events (Phase 3)
     AUTH_LOGIN: 'auth:login',
     AUTH_LOGOUT: 'auth:logout',
@@ -109,11 +121,20 @@ export const Events = Object.freeze({
     AUTH_ERROR: 'auth:error',
     AUTH_ROLE_CHANGED: 'auth:roleChanged',
 
+    // Case navigation events (Wave 3)
+    CASE_SELECTED: 'ui:caseSelected',
+    CASE_SLIDE_SWITCH: 'case:slideSwitch',
+
     // Quality metrics events (Phase 4)
     QUALITY_LOADING: 'quality:loading',
     QUALITY_READY: 'quality:ready',
     QUALITY_ERROR: 'quality:error',
     QUALITY_DISAGREEMENT_TOGGLE: 'quality:disagreementToggle',
+
+    // Drift monitoring events (Wave 4)
+    DRIFT_LOADING: 'drift:loading',
+    DRIFT_READY: 'drift:ready',
+    DRIFT_ERROR: 'drift:error',
 });
 
 /**
@@ -195,8 +216,8 @@ export const DEFAULT_LAYOUT = LayoutPresets.SINGLE;
  * @readonly
  */
 export const SyncConfig = Object.freeze({
-    /** Sync is disabled by default per user requirement */
-    ENABLED_BY_DEFAULT: false,
+    /** Sync is enabled by default for compare mode */
+    ENABLED_BY_DEFAULT: true,
 
     /** Debounce time for sync events (ms) */
     DEBOUNCE_MS: 16, // ~60fps

@@ -31,7 +31,7 @@ from fastapi.responses import PlainTextResponse
 # IMPORTANT: Configure OpenSlide DLL path AVANT tout import
 # (Nécessaire sur Windows pour trouver libopenslide-0.dll)
 import config_openslide
-from routes import ml, slides
+from routes import ml, slides, viewstate
 
 # Phase 2: Annotations (optional - requires sqlalchemy + asyncpg)
 try:
@@ -85,6 +85,34 @@ try:
 except ImportError:
     MONITORING_ENABLED = False
     print("[INFO] Monitoring disabled (prometheus_client not installed)")
+
+# Rate limiting optionnel (requires slowapi)
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+    from slowapi.util import get_remote_address
+
+    # Read rate limit config from env (with defaults)
+    _default_rate = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
+    _tile_rate = os.getenv("RATE_LIMIT_TILES", "500/minute")
+    _ml_rate = os.getenv("RATE_LIMIT_ML", "30/minute")
+
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=[_default_rate],
+        headers_enabled=True,  # Add X-RateLimit-* headers
+    )
+    RATE_LIMITING_ENABLED = True
+    print(
+        f"[INFO] Rate limiting enabled "
+        f"(default={_default_rate}, tiles={_tile_rate}, ml={_ml_rate})"
+    )
+except ImportError:
+    RATE_LIMITING_ENABLED = False
+    limiter = None
+    _tile_rate = None
+    _ml_rate = None
+    print("[INFO] Rate limiting disabled (slowapi not installed)")
 
 
 @asynccontextmanager
@@ -148,6 +176,11 @@ Voir `/docs/Manuel/` pour le guide utilisateur complet.
     ],
 )
 
+# Rate limiting middleware (optional - requires slowapi)
+if RATE_LIMITING_ENABLED:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # CORS configuration
 # Read from environment variable (Phase 2.1+) or use defaults (Phase 1)
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
@@ -177,6 +210,7 @@ if MONITORING_ENABLED:
 # Routes
 app.include_router(slides.router)
 app.include_router(ml.router, prefix="/api")
+app.include_router(viewstate.router)
 if ANNOTATIONS_ENABLED:
     app.include_router(annotations.router)
     app.include_router(annotations.label_router)
@@ -192,6 +226,87 @@ if fhir_routes is not None and FHIR_ENABLED:
 # Phase 4: Quality routes (requires annotations)
 if quality_routes is not None and QUALITY_ENABLED and ANNOTATIONS_ENABLED:
     app.include_router(quality_routes.router)
+
+# Legacy sweep: Processing pipeline (batch tiles, normalization, outliers)
+try:
+    from routes import processing
+
+    app.include_router(processing.router)
+except ImportError:
+    print("[INFO] Processing module disabled")
+
+# Legacy sweep: Collaboration (sharing, WebSocket, merge)
+try:
+    from routes import sharing, ws
+
+    app.include_router(sharing.router)
+    app.include_router(ws.router)
+except ImportError:
+    print("[INFO] Collaboration modules disabled")
+
+# Legacy sweep: Embeddings (UNI, Phikon, Virchow, CTransPath)
+try:
+    from routes import embeddings
+
+    app.include_router(embeddings.router)
+except ImportError:
+    print("[INFO] Embeddings module disabled")
+
+# Legacy sweep: DICOM export
+try:
+    from routes import exports
+
+    app.include_router(exports.router)
+except ImportError:
+    print("[INFO] DICOM export module disabled")
+
+# Legacy sweep: Plugin manager
+try:
+    from routes import plugins
+
+    app.include_router(plugins.router)
+except ImportError:
+    print("[INFO] Plugin manager disabled")
+
+# DICOMweb endpoints — WADO-RS, STOW-RS, QIDO-RS, SR, annotations
+try:
+    from routes import dicomweb
+
+    app.include_router(dicomweb.router)
+except ImportError:
+    print("[INFO] DICOMweb module disabled")
+
+# Standards: Integration (eHealth BE, HL7v2, APSR)
+try:
+    from routes import integration
+
+    app.include_router(integration.router)
+except ImportError:
+    print("[INFO] Integration module disabled")
+
+# Standards: Terminology (SNOMED CT, LOINC)
+try:
+    from routes import terminology
+
+    app.include_router(terminology.router)
+except ImportError:
+    print("[INFO] Terminology module disabled")
+
+# Standards: Audit API (search, GDPR register)
+try:
+    from routes import audit_api
+
+    app.include_router(audit_api.router)
+except ImportError:
+    print("[INFO] Audit API module disabled")
+
+# Regional standards — ABDM, SS-MIX2, I18n
+try:
+    from routes import regional
+
+    app.include_router(regional.router)
+except ImportError:
+    print("[INFO] Regional module disabled")
 
 
 @app.get("/", tags=["health"])

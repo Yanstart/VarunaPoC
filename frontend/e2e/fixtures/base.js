@@ -12,6 +12,18 @@ export const test = base.extend({
     /** Backend API base URL */
     apiUrl: [process.env.API_URL || 'http://localhost:8000', { option: true }],
 
+    /**
+     * Override page fixture to force explorer home view by default.
+     * Wave 3 changed the default to CaseBrowser, but existing tests
+     * expect FolderBrowser. Individual tests can override via addInitScript.
+     */
+    page: async ({ page }, use) => {
+        await page.addInitScript(() => {
+            localStorage.setItem('varuna_home_view', 'explorer');
+        });
+        await use(page);
+    },
+
     /** Wait for the app container to be rendered */
     waitForApp: async ({ page }, use) => {
         const helper = async () => {
@@ -21,6 +33,7 @@ export const test = base.extend({
     },
 
     /** Deterministic mock slide data */
+    // eslint-disable-next-line no-empty-pattern
     mockSlideData: async ({}, use) => {
         const data = {
             slide: {

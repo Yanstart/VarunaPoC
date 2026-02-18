@@ -1,7 +1,8 @@
-"""ORM Models for VarunaPoC Phase 2 + Phase 3 Auth + Phase 4 Quality."""
+"""ORM Models for VarunaPoC Phase 2 + Phase 3 Auth + Phase 4 Quality + Phase 5 Corrections."""
 
 from .annotation import Annotation
 from .annotation_label import AnnotationLabel
+from .correction import Correction
 
 # Phase 3: Auth models (optional - requires auth module)
 try:
@@ -20,7 +21,7 @@ except ImportError:
     _QUALITY_MODELS = []
 
 __all__ = (
-    ["Annotation", "AnnotationLabel"]
+    ["Annotation", "AnnotationLabel", "Correction"]
     + [m.__name__ for m in _AUTH_MODELS]
     + [m.__name__ for m in _QUALITY_MODELS]
 )

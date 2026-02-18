@@ -21,6 +21,7 @@
 
 /* 3. Component styles - ML Panel */
 @import './css/ml-panel.css';
+@import './css/magnification-bar.css';
 
 /* 4. Layout styles - Multi-viewer layouts */
 @import './css/layouts/compare-layout.css';
@@ -28,3 +29,18 @@
 /* 5. Auth styles (Phase 3) */
 @import './css/login.css';
 @import './css/user-menu.css';
+
+/* 6. Auto-tag styles */
+@import './css/auto-tag.css';
+
+/* 7. Focus Assist styles */
+@import './css/focus-assist.css';
+
+/* 8. Case Browser styles (Wave 3) */
+@import './css/case-browser.css';
+
+/* 9. Case Sidebar styles (Wave 3) */
+@import './css/case-sidebar.css';
+
+/* 10. Similarity Panel styles (Wave 3) */
+@import './css/similarity-panel.css';

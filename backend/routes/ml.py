@@ -5,6 +5,7 @@ Endpoints:
 - POST /ml/predict/{slide_id} - Prédiction sur slide
 - POST /ml/features/{slide_id} - Extraction features
 - GET  /ml/heatmap/{slide_id} - Génération heatmap
+- GET  /ml/focus/{slide_id} - Focus assist zones
 - POST /ml/batch/predict - Batch inference
 - GET  /ml/models - Liste modèles disponibles
 - POST /ml/models/reload - Reload model configuration
@@ -17,7 +18,7 @@ References:
 import base64
 import logging
 from io import BytesIO
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -138,6 +139,185 @@ class ModelInfoResponse(BaseModel):
     provider: str
 
 
+class TagsResponse(BaseModel):
+    """Response pour auto-tag endpoint."""
+
+    slide_id: str
+    tags: Dict[str, Optional[str]]
+    source: str
+
+
+class FocusZone(BaseModel):
+    """A single zone of interest."""
+
+    rank: int
+    score: float = Field(..., ge=0.0, le=1.0)
+    centroid: List[float]
+    bbox: List[float]
+    area_px: float
+
+
+class FocusResponse(BaseModel):
+    """Response for focus assist endpoint."""
+
+    slide_id: str
+    zones: List[FocusZone]
+    model_id: str
+    total_zones_above_threshold: int
+
+
+class RegionMeasurement(BaseModel):
+    region_id: int
+    label: str
+    feret_diameter_mm: float
+    area_mm2: float
+    perimeter_mm: float
+    bbox_mm: List[float]
+    confidence: float
+
+
+class MeasurementResponse(BaseModel):
+    slide_id: str
+    measurements: List[RegionMeasurement]
+    mpp: float
+    unit: str = "mm"
+
+
+class FeedbackRequest(BaseModel):
+    """Pathologist feedback on an ML prediction."""
+
+    original_annotation_id: str = Field(..., description="UUID of the original annotation")
+    correction_type: str = Field(..., pattern="^(confirmed|rejected|refined|relabeled)$")
+    corrected_class: Optional[str] = None
+    corrected_geometry: Optional[Dict] = None
+    notes: Optional[str] = None
+
+
+class FeedbackResponse(BaseModel):
+    correction_id: str
+    slide_id: str
+    correction_type: str
+    stats: Dict[str, int]
+
+
+class SimilarSlideResult(BaseModel):
+    """A single similar slide result."""
+
+    slide_id: str
+    score: float = Field(..., ge=0, le=1)
+    name: Optional[str] = None
+    overview_url: Optional[str] = None
+
+
+class SimilarityResponse(BaseModel):
+    """Response for similarity search endpoint."""
+
+    query_slide_id: str
+    results: List[SimilarSlideResult]
+    index_size: int
+
+
+class GeoJSONRegion(BaseModel):
+    """GeoJSON polygon region for cell counting."""
+
+    type: str = Field("Polygon")
+    coordinates: List[List[List[float]]]
+
+
+class CountRequest(BaseModel):
+    """Request for cell counting endpoint."""
+
+    region: Optional[GeoJSONRegion] = None
+    stain: str = Field("Ki67")
+
+
+class CountingResponse(BaseModel):
+    """Response for cell counting endpoint."""
+
+    total_cells: int
+    positive: int
+    negative: int
+    ratio: float
+    percentage: str
+    processing_time_ms: float
+
+
+class ClusterInfoModel(BaseModel):
+    id: int
+    color: str
+    label: str
+    tile_count: int
+    centroid_embedding: List[float] = []
+
+
+class TileAssignmentModel(BaseModel):
+    x: int
+    y: int
+    cluster_id: int
+
+
+class ClusteringResponse(BaseModel):
+    clusters: List[ClusterInfoModel]
+    tile_assignments: List[TileAssignmentModel]
+    processing_time_ms: float
+
+
+class ArtifactModel(BaseModel):
+    type: str
+    severity: str
+    bbox: List[int]
+    area_percent: float
+
+
+class QualityResponse(BaseModel):
+    overall_score: float = Field(..., ge=0.0, le=1.0)
+    quality_label: str
+    artifacts: List[ArtifactModel]
+    recommendation: str
+    processing_time_ms: float
+
+
+class DriftMetricModel(BaseModel):
+    metric_name: str
+    value: float
+    threshold: float
+    is_drifted: bool
+    window_size: int
+
+
+class DriftReportResponse(BaseModel):
+    model_id: str
+    report_date: str
+    metrics: List[DriftMetricModel]
+    overall_drifted: bool
+    recommendation: str
+    processing_time_ms: float
+
+
+class AllDriftReportsResponse(BaseModel):
+    reports: List[DriftReportResponse]
+
+
+class RetrainingRequest(BaseModel):
+    """Request pour retraining pipeline."""
+
+    dataset_tag: str = Field("latest")
+    config: Optional[Dict[str, Any]] = None
+
+
+class RetrainingResponse(BaseModel):
+    """Response pour retraining pipeline."""
+
+    run_id: str
+    status: str
+    model_name: str
+    dataset_version: str
+    metrics: Dict[str, float]
+    processing_time_ms: float
+    artifact_uri: Optional[str] = None
+    recommendation: str
+
+
 # ============================================================================
 # DEPENDENCIES
 # ============================================================================
@@ -238,6 +418,30 @@ def get_tag_router():
 
     config_path = os.getenv("ML_ROUTES_CONFIG", "config/ml_routes.yaml")
     return TagRouter(config_path)
+
+
+from services.cache.memory_cache import MemoryCache
+
+_memory_cache = None
+
+
+def get_memory_cache():
+    global _memory_cache
+    if _memory_cache is None:
+        _memory_cache = MemoryCache(maxsize=512, ttl=300)
+    return _memory_cache
+
+
+from services.cache.disk_cache import DiskCache
+
+_disk_cache = None
+
+
+def get_disk_cache():
+    global _disk_cache
+    if _disk_cache is None:
+        _disk_cache = DiskCache()
+    return _disk_cache
 
 
 # ============================================================================
@@ -594,6 +798,619 @@ async def detect_regions_endpoint(
         raise HTTPException(status_code=500, detail=f"Detection error: {e!s}")
 
 
+def _compute_focus_zones(heatmap, slide_dimensions, threshold, top_n):
+    """Extract and rank focus zones from a heatmap."""
+    import numpy as np
+
+    from services.detection.postprocessing import heatmap_to_contours
+
+    contours_with_confidence = heatmap_to_contours(
+        heatmap, threshold=threshold, min_area=50.0, closing_iterations=2
+    )
+
+    heatmap_h, heatmap_w = heatmap.shape[:2]
+    scale_x = slide_dimensions[0] / heatmap_w
+    scale_y = slide_dimensions[1] / heatmap_h
+
+    zones = []
+    for contour, confidence in contours_with_confidence:
+        scaled = contour.copy().astype(float)
+        scaled[:, 0] *= scale_x
+        scaled[:, 1] *= scale_y
+
+        xs, ys = scaled[:, 0], scaled[:, 1]
+        centroid = [float(np.mean(xs)), float(np.mean(ys))]
+        bbox = [float(np.min(xs)), float(np.min(ys)), float(np.max(xs)), float(np.max(ys))]
+
+        n = len(scaled)
+        if n >= 3:
+            x, y = scaled[:, 0], scaled[:, 1]
+            area = (
+                abs(float(np.sum(x[:-1] * y[1:] - x[1:] * y[:-1]) + x[-1] * y[0] - x[0] * y[-1]))
+                / 2.0
+            )
+        else:
+            area = 0.0
+
+        zones.append(
+            {
+                "score": round(confidence, 4),
+                "centroid": [round(c, 2) for c in centroid],
+                "bbox": [round(v, 2) for v in bbox],
+                "area_px": round(area, 2),
+            }
+        )
+
+    zones.sort(key=lambda z: z["score"], reverse=True)
+    total_above = len(zones)
+    return zones[:top_n], total_above
+
+
+@router.get("/focus/{slide_id}", response_model=FocusResponse)
+async def get_focus_zones(
+    slide_id: str,
+    top_n: int = Query(10, ge=1, le=50, description="Number of top zones to return"),
+    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum attention score"),
+    resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution"),
+    prediction_class: str = Query("tissue", description="Target class"),
+    provider=Depends(get_ml_provider),
+    disk_cache: DiskCache = Depends(get_disk_cache),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Focus Assist — Retourne les N zones les plus intéressantes d'une lame.
+
+    Utilise la heatmap ML pour identifier les régions d'attention élevée,
+    les trie par score décroissant et retourne les top N zones avec
+    coordonnées, bounding box et score.
+    """
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        # Check disk cache for heatmap
+        model_id = (
+            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        )
+        cached_heatmap = disk_cache.load_heatmap(slide_id, model_id)
+
+        if cached_heatmap is not None:
+            heatmap = cached_heatmap
+            # We need slide dimensions - get from OpenSlide
+            import openslide
+
+            slide = openslide.OpenSlide(slide_path)
+            slide_dimensions = slide.dimensions
+            slide.close()
+        else:
+            # Generate heatmap
+            heatmap_result = provider.generate_heatmap(
+                slide_path, prediction_class, resolution_level
+            )
+            heatmap = heatmap_result.heatmap
+            slide_dimensions = heatmap_result.slide_dimensions
+            # Cache for future use
+            disk_cache.save_heatmap(slide_id, model_id, heatmap)
+
+        # Find zones above threshold
+        zones, total_above = _compute_focus_zones(
+            heatmap,
+            slide_dimensions,
+            threshold,
+            top_n,
+        )
+
+        focus_zones = [FocusZone(rank=i + 1, **z) for i, z in enumerate(zones)]
+
+        return FocusResponse(
+            slide_id=slide_id,
+            zones=focus_zones,
+            model_id=model_id,
+            total_zones_above_threshold=total_above,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Focus assist failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Focus assist error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Focus assist error: {e!s}")
+
+
+@router.get("/measure/{slide_id}", response_model=MeasurementResponse)
+async def measure_slide(
+    slide_id: str,
+    threshold: float = Query(0.5, ge=0.0, le=1.0),
+    prediction_class: str = Query("tissue"),
+    resolution_level: int = Query(2, ge=0, le=5),
+    provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Auto-measure tumor dimensions in millimeters."""
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        # Get MPP from slide metadata
+        import openslide
+
+        slide = openslide.OpenSlide(slide_path)
+        mpp = float(slide.properties.get("openslide.mpp-x", "0.25"))
+        slide.close()
+
+        # Generate heatmap
+        heatmap_result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
+
+        # Extract contours
+        from services.detection.postprocessing import heatmap_to_contours
+
+        contours = heatmap_to_contours(heatmap_result.heatmap, threshold=threshold, min_area=100.0)
+
+        # Measure regions
+        from services.measurement import measure_regions
+
+        measurements = measure_regions(
+            contours,
+            heatmap_result.slide_dimensions,
+            heatmap_result.heatmap.shape[:2],
+            mpp,
+        )
+
+        return MeasurementResponse(
+            slide_id=slide_id,
+            measurements=[RegionMeasurement(**m) for m in measurements],
+            mpp=mpp,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Measurement failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Measurement error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Measurement error: {e!s}")
+
+
+@router.post("/count/{slide_id}", response_model=CountingResponse)
+async def count_cells(
+    slide_id: str,
+    request: CountRequest = CountRequest(),
+    provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Comptage cellulaire automatisé (Ki-67 / IHC).
+
+    Compte les cellules positives et négatives dans une lame ou région.
+    Retourne le ratio et le pourcentage pour l'index Ki-67.
+
+    Used by frontend CellCountingPanel (Wave 4).
+    """
+    from services.ml.counting import CellCountingService
+
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        service = CellCountingService()
+        result = service.count_cells(
+            slide_path=slide_path,
+            provider=provider,
+            stain=request.stain,
+            region=request.region,
+        )
+
+        return CountingResponse(
+            total_cells=result.total_cells,
+            positive=result.positive,
+            negative=result.negative,
+            ratio=result.ratio,
+            percentage=result.percentage,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Cell counting failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Cell counting error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Cell counting error: {e!s}")
+
+
+@router.post("/cluster/{slide_id}", response_model=ClusteringResponse)
+async def cluster_slide(
+    slide_id: str,
+    n_clusters: int = Query(4, ge=2, le=8, description="Number of clusters"),
+    provider=Depends(get_ml_provider),
+    disk_cache: DiskCache = Depends(get_disk_cache),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Clustering morphologique -- identifie les patterns dans une lame."""
+    from services.ml.clustering import ClusteringService
+
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        model_id = (
+            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        )
+
+        service = ClusteringService()
+        result = service.cluster(
+            slide_path=slide_path,
+            n_clusters=n_clusters,
+            disk_cache=disk_cache,
+            model_id=model_id,
+        )
+
+        return ClusteringResponse(
+            clusters=[
+                ClusterInfoModel(
+                    id=c.id,
+                    color=c.color,
+                    label=c.label,
+                    tile_count=c.tile_count,
+                    centroid_embedding=c.centroid_embedding,
+                )
+                for c in result.clusters
+            ],
+            tile_assignments=[
+                TileAssignmentModel(x=t.x, y=t.y, cluster_id=t.cluster_id)
+                for t in result.tile_assignments
+            ],
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Clustering failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Clustering error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Clustering error: {e!s}")
+
+
+@router.get("/quality/{slide_id}", response_model=QualityResponse)
+async def get_slide_quality(
+    slide_id: str,
+    provider=Depends(get_ml_provider),
+    disk_cache: DiskCache = Depends(get_disk_cache),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Controle qualite automatique -- evalue la qualite d'une lame.
+
+    Retourne un score global, un label, une liste d'artefacts detectes
+    et une recommandation.
+    """
+    from services.ml.quality import QualityService
+
+    try:
+        slide_path = get_slide_path_by_id(slide_id)
+        if not slide_path:
+            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        _check_slide_format(slide_path, slide_id)
+
+        model_id = (
+            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
+        )
+
+        service = QualityService()
+        result = service.assess_quality(
+            slide_path=slide_path,
+            disk_cache=disk_cache,
+            model_id=model_id,
+        )
+
+        return QualityResponse(
+            overall_score=result.overall_score,
+            quality_label=result.quality_label,
+            artifacts=[
+                ArtifactModel(
+                    type=a.type,
+                    severity=a.severity,
+                    bbox=a.bbox,
+                    area_percent=a.area_percent,
+                )
+                for a in result.artifacts
+            ],
+            recommendation=result.recommendation,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except MLProviderError as e:
+        logger.error(f"Quality assessment failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Quality assessment error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Quality assessment error: {e!s}")
+
+
+@router.get("/drift/{model_id}", response_model=DriftReportResponse)
+async def get_drift_report(
+    model_id: str,
+    provider=Depends(get_ml_provider),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """Get drift report for a specific model."""
+    from services.ml.drift import DriftDetectorService
+
+    try:
+        service = DriftDetectorService()
+        result = service.detect_drift(model_id)
+
+        return DriftReportResponse(
+            model_id=result.model_id,
+            report_date=result.report_date,
+            metrics=[
+                DriftMetricModel(
+                    metric_name=m.metric_name,
+                    value=m.value,
+                    threshold=m.threshold,
+                    is_drifted=m.is_drifted,
+                    window_size=m.window_size,
+                )
+                for m in result.metrics
+            ],
+            overall_drifted=result.overall_drifted,
+            recommendation=result.recommendation,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Drift detection failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Drift detection error: {e!s}")
+
+
+@router.get("/drift", response_model=AllDriftReportsResponse)
+async def get_all_drift_reports(
+    provider=Depends(get_ml_provider),
+    tag_router=Depends(get_tag_router),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """Get drift reports for all loaded models."""
+    from services.ml.drift import DriftDetectorService
+
+    try:
+        service = DriftDetectorService()
+        routes = tag_router.get_all_routes()
+
+        reports = []
+        for route in routes:
+            result = service.detect_drift(route.model_id)
+            reports.append(
+                DriftReportResponse(
+                    model_id=result.model_id,
+                    report_date=result.report_date,
+                    metrics=[
+                        DriftMetricModel(
+                            metric_name=m.metric_name,
+                            value=m.value,
+                            threshold=m.threshold,
+                            is_drifted=m.is_drifted,
+                            window_size=m.window_size,
+                        )
+                        for m in result.metrics
+                    ],
+                    overall_drifted=result.overall_drifted,
+                    recommendation=result.recommendation,
+                    processing_time_ms=result.processing_time_ms,
+                )
+            )
+
+        return AllDriftReportsResponse(reports=reports)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Drift detection failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Drift detection error: {e!s}")
+
+
+@router.post("/pipeline/retrain/{model_id}", response_model=RetrainingResponse)
+async def retrain_model(
+    model_id: str,
+    request: RetrainingRequest = RetrainingRequest(),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """
+    Trigger a model retraining pipeline run.
+
+    Pipeline: DVC data versioning -> Slideflow MIL training -> MLflow tracking.
+
+    Requires ADMIN_TECHNIQUE role.
+    """
+    from services.ml.retraining import RetrainingPipelineService
+
+    try:
+        service = RetrainingPipelineService()
+        result = await service.trigger_retraining(
+            model_id=model_id,
+            dataset_tag=request.dataset_tag,
+            config=request.config,
+        )
+
+        return RetrainingResponse(
+            run_id=result.run_id,
+            status=result.status,
+            model_name=result.model_name,
+            dataset_version=result.dataset_version,
+            metrics=result.metrics,
+            processing_time_ms=result.processing_time_ms,
+            artifact_uri=result.artifact_uri,
+            recommendation=result.recommendation,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Retraining pipeline failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Retraining error: {e!s}")
+
+
+@router.post("/feedback/{slide_id}", response_model=FeedbackResponse)
+async def submit_feedback(
+    slide_id: str,
+    request: FeedbackRequest,
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Record pathologist correction on ML prediction."""
+    import uuid as uuid_mod
+
+    try:
+        # Validate annotation ID format
+        try:
+            annotation_uuid = uuid_mod.UUID(request.original_annotation_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid annotation UUID format")
+
+        # Create correction record
+        from sqlalchemy import func, select
+
+        from core.database import get_db_context
+        from models.correction import Correction
+
+        async with get_db_context() as session:
+            correction = Correction(
+                annotation_id=annotation_uuid,
+                slide_id=slide_id,
+                correction_type=request.correction_type,
+                comment=request.notes,
+                created_by=(
+                    current_user.username if hasattr(current_user, "username") else "anonymous"
+                ),
+            )
+            session.add(correction)
+            await session.flush()
+
+            # Get stats
+            result = await session.execute(
+                select(
+                    Correction.correction_type,
+                    func.count(Correction.id),
+                )
+                .where(Correction.slide_id == slide_id)
+                .group_by(Correction.correction_type)
+            )
+            stats = {row[0]: row[1] for row in result.all()}
+
+        return FeedbackResponse(
+            correction_id=str(correction.id),
+            slide_id=slide_id,
+            correction_type=request.correction_type,
+            stats=stats,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Feedback submission failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Feedback error: {e!s}")
+
+
+@router.get("/feedback/stats")
+async def get_feedback_stats(
+    model_name: str = Query(None),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Get aggregated feedback statistics per model (7-day sliding window)."""
+    from core.database import get_db_context
+    from services.feedback_collector import FeedbackCollector
+
+    collector = FeedbackCollector()
+    async with get_db_context() as session:
+        stats = await collector.get_stats(session, model_name=model_name)
+
+    return {
+        "stats": [
+            {
+                "model_name": s.model_name,
+                "window_days": s.window_days,
+                "total_corrections": s.total_corrections,
+                "confirmed": s.confirmed,
+                "rejected": s.rejected,
+                "refined": s.refined,
+                "relabeled": s.relabeled,
+                "rejection_rate": s.rejection_rate,
+                "needs_retrain": s.needs_retrain,
+                "high_rejection": s.high_rejection,
+            }
+            for s in stats
+        ],
+    }
+
+
+# ============================================================================
+# SIMILARITY SEARCH
+# ============================================================================
+
+_similarity_index = None
+
+
+def get_similarity_index():
+    """Get or create the singleton SimilarityIndex."""
+    global _similarity_index
+    if _similarity_index is None:
+        from services.ml.similarity_index import FAISS_AVAILABLE, SimilarityIndex
+
+        if not FAISS_AVAILABLE:
+            raise HTTPException(503, "Similarity search unavailable (faiss-cpu not installed)")
+        _similarity_index = SimilarityIndex()
+    return _similarity_index
+
+
+@router.post("/similar/{slide_id}", response_model=SimilarityResponse)
+async def search_similar(
+    slide_id: str,
+    top_k: int = Query(5, ge=1, le=20),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """Find the K most similar slides to the given slide."""
+    import os
+
+    index = get_similarity_index()
+
+    # Get query embeddings from disk cache
+    disk_cache = DiskCache()
+    model = os.getenv("ML_EXTRACTOR", "ctranspath")
+    embeddings = disk_cache.load_embeddings(slide_id, model)
+
+    if embeddings is None:
+        raise HTTPException(404, f"No embeddings cached for slide {slide_id}")
+
+    results = index.search(embeddings, top_k=top_k, exclude_id=slide_id)
+
+    # Enrich with slide names and overview URLs
+    for r in results:
+        r["name"] = r["slide_id"].split("/")[-1] if "/" in r["slide_id"] else r["slide_id"]
+        r["overview_url"] = f"/api/slides/{r['slide_id']}/overview"
+
+    return SimilarityResponse(
+        query_slide_id=slide_id,
+        results=[SimilarSlideResult(**r) for r in results],
+        index_size=index.size(),
+    )
+
+
 @router.post("/batch/predict", response_model=BatchJobResponse)
 async def batch_predict(
     request: BatchPredictionRequest,
@@ -725,6 +1542,72 @@ async def reload_models(
     except Exception as e:
         logger.error(f"Failed to reload configuration: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/tags/{slide_id}", response_model=TagsResponse)
+async def get_slide_tags(
+    slide_id: str,
+    tag_extractor=Depends(get_tag_extractor),
+    memory_cache: MemoryCache = Depends(get_memory_cache),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Auto-tag une lame — classification automatique (organe, coloration, pathologie).
+
+    Utilise le TagExtractor existant pour extraire des tags depuis les métadonnées
+    et le nom de fichier de la lame. Les résultats sont mis en cache mémoire.
+    """
+    # Check cache
+    cache_key = f"tags:{slide_id}"
+    cached = memory_cache.get(cache_key)
+    if cached is not None:
+        return TagsResponse(
+            slide_id=slide_id,
+            tags=cached["tags"],
+            source=cached["source"],
+        )
+
+    # Get slide path
+    slide_path = get_slide_path_by_id(slide_id)
+    if not slide_path:
+        raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+
+    # Extract format from extension
+    from pathlib import Path
+
+    ext = Path(slide_path).suffix.upper().lstrip(".")
+    slide_format = ext if ext else "UNKNOWN"
+
+    # Extract tags
+    try:
+        raw_tags = tag_extractor.extract_tags(slide_path, slide_format)
+    except Exception as e:
+        logger.warning(f"Tag extraction failed for {slide_id}: {e}")
+        raw_tags = {
+            "organ": None,
+            "stain": None,
+            "marker": None,
+            "confidence": 0.0,
+            "source": "error",
+        }
+
+    tags_dict = {
+        "organ": raw_tags.get("organ"),
+        "stain": raw_tags.get("stain"),
+        "marker": raw_tags.get("marker"),
+        "pathology": None,  # Will be populated by ML in future
+        "confidence": raw_tags.get("confidence", 0.0),
+    }
+    source = raw_tags.get("source", "unknown")
+
+    # Cache result
+    memory_cache.set(cache_key, {"tags": tags_dict, "source": source})
+
+    return TagsResponse(
+        slide_id=slide_id,
+        tags=tags_dict,
+        source=source,
+    )
 
 
 @router.get("/health")

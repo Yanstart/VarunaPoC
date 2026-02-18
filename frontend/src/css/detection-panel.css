@@ -368,3 +368,159 @@
 .detection-item__conf--high { color: #4CAF50; }
 .detection-item__conf--medium { color: #ff9800; }
 .detection-item__conf--low { color: #ff6b6b; }
+
+/* Confidence badges */
+.detection-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.detection-badge--high {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.detection-badge--medium {
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.detection-badge--low {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.detection-badge--unknown {
+    background: rgba(149, 165, 166, 0.2);
+    color: #95a5a6;
+    border: 1px solid rgba(149, 165, 166, 0.3);
+}
+
+.detection-panel__header {
+    padding: 10px 14px;
+    border-bottom: 1px solid #333;
+}
+
+.detection-panel__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+/* Accordion collapse */
+.detection-panel__header--collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detection-panel__chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    color: var(--text-secondary, #999);
+}
+
+
+/* Dimension display (measurement) */
+.detection-item__dimension {
+    font-size: 0.75rem;
+    color: var(--color-info, #60a5fa);
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* Feedback buttons row */
+.detection-item__feedback {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.feedback-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.feedback-btn:hover {
+    filter: brightness(1.2);
+}
+
+.feedback-btn--confirm {
+    border-color: rgba(76, 175, 80, 0.4);
+    color: #4CAF50;
+}
+
+.feedback-btn--confirm:hover {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: #4CAF50;
+}
+
+.feedback-btn--correct {
+    border-color: rgba(74, 158, 255, 0.4);
+    color: #4a9eff;
+}
+
+.feedback-btn--correct:hover {
+    background: rgba(74, 158, 255, 0.15);
+    border-color: #4a9eff;
+}
+
+.feedback-btn--reject {
+    border-color: rgba(255, 107, 107, 0.4);
+    color: #ff6b6b;
+}
+
+.feedback-btn--reject:hover {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: #ff6b6b;
+}
+
+/* Feedback badge (after submission) */
+.feedback-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+.feedback-badge--confirmed {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.feedback-badge--refined {
+    background: rgba(74, 158, 255, 0.15);
+    color: #4a9eff;
+    border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.feedback-badge--rejected {
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}

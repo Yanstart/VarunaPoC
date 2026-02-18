@@ -480,6 +480,72 @@ class ApiService {
         });
     }
 
+    /**
+     * Get measurement for detected regions on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [options={}] - Measurement options
+     * @param {number} [options.threshold=0.5] - Detection threshold
+     * @param {string} [options.predictionClass='tissue'] - Target class
+     * @returns {Promise<Object>} Measurement result
+     */
+    async getMeasurement(slideId, options = {}) {
+        const params = new URLSearchParams({
+            threshold: options.threshold || 0.5,
+            prediction_class: options.predictionClass || 'tissue',
+        });
+        return this.get(`/api/ml/measure/${encodeURIComponent(slideId)}?${params}`);
+    }
+
+    /**
+     * Submit pathologist feedback on an ML prediction
+     * @param {string} slideId - Slide ID
+     * @param {Object} feedback - Feedback data
+     * @returns {Promise<Object>} Feedback result
+     */
+    async submitFeedback(slideId, feedback) {
+        return this.post(`/api/ml/feedback/${encodeURIComponent(slideId)}`, feedback);
+    }
+
+    /**
+     * Get auto-detected tags for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} Tags response with organ, stain, etc.
+     */
+    async getSlideTags(slideId) {
+        return this.get(`/api/ml/tags/${encodeURIComponent(slideId)}`);
+    }
+
+
+    /**
+     * Get focus assist zones for a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [options={}] - Options
+     * @param {number} [options.topN=10] - Number of top zones
+     * @param {number} [options.threshold=0.5] - Score threshold
+     * @returns {Promise<Object>} Focus response with zones array
+     */
+    async getFocusZones(slideId, options = {}) {
+        const params = new URLSearchParams({
+            top_n: options.topN || 10,
+            threshold: options.threshold || 0.5,
+        });
+        return this.get(`/api/ml/focus/${encodeURIComponent(slideId)}?${params}`);
+    }
+
+    /**
+     * Search for similar slides using FAISS similarity index
+     * @param {string} slideId - Query slide ID
+     * @param {Object} [options={}] - Search options
+     * @param {number} [options.topK=5] - Number of results
+     * @returns {Promise<Object>} SimilarityResponse with results array
+     */
+    async getSimilarSlides(slideId, options = {}) {
+        const params = new URLSearchParams();
+        if (options.topK) {params.set('top_k', options.topK);}
+        const query = params.toString() ? `?${params}` : '';
+        return this.post(`/api/ml/similar/${encodeURIComponent(slideId)}${query}`, {});
+    }
+
     // ==========================================
     // ANNOTATIONS API
     // ==========================================
@@ -614,6 +680,77 @@ class ApiService {
     }
 
     // ==========================================
+    // CELL COUNTING API (Wave 4)
+    // ==========================================
+
+    /**
+     * Run cell counting on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [params={}] - Counting parameters
+     * @param {Object} [params.region] - Optional GeoJSON polygon region
+     * @param {string} [params.stain] - Stain type (Ki67, HER2, PD-L1)
+     * @returns {Promise<Object>} Counting result
+     */
+    async countCells(slideId, params = {}) {
+        const body = {};
+        if (params.region) body.region = params.region;
+        if (params.stain) body.stain = params.stain;
+        return this.post(`/api/ml/count/${encodeURIComponent(slideId)}`, body);
+    }
+
+    // ==========================================
+    // CLUSTERING API (Wave 4)
+    // ==========================================
+
+    /**
+     * Run morphological clustering on a slide
+     * @param {string} slideId - Slide ID
+     * @param {Object} [params={}] - Clustering parameters
+     * @param {number} [params.n_clusters=4] - Number of clusters (2-8)
+     * @returns {Promise<Object>} Clustering result
+     */
+    async clusterSlide(slideId, params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.n_clusters !== undefined) queryParams.set('n_clusters', params.n_clusters);
+        const qs = queryParams.toString();
+        return this.post(`/api/ml/cluster/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`, {});
+    }
+
+    // ==========================================
+    // SLIDE QUALITY API (Wave 4)
+    // ==========================================
+
+    /**
+     * Get automatic quality assessment for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} Quality result with score, label, artifacts
+     */
+    async getSlideQuality(slideId) {
+        return this.get(`/api/ml/quality/${encodeURIComponent(slideId)}`);
+    }
+
+    // ==========================================
+    // DRIFT MONITORING API (Wave 4)
+    // ==========================================
+
+    /**
+     * Get drift report for a specific model
+     * @param {string} modelId - Model identifier
+     * @returns {Promise<Object>} DriftReportResponse
+     */
+    async getDriftReport(modelId) {
+        return this.get(`/api/ml/drift/${encodeURIComponent(modelId)}`);
+    }
+
+    /**
+     * Get drift reports for all loaded models
+     * @returns {Promise<Object>} AllDriftReportsResponse with reports array
+     */
+    async getAllDriftReports() {
+        return this.get('/api/ml/drift');
+    }
+
+    // ==========================================
     // AUTH API (Phase 3)
     // ==========================================
 
@@ -728,6 +865,27 @@ class ApiService {
      */
     async getDisagreements(slideId, params) {
         return this.post(`/api/quality/${encodeURIComponent(slideId)}/disagreements`, params);
+    }
+
+    // ==========================================
+    // WORKLIST & HISTORY API (Wave 4)
+    // ==========================================
+
+    /**
+     * Get worklist (assigned cases) for the current user
+     * @returns {Promise<Object>} WorklistResponse with items and counts
+     */
+    async getWorklist() {
+        return this.get('/api/slides/worklist', { useCache: false });
+    }
+
+    /**
+     * Get recently viewed slides history
+     * @param {number} [limit=20] - Maximum number of items
+     * @returns {Promise<Object>} HistoryResponse with items and total
+     */
+    async getHistory(limit = 20) {
+        return this.get(`/api/slides/history?limit=${limit}`, { useCache: false });
     }
 
     // ==========================================

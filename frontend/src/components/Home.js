@@ -34,7 +34,7 @@ export function createHomePage(slides, onSlideSelect) {
     header.innerHTML = `
         <div class="home-title">
             <h1>VarunaPoC</h1>
-            <p class="subtitle">Digital Pathology Slide Viewer</p>
+            <p class="subtitle">Visualiseur de pathologie num\u00e9rique</p>
         </div>
         <div class="home-toolbar">
             <div class="search-box">

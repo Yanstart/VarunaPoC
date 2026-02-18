@@ -20,3 +20,21 @@ scipy==1.12.0
 # Phase 3: Auth (OIDC + JWT)
 python-jose[cryptography]==3.3.0
 httpx==0.27.0
+
+# Phase 4: Testing
+pytest-asyncio>=0.24.0
+
+# Phase 4: Load testing
+locust>=2.20.0
+
+# Phase 5: Caching
+cachetools>=5.3.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Phase 6: Wave 2 ML
+# scipy already included above (>=1.11.0 satisfied by 1.12.0)
+
+# Similarity search
+faiss-cpu>=1.7.4

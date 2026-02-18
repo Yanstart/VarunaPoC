@@ -8,18 +8,85 @@ API Design:
 - GET /api/browse?path={path} → Navigation hiérarchique dans /Slides
 - GET /api/slides/{id}/info → Métadonnées d'une lame
 - GET /api/slides/{id}/overview → Image overview (JPEG)
+- GET /api/slides/worklist → Liste de travail (mes cas assignés)
+- GET /api/slides/history → Historique des lames consultées
 """
 
-import openslide
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse, Response
+import hashlib
+import random
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
 
-from auth.dependencies import get_current_user
+import openslide
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
+
+from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.slide_scanner import get_slide_by_name, get_slide_path_by_id, scan_slides_directory
 from services.tile_server import tile_server
+
+# ==========================================
+# Worklist & History Schemas
+# ==========================================
+
+
+class WorklistItem(BaseModel):
+    slide_id: str
+    slide_name: str
+    case_path: str
+    status: str  # "pending", "in_progress", "completed"
+    assigned_date: str  # ISO date
+    is_new: bool  # True if never opened
+
+
+class WorklistResponse(BaseModel):
+    items: List[WorklistItem]
+    counts: Dict[str, int]  # {"pending": 3, "in_progress": 1, "completed": 5}
+
+
+class HistoryItem(BaseModel):
+    slide_id: str
+    slide_name: str
+    viewed_at: str  # ISO datetime
+    view_count: int
+
+
+class HistoryResponse(BaseModel):
+    items: List[HistoryItem]
+    total: int
+
+
+# ==========================================
+# MPP (Microns Per Pixel) Schema
+# ==========================================
+
+# Objective power to MPP lookup table (common scanner defaults)
+_OBJECTIVE_TO_MPP = {
+    100: 0.10,
+    80: 0.125,
+    60: 0.167,
+    40: 0.25,
+    20: 0.50,
+    10: 1.0,
+    5: 2.0,
+    4: 2.5,
+    2: 5.0,
+    1: 10.0,
+}
+
+
+class MPPResponse(BaseModel):
+    """Microns-per-pixel metadata for a slide."""
+
+    mpp_x: float
+    mpp_y: float
+    objective: Optional[int] = None
+    source: str = "openslide"
+
 
 router = APIRouter(prefix="/api/slides")
 
@@ -123,6 +190,117 @@ def browse_slides_directory(
         raise HTTPException(500, f"Error browsing directory: {e}")
 
 
+@router.get("/worklist", tags=["navigation"])
+def get_worklist(
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Liste de travail : cas assignés au médecin connecté.
+
+    Mock implementation: génère des items déterministes depuis la liste de lames.
+    Le seed est basé sur le hash du sub utilisateur pour la reproductibilité.
+
+    Returns:
+        WorklistResponse avec items et counts par statut.
+    """
+    slides = scan_slides_directory()
+
+    # Deterministic seed from user sub
+    seed = int(hashlib.md5(current_user.sub.encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+
+    statuses = ["pending", "in_progress", "completed"]
+    weights = [0.5, 0.3, 0.2]  # ~50% pending, ~30% in_progress, ~20% completed
+
+    now = datetime.now(timezone.utc)
+    items = []
+
+    for slide in slides:
+        # Pick status based on weighted random
+        status = rng.choices(statuses, weights=weights, k=1)[0]
+
+        # assigned_date: random date in the last 30 days
+        days_ago = rng.randint(0, 30)
+        assigned_date = now - timedelta(days=days_ago)
+
+        # is_new: ~30% of pending items
+        is_new = status == "pending" and rng.random() < 0.3
+
+        # Derive case_path from slide path
+        slide_path = slide.get("path", "")
+        case_path = "/".join(slide_path.replace("\\", "/").split("/")[:-1]) or "/"
+
+        items.append(
+            WorklistItem(
+                slide_id=slide["id"],
+                slide_name=slide["name"],
+                case_path=case_path,
+                status=status,
+                assigned_date=assigned_date.isoformat(),
+                is_new=is_new,
+            )
+        )
+
+    # Sort by date, most recent first
+    items.sort(key=lambda x: x.assigned_date, reverse=True)
+
+    # Compute counts
+    counts = {s: sum(1 for item in items if item.status == s) for s in statuses}
+
+    return WorklistResponse(items=items, counts=counts)
+
+
+@router.get("/history", tags=["navigation"])
+def get_history(
+    limit: int = Query(20, ge=1, le=100, description="Nombre max d'items à retourner"),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
+    """
+    Historique des lames récemment consultées.
+
+    Mock implementation: génère un historique déterministe depuis la liste de lames.
+    Le seed est basé sur le hash du sub utilisateur pour la reproductibilité.
+
+    Args:
+        limit: Nombre maximum d'items (défaut 20, max 100).
+
+    Returns:
+        HistoryResponse avec items et total.
+    """
+    slides = scan_slides_directory()
+
+    # Deterministic seed from user sub
+    seed = int(hashlib.md5(current_user.sub.encode()).hexdigest()[:8], 16) + 42
+    rng = random.Random(seed)
+
+    now = datetime.now(timezone.utc)
+    items = []
+
+    for slide in slides:
+        # viewed_at: random datetime in the last 7 days
+        seconds_ago = rng.randint(0, 7 * 24 * 3600)
+        viewed_at = now - timedelta(seconds=seconds_ago)
+
+        view_count = rng.randint(1, 10)
+
+        items.append(
+            HistoryItem(
+                slide_id=slide["id"],
+                slide_name=slide["name"],
+                viewed_at=viewed_at.isoformat(),
+                view_count=view_count,
+            )
+        )
+
+    # Sort by viewed_at, most recent first
+    items.sort(key=lambda x: x.viewed_at, reverse=True)
+
+    total = len(items)
+    items = items[:limit]
+
+    return HistoryResponse(items=items, total=total)
+
+
 @router.get("/by-name/{slide_name:path}", tags=["pacs-integration"])
 def resolve_slide_by_name(
     slide_name: str,
@@ -154,8 +332,87 @@ def resolve_slide_by_name(
     return slide
 
 
+@router.get("/{slide_id}/mpp", tags=["visualization"], response_model=MPPResponse)
+def get_slide_mpp(
+    slide_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Retrieve microns-per-pixel (MPP) calibration data for a slide.
+
+    Args:
+        slide_id: Unique slide identifier (MD5 hash).
+
+    Returns:
+        MPPResponse with mpp_x, mpp_y, objective power, and data source.
+
+    Raises:
+        404: Slide not found or MPP data unavailable.
+        422: Slide detected but cannot be opened.
+
+    Technical Notes:
+        - Primary source: ``openslide.mpp-x`` / ``openslide.mpp-y`` properties.
+        - Fallback: estimate MPP from ``openslide.objective-power`` using a
+          standard lookup table (40x -> 0.25, 20x -> 0.50, etc.).
+        - Returns 404 if neither MPP nor objective power is available.
+    """
+    slide_path = get_slide_path_by_id(slide_id)
+    if not slide_path:
+        raise HTTPException(404, f"Slide {slide_id} not found")
+
+    try:
+        slide = openslide.OpenSlide(slide_path)
+    except openslide.OpenSlideError as e:
+        raise HTTPException(
+            422,
+            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
+        )
+
+    try:
+        props = slide.properties
+
+        # Read objective power (may be None)
+        obj_str = props.get("openslide.objective-power")
+        objective = int(float(obj_str)) if obj_str else None
+
+        # Try direct MPP from metadata
+        mpp_x_str = props.get("openslide.mpp-x")
+        mpp_y_str = props.get("openslide.mpp-y")
+
+        if mpp_x_str and mpp_y_str:
+            return MPPResponse(
+                mpp_x=float(mpp_x_str),
+                mpp_y=float(mpp_y_str),
+                objective=objective,
+                source="openslide",
+            )
+
+        # Fallback: estimate from objective power
+        if objective and objective in _OBJECTIVE_TO_MPP:
+            estimated = _OBJECTIVE_TO_MPP[objective]
+            return MPPResponse(
+                mpp_x=estimated,
+                mpp_y=estimated,
+                objective=objective,
+                source="estimated_from_objective",
+            )
+
+        # No MPP data available
+        raise HTTPException(
+            404,
+            f"MPP data not available for slide {slide_id}. "
+            "Neither openslide.mpp-x/y nor openslide.objective-power found in metadata.",
+        )
+    finally:
+        slide.close()
+
+
 @router.get("/{slide_id}/info", tags=["visualization"])
-def get_slide_info(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
+def get_slide_info(
+    slide_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentUser = Depends(get_current_user),
+):
     """
     Récupère métadonnées d'une lame.
 
@@ -186,6 +443,15 @@ def get_slide_info(slide_id: str, current_user: CurrentUser = Depends(get_curren
 
     try:
         metadata = get_slide_metadata(slide_path)
+
+        # Trigger background embedding pre-computation
+        import os
+
+        if os.getenv("ML_ENABLED", "true").lower() == "true":
+            from services.background_tasks import precompute_embeddings
+
+            background_tasks.add_task(precompute_embeddings, slide_id, slide_path)
+
         return metadata
     except openslide.OpenSlideError as e:
         raise HTTPException(

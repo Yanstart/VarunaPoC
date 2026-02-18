@@ -34,9 +34,11 @@ import { viewerManager } from './viewers/ViewerManager.js';
 
 // Components
 import { createFolderBrowser } from './components/FolderBrowser.js';
+import { createCaseBrowser } from './components/CaseBrowser.js';
 import { CompareLayout } from './components/CompareLayout.js';
 import { MLPanel } from './components/MLPanel.js';
 import { HeatmapOverlay } from './components/HeatmapOverlay.js';
+import { CaseSidebar } from './components/CaseSidebar.js';
 
 // Phase 2: Annotations
 import { AnnotationLayer } from './components/AnnotationLayer.js';
@@ -44,6 +46,16 @@ import { DrawingTools } from './components/DrawingTools.js';
 import { LayerManager } from './components/LayerManager.js';
 import { DetectionPanel } from './components/DetectionPanel.js';
 import { CountingPanel } from './components/CountingPanel.js';
+import { CellCountingPanel } from './components/CellCountingPanel.js';
+import { ClusteringPanel } from './components/ClusteringPanel.js';
+import { ClusteringOverlay } from './components/ClusteringOverlay.js';
+import { QualityBadge } from './components/QualityBadge.js';
+import { DriftDashboard } from './components/DriftDashboard.js';
+import { createWorklistView } from './components/WorklistView.js';
+import { createRecentCases } from './components/RecentCases.js';
+import { FocusAssistPanel } from './components/FocusAssistPanel.js';
+import { AutoTagBadge } from './components/AutoTagBadge.js';
+import { MagnificationBar } from './components/MagnificationBar.js';
 
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
@@ -90,6 +102,28 @@ const appState = {
     /** Phase 3: Auth components */
     loginPage: null,
     userMenu: null,
+
+    /** Wave 4: Cell counting panel */
+    cellCountingPanel: null,
+
+    /** Wave 4: Clustering */
+    clusteringPanel: null,
+    clusteringOverlay: null,
+
+    /** Wave 4: Quality badge */
+    qualityBadge: null,
+
+    /** Wave 4: Drift dashboard */
+    driftDashboard: null,
+
+    /** Waves 1-2: Focus assist, auto-tag, magnification */
+    focusAssistPanel: null,
+    autoTagBadge: null,
+    magnificationBar: null,
+
+    /** Wave 3: Case navigation */
+    caseSidebar: null,
+    currentCase: null,
 };
 
 // ==========================================
@@ -226,8 +260,12 @@ function setupEventListeners() {
         }
     });
 
-    // Listen for page changes
+    // Listen for page changes (handles drift dashboard back navigation)
     eventBus.on(Events.PAGE_CHANGED, ({ page }) => {
+        if (page === Pages.HOME && appState.currentPage === 'drift') {
+            showHomePage();
+            return;
+        }
         appState.currentPage = page;
     });
 }
@@ -257,12 +295,45 @@ function showHomePage() {
     cleanup();
 
     const app = document.querySelector('#app');
-    app.innerHTML = '';
+    app.textContent = '';
     app.className = 'page-home';
 
-    // Create folder browser
-    appState.folderBrowser = createFolderBrowser(handleSlideSelect);
-    app.appendChild(appState.folderBrowser);
+    // View toggle callback — re-renders home page with new preference
+    function handleViewToggle(_newView) {
+        showHomePage();
+    }
+
+    // Check user preference: default to 'cases' view
+    const viewPref = localStorage.getItem('varuna_home_view') || 'cases';
+
+    if (viewPref === 'explorer') {
+        // Explorer (folder) view
+        appState.folderBrowser = createFolderBrowser(handleSlideSelect, handleViewToggle);
+        app.appendChild(appState.folderBrowser);
+    } else if (viewPref === 'worklist') {
+        // Worklist view ("Mes cas")
+        const worklistView = createWorklistView(handleSlideSelect, handleViewToggle);
+        app.appendChild(worklistView);
+    } else {
+        // Case view (default) — includes recent cases section
+        const recentCases = createRecentCases(handleSlideSelect);
+        app.appendChild(recentCases);
+        const caseBrowser = createCaseBrowser(handleSlideSelect, handleCaseSelect, handleViewToggle);
+        app.appendChild(caseBrowser);
+    }
+
+    // Worklist shortcut button
+    if (viewPref !== 'worklist') {
+        const worklistBtn = document.createElement('button');
+        worklistBtn.className = 'worklist-shortcut-button';
+        worklistBtn.textContent = 'Mes cas';
+        worklistBtn.title = 'Ouvrir la liste de travail';
+        worklistBtn.addEventListener('click', () => {
+            localStorage.setItem('varuna_home_view', 'worklist');
+            showHomePage();
+        });
+        app.appendChild(worklistBtn);
+    }
 
     // Add compare mode button
     const compareBtn = document.createElement('button');
@@ -272,9 +343,9 @@ function showHomePage() {
             <rect x="3" y="3" width="8" height="18" rx="1"/>
             <rect x="13" y="3" width="8" height="18" rx="1"/>
         </svg>
-        Compare Mode
+        Mode comparaison
     `;
-    compareBtn.title = 'Open compare mode for side-by-side viewing';
+    compareBtn.title = 'Ouvrir le mode comparaison';
     compareBtn.addEventListener('click', () => showComparePage());
     app.appendChild(compareBtn);
 
@@ -301,13 +372,13 @@ async function showViewerPage(slide) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    Back
+                    Retour
                 </button>
                 <div class="viewer-title">
                     <h1>${slide.name}</h1>
                     <p class="slide-info">
                         ${slide.format} | ${slide.structure_type}
-                        ${slide.is_supported === false ? ' | <span class="warning">Not supported</span>' : ''}
+                        ${slide.is_supported === false ? ' | <span class="warning">Non supporté</span>' : ''}
                     </p>
                 </div>
                 <button id="compare-btn" class="header-button" title="Open in compare mode">
@@ -316,7 +387,7 @@ async function showViewerPage(slide) {
                         <rect x="13" y="3" width="8" height="18" rx="1"/>
                     </svg>
                 </button>
-                <button id="ml-btn" class="header-button header-button--ml" title="ML Analysis">
+                <button id="ml-btn" class="header-button header-button--ml" title="Analyse IA">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                         <path d="M2 17l10 5 10-5"/>
@@ -340,6 +411,16 @@ async function showViewerPage(slide) {
 
     // Back button
     document.querySelector('#back-btn').addEventListener('click', showHomePage);
+
+    // Wave 4: Quality Badge in header
+    const viewerTitle = document.querySelector('.viewer-title');
+    if (viewerTitle) {
+        appState.qualityBadge = new QualityBadge(slide.id, eventBus);
+        viewerTitle.insertAdjacentElement('afterend', appState.qualityBadge.el);
+
+        // Wave 2: Auto-tag badge below slide info
+        appState.autoTagBadge = new AutoTagBadge(viewerTitle, { slideId: slide.id });
+    }
 
     // Compare button
     document.querySelector('#compare-btn').addEventListener('click', () => {
@@ -390,6 +471,41 @@ async function showViewerPage(slide) {
             detectionContainer.style.marginTop = '8px';
             mlContainer2.appendChild(detectionContainer);
             appState.detectionPanel = new DetectionPanel(detectionContainer, { slideId: slide.id });
+
+            // Wave 4: Cell Counting Panel
+            const cellCountingContainer = document.createElement('div');
+            cellCountingContainer.id = 'cell-counting-panel-container';
+            cellCountingContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(cellCountingContainer);
+            appState.cellCountingPanel = new CellCountingPanel(cellCountingContainer, { slideId: slide.id });
+
+            // Wave 4: Clustering Panel
+            const clusteringContainer = document.createElement('div');
+            clusteringContainer.id = 'clustering-panel-container';
+            clusteringContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(clusteringContainer);
+            appState.clusteringPanel = new ClusteringPanel(clusteringContainer, { slideId: slide.id });
+
+            // Wave 2: Focus Assist Panel
+            const focusContainer = document.createElement('div');
+            focusContainer.id = 'focus-assist-panel-container';
+            focusContainer.style.marginTop = '8px';
+            mlContainer2.appendChild(focusContainer);
+            appState.focusAssistPanel = new FocusAssistPanel(focusContainer, { slideId: slide.id });
+        }
+    }
+
+    // Wave 4: Clustering Overlay (canvas on OSD viewer)
+    if (viewerInstance) {
+        appState.clusteringOverlay = new ClusteringOverlay(viewerInstance);
+    }
+
+    // Wave 1: Magnification Bar (floating badge in viewer area)
+    if (viewerInstance && viewerInstance.viewer) {
+        appState.magnificationBar = new MagnificationBar(viewerInstance.viewer);
+        const viewerArea = document.querySelector('.viewer-area');
+        if (viewerArea && appState.magnificationBar.element) {
+            viewerArea.appendChild(appState.magnificationBar.element);
         }
     }
 
@@ -422,7 +538,70 @@ async function showViewerPage(slide) {
     // Phase 3: Role-based UI visibility
     _applyRoleVisibility();
 
+    // Wave 3: Case Sidebar — show sibling slides from same case
+    await _initCaseSidebar(slide);
+
     eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
+}
+
+/**
+ * Initialize the case sidebar in the viewer.
+ * Wraps the viewer-main in a flex container and adds the sidebar.
+ *
+ * @param {Object} slide - Current slide
+ */
+async function _initCaseSidebar(slide) {
+    const viewerMain = document.querySelector('.viewer-main');
+    if (!viewerMain) { return; }
+
+    // Wrap viewer-main content in a viewer-body flex container
+    const viewerBody = document.createElement('div');
+    viewerBody.className = 'viewer-body';
+
+    // Move existing viewer-main children into viewer-body
+    while (viewerMain.firstChild) {
+        viewerBody.appendChild(viewerMain.firstChild);
+    }
+    viewerMain.appendChild(viewerBody);
+
+    // Create sidebar container
+    const sidebarContainer = document.createElement('div');
+    sidebarContainer.id = 'case-sidebar-container';
+    viewerBody.appendChild(sidebarContainer);
+
+    // Determine case data: from case browser navigation or from slide info
+    let casePath = null;
+    let caseSlides = [];
+
+    if (appState.currentCase && appState.currentCase.slides) {
+        // Navigated from CaseBrowser — case data already available
+        casePath = appState.currentCase.path;
+        caseSlides = appState.currentCase.slides;
+    } else {
+        // Navigated from FolderBrowser or deep link — try to extract parent path
+        try {
+            const slideId = slide.id || '';
+            // slide.id often encodes the relative path; extract parent folder
+            const lastSlash = slideId.lastIndexOf('/');
+            if (lastSlash > 0) {
+                const parentPath = '/' + slideId.substring(0, lastSlash);
+                const folderData = await apiService.browse(parentPath);
+                casePath = parentPath;
+                caseSlides = folderData.slides || [];
+            }
+        } catch (err) {
+            console.warn('[App] Could not load sibling slides for sidebar:', err);
+        }
+    }
+
+    if (caseSlides.length > 0) {
+        appState.caseSidebar = new CaseSidebar(sidebarContainer, {
+            onSlideSwitch: (newSlide) => {
+                handleSlideSwitch(newSlide);
+            },
+        });
+        appState.caseSidebar.setCase(casePath, caseSlides, slide.id);
+    }
 }
 
 /**
@@ -461,9 +640,9 @@ async function showComparePage(initialSlide = null) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    Back
+                    Retour
                 </button>
-                <h1 class="compare-title">Compare Mode</h1>
+                <h1 class="compare-title">Mode comparaison</h1>
             </header>
             <main id="compare-container" class="compare-container"></main>
         </div>
@@ -492,6 +671,20 @@ async function showComparePage(initialSlide = null) {
 }
 
 /**
+ * Show drift monitoring dashboard (admin page)
+ */
+function showDriftPage() {
+    cleanup();
+    appState.currentPage = 'drift';
+
+    const app = document.querySelector('#app');
+    app.className = 'page-drift';
+    app.textContent = '';
+
+    appState.driftDashboard = new DriftDashboard(app);
+}
+
+/**
  * Show slide picker modal
  */
 function showSlidePicker() {
@@ -501,7 +694,7 @@ function showSlidePicker() {
     modal.innerHTML = `
         <div class="slide-picker-content">
             <header class="slide-picker-header">
-                <h2>Select Slide</h2>
+                <h2>Sélectionner une lame</h2>
                 <button class="slide-picker-close">&times;</button>
             </header>
             <div class="slide-picker-body">
@@ -540,7 +733,7 @@ async function loadSlidesInPicker(container) {
         const data = await apiService.fetchSlides();
 
         if (!data.slides || data.slides.length === 0) {
-            container.innerHTML = '<p class="empty">No slides found</p>';
+            container.innerHTML = '<p class="empty">Aucune lame trouvée</p>';
             return;
         }
 
@@ -594,6 +787,100 @@ function handleSlideSelect(slide) {
 }
 
 /**
+ * Handle case selection (Case Browser -> Viewer with first slide)
+ * @param {Object} caseData - Case data with slides array
+ */
+function handleCaseSelect(caseData) {
+    if (!caseData.slides || caseData.slides.length === 0) {
+        console.warn('[App] Case has no slides:', caseData.name);
+        return;
+    }
+    console.warn('[App] Navigating to case:', caseData.name, `(${caseData.slides.length} slides)`);
+    const firstSlide = caseData.slides[0];
+    // Store case data on appState for sidebar use (Task A3)
+    appState.currentCase = caseData;
+    showViewerPage(firstSlide);
+}
+
+/**
+ * Handle intra-case slide switching (Wave 3 - Task A4).
+ * Reloads viewer without navigating back to home.
+ * Updates title, reloads tile source, resets annotations and ML panels.
+ *
+ * @param {Object} newSlide - Slide to switch to
+ */
+async function handleSlideSwitch(newSlide) {
+    console.warn('[App] Rapid slide switch to:', newSlide.name);
+
+    // 1. Update app state
+    appState.selectedSlide = newSlide;
+
+    // 2. Update viewer header title
+    const titleH1 = document.querySelector('.viewer-title h1');
+    if (titleH1) { titleH1.textContent = newSlide.name; }
+
+    const slideInfo = document.querySelector('.viewer-title .slide-info');
+    if (slideInfo) {
+        slideInfo.textContent = `${newSlide.format || ''} | ${newSlide.structure_type || ''}`;
+    }
+
+    // 3. Close old tile source and reload new slide
+    if (appState.viewer) {
+        appState.viewer.close();
+    }
+    await loadSlide(newSlide);
+
+    // 4. Update sidebar active indicator
+    if (appState.caseSidebar) {
+        appState.caseSidebar.setActiveSlide(newSlide.id);
+    }
+
+    // 5. Reload annotations for new slide
+    annotationStore.clear();
+    annotationStore.setSlide(newSlide.id);
+
+    // 6. Reset ML panel for new slide
+    if (appState.mlPanel) {
+        appState.mlPanel.setSlide(newSlide.id);
+    }
+
+    // 7. Reset detection panel for new slide
+    if (appState.detectionPanel && appState.detectionPanel.setSlide) {
+        appState.detectionPanel.setSlide(newSlide.id);
+    }
+
+    // 8. Reset cell counting panel for new slide
+    if (appState.cellCountingPanel && appState.cellCountingPanel.setSlide) {
+        appState.cellCountingPanel.setSlide(newSlide.id);
+    }
+
+    // 9. Reset clustering panel for new slide
+    if (appState.clusteringPanel && appState.clusteringPanel.setSlide) {
+        appState.clusteringPanel.setSlide(newSlide.id);
+    }
+
+    // 10. Clear clustering overlay for new slide
+    if (appState.clusteringOverlay && appState.clusteringOverlay.clear) {
+        appState.clusteringOverlay.clear();
+    }
+
+    // 11. Reset quality badge for new slide
+    if (appState.qualityBadge && appState.qualityBadge.setSlide) {
+        appState.qualityBadge.setSlide(newSlide.id);
+    }
+
+    // 12. Reset focus assist panel for new slide
+    if (appState.focusAssistPanel && appState.focusAssistPanel.setSlide) {
+        appState.focusAssistPanel.setSlide(newSlide.id);
+    }
+
+    // 13. Reset auto-tag badge for new slide
+    if (appState.autoTagBadge && appState.autoTagBadge.setSlide) {
+        appState.autoTagBadge.setSlide(newSlide.id);
+    }
+}
+
+/**
  * Load slide in single viewer mode
  * @param {Object} slide - Slide to load
  */
@@ -601,12 +888,12 @@ async function loadSlide(slide) {
     const infoPanel = document.querySelector('#info');
 
     try {
-        infoPanel.innerHTML = '<div class="loading">Loading metadata...</div>';
+        infoPanel.innerHTML = '<div class="loading">Chargement des métadonnées...</div>';
 
         // Get metadata
         const metadata = await apiService.getSlideInfo(slide.id);
 
-        infoPanel.innerHTML = '<div class="loading">Loading tiles (DZI streaming)...</div>';
+        infoPanel.innerHTML = '<div class="loading">Chargement des tuiles (flux DZI)...</div>';
 
         // Load slide with tiles
         await loadSlideWithTiles(appState.viewer, slide.id);
@@ -620,24 +907,24 @@ async function loadSlide(slide) {
                 <dd>${slide.format}</dd>
                 <dt>Dimensions</dt>
                 <dd>${w.toLocaleString()} x ${h.toLocaleString()} px</dd>
-                <dt>Levels</dt>
-                <dd>${metadata.level_count} pyramid levels</dd>
+                <dt>Niveaux</dt>
+                <dd>${metadata.level_count} niveaux de pyramide</dd>
                 <dt>Structure</dt>
                 <dd>${slide.structure_type}</dd>
                 ${slide.has_joint_files ? `
-                    <dt>Joint files</dt>
+                    <dt>Fichiers joints</dt>
                     <dd>${slide.joint_files_count}</dd>
                 ` : ''}
                 ${slide.has_companion_dirs ? `
-                    <dt>Companion dirs</dt>
+                    <dt>Dossiers compagnons</dt>
                     <dd>${slide.companion_dirs_count}</dd>
                 ` : ''}
             </dl>
             <p class="note">
-                <strong>Tile Streaming Active:</strong><br>
-                256x256 tiles loaded on demand<br>
-                ${metadata.level_count} zoom levels available<br>
-                Mini-map shows current position
+                <strong>Flux de tuiles actif</strong><br>
+                Tuiles 256x256 chargées à la demande<br>
+                ${metadata.level_count} niveaux de zoom disponibles<br>
+                La mini-carte montre la position actuelle
             </p>
         `;
 
@@ -691,6 +978,18 @@ function cleanup() {
         appState.detectionPanel.destroy();
         appState.detectionPanel = null;
     }
+    if (appState.cellCountingPanel) {
+        appState.cellCountingPanel.destroy();
+        appState.cellCountingPanel = null;
+    }
+    if (appState.clusteringPanel) {
+        appState.clusteringPanel.destroy();
+        appState.clusteringPanel = null;
+    }
+    if (appState.clusteringOverlay) {
+        appState.clusteringOverlay.destroy();
+        appState.clusteringOverlay = null;
+    }
     if (appState.countingPanel) {
         appState.countingPanel.destroy();
         appState.countingPanel = null;
@@ -708,6 +1007,32 @@ function cleanup() {
         appState.annotationLayer = null;
     }
 
+    // Wave 4: Quality badge
+    if (appState.qualityBadge) {
+        appState.qualityBadge.destroy();
+        appState.qualityBadge = null;
+    }
+
+    // Wave 4: Drift dashboard
+    if (appState.driftDashboard) {
+        appState.driftDashboard.destroy();
+        appState.driftDashboard = null;
+    }
+
+    // Waves 1-2: Focus assist, auto-tag, magnification
+    if (appState.focusAssistPanel) {
+        appState.focusAssistPanel.destroy();
+        appState.focusAssistPanel = null;
+    }
+    if (appState.autoTagBadge) {
+        appState.autoTagBadge.destroy();
+        appState.autoTagBadge = null;
+    }
+    if (appState.magnificationBar) {
+        appState.magnificationBar.destroy();
+        appState.magnificationBar = null;
+    }
+
     // Destroy ML components
     if (appState.heatmapOverlay) {
         appState.heatmapOverlay.destroy();
@@ -722,6 +1047,12 @@ function cleanup() {
     if (appState.compareLayout) {
         appState.compareLayout.destroy();
         appState.compareLayout = null;
+    }
+
+    // Wave 3: Case sidebar
+    if (appState.caseSidebar) {
+        appState.caseSidebar.destroy();
+        appState.caseSidebar = null;
     }
 
     // Reset viewer manager
@@ -744,6 +1075,7 @@ function cleanup() {
     appState.viewer = null;
     appState.folderBrowser = null;
     appState.selectedSlide = null;
+    // Note: currentCase intentionally preserved across viewer reloads
 }
 
 /**
@@ -771,6 +1103,33 @@ function showError(err) {
 // Inject additional styles
 const additionalStyles = document.createElement('style');
 additionalStyles.textContent = `
+    /* Worklist shortcut button on home page */
+    .worklist-shortcut-button {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: var(--color-bg-elevated, #1a1a1a);
+        color: var(--color-text-primary, #e0e0e0);
+        border: 1px solid var(--color-border, #333);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: all 0.2s ease;
+        z-index: 100;
+    }
+
+    .worklist-shortcut-button:hover {
+        border-color: var(--color-primary, #4a9eff);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
     /* Compare mode button on home page */
     .compare-mode-button {
         position: fixed;

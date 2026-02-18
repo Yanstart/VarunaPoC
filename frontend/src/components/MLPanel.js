@@ -30,13 +30,16 @@ class MLPanel {
         this.slideId = null;
 
         // State
+        this.selectedModelId = null;
         this.prediction = null;
         this.heatmapVisible = false;
         this.heatmapOpacity = 0.5;
         this.isLoading = false;
+        this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_ml_open') !== 'true'; } catch (_) { return true; } })();
 
         // Elements
         this.element = null;
+        this.modelSelect = null;
         this.predictBtn = null;
         this.heatmapBtn = null;
         this.opacitySlider = null;
@@ -57,22 +60,24 @@ class MLPanel {
         this.element = document.createElement('div');
         this.element.className = 'ml-panel';
         this.element.innerHTML = `
-            <div class="ml-panel__header">
+            <div class="ml-panel__header ml-panel__header--collapsible">
                 <span class="ml-panel__title">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                         <path d="M2 17l10 5 10-5"/>
                         <path d="M2 12l10 5 10-5"/>
                     </svg>
-                    ML Analysis
+                    Analyse IA
                 </span>
-                <button class="ml-panel__collapse" title="Collapse">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                </button>
+                <span class="ml-panel__chevron">\u25B6</span>
             </div>
             <div class="ml-panel__content">
+                <div class="ml-panel__model-selector">
+                    <label class="ml-panel__model-label">Modele IA</label>
+                    <select class="ml-panel__model-select" disabled>
+                        <option value="">Chargement...</option>
+                    </select>
+                </div>
                 <div class="ml-panel__actions">
                     <button class="ml-panel__btn ml-panel__btn--predict" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -80,7 +85,7 @@ class MLPanel {
                             <path d="M12 16v-4"/>
                             <path d="M12 8h.01"/>
                         </svg>
-                        Analyze Slide
+                        Analyser la lame
                     </button>
                     <button class="ml-panel__btn ml-panel__btn--heatmap" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -90,17 +95,17 @@ class MLPanel {
                             <path d="M9 3v18"/>
                             <path d="M15 3v18"/>
                         </svg>
-                        Show Heatmap
+                        Afficher la carte de chaleur
                     </button>
                 </div>
                 <div class="ml-panel__opacity" style="display: none;">
-                    <label>Heatmap Opacity</label>
+                    <label>Opacité de la carte</label>
                     <input type="range" min="0" max="100" value="50" class="ml-panel__slider">
                     <span class="ml-panel__opacity-value">50%</span>
                 </div>
                 <div class="ml-panel__results">
                     <div class="ml-panel__placeholder">
-                        Load a slide and click "Analyze" to run ML prediction
+                        Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
                     </div>
                 </div>
             </div>
@@ -113,10 +118,28 @@ class MLPanel {
         this.opacityContainer = this.element.querySelector('.ml-panel__opacity');
         this.opacityValue = this.element.querySelector('.ml-panel__opacity-value');
         this.resultsContainer = this.element.querySelector('.ml-panel__results');
-        this.collapseBtn = this.element.querySelector('.ml-panel__collapse');
         this.content = this.element.querySelector('.ml-panel__content');
+        this.modelSelect = this.element.querySelector('.ml-panel__model-select');
+
+        // Make header clickable for accordion
+        const header = this.element.querySelector('.ml-panel__header');
+        if (header) {
+            header.addEventListener('click', () => this._toggleCollapse());
+        }
+
+        this._loadModels();
 
         this.container.appendChild(this.element);
+
+        // Apply initial collapse state (collapsed by default, persisted via localStorage)
+        const body = this.element.querySelector('.ml-panel__content');
+        if (body) {
+            body.style.display = this.isCollapsed ? 'none' : 'block';
+        }
+        const chevronEl = this.element.querySelector('.ml-panel__chevron');
+        if (chevronEl) {
+            chevronEl.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
     }
 
     /**
@@ -138,11 +161,6 @@ class MLPanel {
                 viewerId: this.viewerId,
                 opacity: this.heatmapOpacity,
             });
-        });
-
-        // Collapse button
-        this.collapseBtn.addEventListener('click', () => {
-            this.element.classList.toggle('is-collapsed');
         });
 
         // Listen for slide loaded events - Store unsubscribe functions
@@ -182,7 +200,7 @@ class MLPanel {
         // Reset results
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__placeholder">
-                Click "Analyze Slide" to run ML prediction
+                Cliquez « Analyser la lame » pour lancer la prédiction IA
             </div>
         `;
     }
@@ -202,7 +220,7 @@ class MLPanel {
 
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__placeholder">
-                Load a slide and click "Analyze" to run ML prediction
+                Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
             </div>
         `;
     }
@@ -218,15 +236,15 @@ class MLPanel {
         this.predictBtn.disabled = true;
         this.predictBtn.innerHTML = `
             <span class="ml-panel__spinner"></span>
-            Analyzing...
+            Analyse en cours...
         `;
 
         // Show loading in results
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__loading">
                 <span class="ml-panel__spinner ml-panel__spinner--large"></span>
-                <p>Running ML analysis...</p>
-                <p class="ml-panel__loading-sub">This may take a few seconds</p>
+                <p>Analyse IA en cours...</p>
+                <p class="ml-panel__loading-sub">Cela peut prendre quelques secondes</p>
             </div>
         `;
 
@@ -238,6 +256,7 @@ class MLPanel {
         try {
             const result = await apiService.predict(this.slideId, {
                 numMcSamples: 10,
+                modelId: this.selectedModelId || undefined,
             });
 
             this.prediction = result;
@@ -270,7 +289,7 @@ class MLPanel {
                     <path d="M12 16v-4"/>
                     <path d="M12 8h.01"/>
                 </svg>
-                Analyze Slide
+                Analyser la lame
             `;
         }
     }
@@ -308,33 +327,33 @@ class MLPanel {
         this.resultsContainer.innerHTML = `
             <div class="ml-panel__result">
                 <div class="ml-panel__prediction">
-                    <span class="ml-panel__prediction-label">Prediction</span>
+                    <span class="ml-panel__prediction-label">Prédiction</span>
                     <span class="ml-panel__prediction-class">${result.prediction_class}</span>
                 </div>
                 <div class="ml-panel__metrics">
                     <div class="ml-panel__metric">
-                        <span class="ml-panel__metric-label">Confidence</span>
+                        <span class="ml-panel__metric-label">Confiance</span>
                         <span class="ml-panel__metric-value" style="color: ${confColor}">
                             ${confidence}%
                         </span>
                     </div>
                     ${uncertainty !== null ? `
                         <div class="ml-panel__metric">
-                            <span class="ml-panel__metric-label">Uncertainty</span>
+                            <span class="ml-panel__metric-label">Incertitude</span>
                             <span class="ml-panel__metric-value ml-panel__metric-value--uncertainty">
                                 ±${uncertainty}%
                             </span>
                         </div>
                     ` : ''}
                     <div class="ml-panel__metric">
-                        <span class="ml-panel__metric-label">Time</span>
+                        <span class="ml-panel__metric-label">Temps</span>
                         <span class="ml-panel__metric-value">
                             ${result.execution_time_ms?.toFixed(0) || '?'}ms
                         </span>
                     </div>
                 </div>
                 <div class="ml-panel__probabilities">
-                    <span class="ml-panel__prob-title">Class Probabilities</span>
+                    <span class="ml-panel__prob-title">Probabilités par classe</span>
                     ${probBars}
                 </div>
             </div>
@@ -354,7 +373,7 @@ class MLPanel {
                     <line x1="15" y1="9" x2="9" y2="15"/>
                     <line x1="9" y1="9" x2="15" y2="15"/>
                 </svg>
-                <p>Analysis failed</p>
+                <p>Erreur d'analyse</p>
                 <p class="ml-panel__error-detail">${message}</p>
             </div>
         `;
@@ -392,7 +411,7 @@ class MLPanel {
                     <path d="M9 3v18"/>
                     <path d="M15 3v18"/>
                 </svg>
-                Hide Heatmap
+                Masquer la carte de chaleur
             `;
         } else {
             this.opacityContainer.style.display = 'none';
@@ -404,7 +423,7 @@ class MLPanel {
                     <path d="M9 3v18"/>
                     <path d="M15 3v18"/>
                 </svg>
-                Show Heatmap
+                Afficher la carte de chaleur
             `;
         }
 
@@ -415,6 +434,133 @@ class MLPanel {
             predictionClass: this.prediction.prediction_class,
             opacity: this.heatmapOpacity,
         });
+    }
+
+
+    /**
+     * Load available ML models and populate the selector
+     * @private
+     */
+    async _loadModels() {
+        try {
+            const models = await apiService.listModels();
+            this._populateModelSelector(models);
+        } catch (err) {
+            console.warn('[MLPanel] Could not load models:', err);
+        }
+    }
+
+    /**
+     * Get user-friendly model name
+     * @param {Object} model
+     * @returns {string}
+     * @private
+     */
+    _friendlyModelName(model) {
+        const nameMap = {
+            'phikon-v2_features_1024d': 'Phikon v2',
+            'phikon-v2': 'Phikon v2',
+            'phikon': 'Phikon v2',
+            'ctranspath': 'CTransPath',
+            'uni': 'UNI',
+            'resnet50_imagenet': 'ResNet-50',
+        };
+        const name = model.model_name || model.model_id;
+        const nameLower = name.toLowerCase();
+        // Check exact match first, then partial
+        if (nameMap[nameLower]) {
+            return nameMap[nameLower];
+        }
+        for (const [key, friendly] of Object.entries(nameMap)) {
+            if (nameLower.includes(key)) {
+                return friendly;
+            }
+        }
+        // Fallback: capitalize and clean up underscores/dashes
+        return name
+            .replace(/[_-]/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    /**
+     * Get a short description/tooltip for a model
+     * @param {Object} model
+     * @returns {string}
+     * @private
+     */
+    _modelTooltip(model) {
+        const tooltipMap = {
+            'phikon': 'Mod\u00e8le fondation histopathologie, 1024 dimensions',
+            'ctranspath': 'Transformeur pr\u00e9-entra\u00een\u00e9 pour la pathologie computationnelle',
+            'uni': 'Universal image encoder pour la pathologie',
+            'resnet50': 'R\u00e9seau r\u00e9siduel classique pr\u00e9-entra\u00een\u00e9 sur ImageNet',
+        };
+        const name = (model.model_name || model.model_id).toLowerCase();
+        for (const [key, tip] of Object.entries(tooltipMap)) {
+            if (name.includes(key)) {
+                return tip;
+            }
+        }
+        return model.description || '';
+    }
+
+    /**
+     * Populate the model selector dropdown
+     * @param {Array} models
+     * @private
+     */
+    _populateModelSelector(models) {
+        const select = this.element.querySelector('.ml-panel__model-select');
+        if (!select) {
+            return;
+        }
+
+        // Clear existing options
+        while (select.firstChild) {
+            select.removeChild(select.firstChild);
+        }
+
+        if (models.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Aucun mod\u00e8le disponible';
+            select.appendChild(opt);
+            return;
+        }
+
+        models.forEach((model, i) => {
+            const opt = document.createElement('option');
+            opt.value = model.model_id;
+            const friendly = this._friendlyModelName(model);
+            opt.textContent = i === 0 ? `${friendly} (recommand\u00e9)` : friendly;
+            const tooltip = this._modelTooltip(model);
+            if (tooltip) {
+                opt.title = tooltip;
+            }
+            select.appendChild(opt);
+        });
+
+        select.disabled = false;
+        select.addEventListener('change', (e) => {
+            this.selectedModelId = e.target.value || null;
+        });
+    }
+
+    /**
+     * Toggle collapse state of the panel
+     * @private
+     */
+    _toggleCollapse() {
+        this.isCollapsed = !this.isCollapsed;
+        const body = this.element.querySelector('.ml-panel__content');
+        const chevron = this.element.querySelector('.ml-panel__chevron');
+        if (body) {
+            body.style.display = this.isCollapsed ? 'none' : 'block';
+        }
+        if (chevron) {
+            chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
+        try { localStorage.setItem('varuna_panel_ml_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }
 
     /**

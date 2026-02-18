@@ -5,7 +5,7 @@
  * annotation list display, and label colors.
  */
 import { test, expect } from '../fixtures/base.js';
-import { setupFullMocks, mockAnnotations } from '../helpers/api-mock.js';
+import { setupFullMocks } from '../helpers/api-mock.js';
 
 test.describe('Annotations', () => {
     test.beforeEach(async ({ page, mockSlideData }) => {
@@ -13,9 +13,10 @@ test.describe('Annotations', () => {
         await page.goto('/');
         await page.waitForSelector('.folder-browser');
 
-        // Navigate to viewer
+        // Navigate to viewer (wait for page transition + metadata load)
         await page.locator('.slide-item, .slide-card', { hasText: 'TestSlide' }).first().click();
-        await page.locator('#viewer').waitFor({ timeout: 10_000 });
+        await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#info')).toContainText('Information', { timeout: 10_000 });
     });
 
     test('drawing tools toolbar is visible on viewer page', async ({ page }) => {
@@ -26,9 +27,9 @@ test.describe('Annotations', () => {
         const toolbar = page.locator('.drawing-tools');
         await expect(toolbar).toBeVisible({ timeout: 5_000 });
 
-        // Should have tool buttons (select, rectangle, polygon, point, freehand, circle)
+        // Tool buttons: 2 primary + 1 "more" + 4 overflow + 1 delete = 8
         const buttons = toolbar.locator('.drawing-tools__btn');
-        await expect(buttons).toHaveCount(6, { timeout: 5_000 });
+        await expect(buttons).toHaveCount(8, { timeout: 5_000 });
     });
 
     test('clicking tool button activates it', async ({ page }) => {
