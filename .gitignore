@@ -325,3 +325,9 @@ backend/logs/
 # Playwright
 frontend/e2e/test-results/
 frontend/e2e/playwright-report/
+
+# Self-hosted runner secrets (covered by .env above, explicit for clarity)
+.github/runner/.env
+
+# act local testing
+.actrc.local
