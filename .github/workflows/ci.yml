@@ -163,10 +163,18 @@ jobs:
           CONTAINER="ci-backend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
           docker run -d --name "$CONTAINER" -P varuna-backend:ci-test
-          sleep 10
           PORT=$(docker port "$CONTAINER" 8000/tcp | head -1 | cut -d: -f2)
-          curl -f "http://localhost:$PORT/api/health" || \
-            (echo "--- container logs ---" && docker logs "$CONTAINER" && exit 1)
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
+              echo "Backend container healthy on port $PORT"
+              exit 0
+            fi
+            echo "Waiting for backend container... ($i/30)"
+            sleep 2
+          done
+          echo "Backend container failed to respond"
+          docker logs "$CONTAINER"
+          exit 1
 
       - name: Cleanup
         if: always()
@@ -270,10 +278,18 @@ jobs:
           CONTAINER="ci-frontend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
           docker run -d --name "$CONTAINER" -P varuna-frontend:ci-test
-          sleep 10
           PORT=$(docker port "$CONTAINER" 80/tcp | head -1 | cut -d: -f2)
-          curl -f "http://localhost:$PORT/" || \
-            (echo "--- container logs ---" && docker logs "$CONTAINER" && exit 1)
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
+              echo "Frontend container healthy on port $PORT"
+              exit 0
+            fi
+            echo "Waiting for frontend container... ($i/30)"
+            sleep 2
+          done
+          echo "Frontend container failed to respond"
+          docker logs "$CONTAINER"
+          exit 1
 
       - name: Cleanup
         if: always()
@@ -319,9 +335,24 @@ jobs:
         run: |
           BE_PORT=$(docker port "integ-backend-${{ github.run_id }}" 8000/tcp | head -1 | cut -d: -f2)
           FE_PORT=$(docker port "integ-frontend-${{ github.run_id }}" 80/tcp | head -1 | cut -d: -f2)
-          sleep 15
-          curl -f "http://localhost:$BE_PORT/api/health" && echo "Backend healthy"
-          curl -f "http://localhost:$FE_PORT/" && echo "Frontend accessible"
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:$BE_PORT/api/health" > /dev/null 2>&1; then
+              echo "Backend healthy on port $BE_PORT"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:$FE_PORT/" > /dev/null 2>&1; then
+              echo "Frontend accessible on port $FE_PORT"
+              break
+            fi
+            echo "Waiting for frontend... ($i/30)"
+            sleep 2
+          done
+          curl -f "http://localhost:$BE_PORT/api/health" && echo "Backend OK"
+          curl -f "http://localhost:$FE_PORT/" && echo "Frontend OK"
 
       - name: Cleanup
         if: always()
