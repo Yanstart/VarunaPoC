@@ -20,7 +20,7 @@ jobs:
   # ============================================
   build-and-push:
     name: Build and Push Images
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write
@@ -74,8 +74,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache/${{ matrix.component }}
+            type=registry,ref=localhost:5000/varuna/${{ matrix.component }}:buildcache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new/${{ matrix.component }},mode=max
           # Build args (if needed)
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
@@ -89,6 +91,20 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+      - name: Push to local registry
+        if: vars.USE_SELF_HOSTED == 'true'
+        continue-on-error: true
+        run: |
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -1 | sed 's|.*/||')
+          docker tag $(echo "${{ steps.meta.outputs.tags }}" | head -1) localhost:5000/varuna/${{ matrix.component }}:${TAG} 2>/dev/null || true
+          docker push localhost:5000/varuna/${{ matrix.component }}:${TAG} 2>/dev/null || true
+
+      - name: Rotate Docker build cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache/${{ matrix.component }}
+          mv /tmp/.buildx-cache-new/${{ matrix.component }} /tmp/.buildx-cache/${{ matrix.component }} 2>/dev/null || true
+
   # ============================================
   # Create GitHub Release (for version tags)
   # ============================================
@@ -96,7 +112,7 @@ jobs:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     permissions:
       contents: write
 
@@ -188,7 +204,7 @@ jobs:
   update-manifest:
     name: Update Deployment Manifest
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     permissions:
       contents: write
 
@@ -230,7 +246,7 @@ jobs:
   notify:
     name: Deployment Notification
     needs: [build-and-push, update-manifest]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     if: always()
 
     steps:
