@@ -331,3 +331,4 @@ frontend/e2e/playwright-report/
 
 # act local testing
 .actrc.local
+.github/runner/.secrets

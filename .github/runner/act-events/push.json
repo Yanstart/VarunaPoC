@@ -1,0 +1,14 @@
+{
+  "ref": "refs/heads/main",
+  "before": "0000000000000000000000000000000000000000",
+  "after": "abc1234567890",
+  "repository": {
+    "full_name": "Yanstart/VarunaPoC",
+    "clone_url": "https://github.com/Yanstart/VarunaPoC.git"
+  },
+  "head_commit": {
+    "id": "abc1234567890",
+    "message": "test: local act run",
+    "timestamp": "2026-02-18T12:00:00Z"
+  }
+}
