@@ -162,12 +162,10 @@ jobs:
         run: |
           CONTAINER="ci-backend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
-          docker run -d --name "$CONTAINER" -P varuna-backend:ci-test
-          PORT=$(docker port "$CONTAINER" 8000/tcp | awk -F: '{print $NF}' | head -1)
-          echo "Extracted port: '$PORT' (raw: $(docker port "$CONTAINER" 8000/tcp))"
+          docker run -d --name "$CONTAINER" varuna-backend:ci-test
           for i in $(seq 1 30); do
-            if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
-              echo "Backend container healthy on port $PORT"
+            if docker exec "$CONTAINER" curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+              echo "Backend container healthy (attempt $i)"
               exit 0
             fi
             echo "Waiting for backend container... ($i/30)"
@@ -278,12 +276,10 @@ jobs:
         run: |
           CONTAINER="ci-frontend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
-          docker run -d --name "$CONTAINER" -P varuna-frontend:ci-test
-          PORT=$(docker port "$CONTAINER" 80/tcp | awk -F: '{print $NF}' | head -1)
-          echo "Extracted port: '$PORT' (raw: $(docker port "$CONTAINER" 80/tcp))"
+          docker run -d --name "$CONTAINER" varuna-frontend:ci-test
           for i in $(seq 1 30); do
-            if curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
-              echo "Frontend container healthy on port $PORT"
+            if docker exec "$CONTAINER" curl -sf http://localhost:80/ > /dev/null 2>&1; then
+              echo "Frontend container healthy (attempt $i)"
               exit 0
             fi
             echo "Waiting for frontend container... ($i/30)"
@@ -321,7 +317,6 @@ jobs:
           cd backend
           docker build -t varuna-backend:test .
           docker run -d --name "integ-backend-${{ github.run_id }}" \
-            -P \
             -e CORS_ORIGINS="*" \
             varuna-backend:test
 
@@ -330,31 +325,30 @@ jobs:
           cd frontend
           docker build -t varuna-frontend:test .
           docker run -d --name "integ-frontend-${{ github.run_id }}" \
-            -P \
             varuna-frontend:test
 
       - name: Wait for services and test
         run: |
-          BE_PORT=$(docker port "integ-backend-${{ github.run_id }}" 8000/tcp | awk -F: '{print $NF}' | head -1)
-          FE_PORT=$(docker port "integ-frontend-${{ github.run_id }}" 80/tcp | awk -F: '{print $NF}' | head -1)
+          BE="integ-backend-${{ github.run_id }}"
+          FE="integ-frontend-${{ github.run_id }}"
           for i in $(seq 1 30); do
-            if curl -sf "http://localhost:$BE_PORT/api/health" > /dev/null 2>&1; then
-              echo "Backend healthy on port $BE_PORT"
+            if docker exec "$BE" curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+              echo "Backend healthy (attempt $i)"
               break
             fi
             echo "Waiting for backend... ($i/30)"
             sleep 2
           done
           for i in $(seq 1 30); do
-            if curl -sf "http://localhost:$FE_PORT/" > /dev/null 2>&1; then
-              echo "Frontend accessible on port $FE_PORT"
+            if docker exec "$FE" curl -sf http://localhost:80/ > /dev/null 2>&1; then
+              echo "Frontend accessible (attempt $i)"
               break
             fi
             echo "Waiting for frontend... ($i/30)"
             sleep 2
           done
-          curl -f "http://localhost:$BE_PORT/api/health" && echo "Backend OK"
-          curl -f "http://localhost:$FE_PORT/" && echo "Frontend OK"
+          docker exec "$BE" curl -f http://localhost:8000/api/health && echo "Backend OK"
+          docker exec "$FE" curl -f http://localhost:80/ && echo "Frontend OK"
 
       - name: Cleanup
         if: always()
@@ -426,25 +420,26 @@ jobs:
         run: |
           CONTAINER="e2e-backend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
-          docker run -d --name "$CONTAINER" -P \
+          docker run -d --name "$CONTAINER" \
             -e CORS_ORIGINS="*" \
             varuna-backend:e2e-test
-          PORT=$(docker port "$CONTAINER" 8000/tcp | awk -F: '{print $NF}' | head -1)
-          echo "port=$PORT" >> "$GITHUB_OUTPUT"
+          # Get container IP for host-to-container communication (DooD compatible)
+          IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER")
+          echo "ip=$IP" >> "$GITHUB_OUTPUT"
 
       - name: Wait for backend healthy
         run: |
-          PORT=${{ steps.e2e-backend.outputs.port }}
+          CONTAINER="e2e-backend-${{ github.run_id }}"
           for i in $(seq 1 30); do
-            if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
-              echo "Backend is healthy on port $PORT"
+            if docker exec "$CONTAINER" curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+              echo "Backend is healthy (attempt $i)"
               exit 0
             fi
             echo "Waiting for backend... ($i/30)"
             sleep 2
           done
           echo "Backend failed to start"
-          docker logs "e2e-backend-${{ github.run_id }}"
+          docker logs "$CONTAINER"
           exit 1
 
       - name: Run Playwright tests
@@ -454,7 +449,7 @@ jobs:
         env:
           CI: true
           BASE_URL: http://localhost:5173
-          API_URL: http://localhost:${{ steps.e2e-backend.outputs.port }}
+          API_URL: http://${{ steps.e2e-backend.outputs.ip }}:8000
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
