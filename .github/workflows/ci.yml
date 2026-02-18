@@ -25,7 +25,7 @@ jobs:
   # ============================================
   backend-lint:
     name: Backend - Lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -60,7 +60,7 @@ jobs:
 
   backend-test:
     name: Backend - Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -103,7 +103,7 @@ jobs:
 
   backend-docker:
     name: Backend - Docker Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -120,8 +120,10 @@ jobs:
           push: false
           load: true
           tags: varuna-backend:ci-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache/backend
+            type=registry,ref=localhost:5000/varuna/backend:buildcache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new/backend,mode=max
 
       - name: Test backend container
         run: |
@@ -138,12 +140,18 @@ jobs:
           # Stop container
           docker stop test-backend
 
+      - name: Rotate Docker build cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache/backend
+          mv /tmp/.buildx-cache-new/backend /tmp/.buildx-cache/backend 2>/dev/null || true
+
   # ============================================
   # Frontend CI
   # ============================================
   frontend-lint:
     name: Frontend - Lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -168,7 +176,7 @@ jobs:
 
   frontend-build:
     name: Frontend - Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -200,7 +208,7 @@ jobs:
 
   frontend-docker:
     name: Frontend - Docker Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -217,8 +225,10 @@ jobs:
           push: false
           load: true
           tags: varuna-frontend:ci-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache/frontend
+            type=registry,ref=localhost:5000/varuna/frontend:buildcache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new/frontend,mode=max
 
       - name: Test frontend container
         run: |
@@ -235,13 +245,19 @@ jobs:
           # Stop container
           docker stop test-frontend
 
+      - name: Rotate Docker build cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache/frontend
+          mv /tmp/.buildx-cache-new/frontend /tmp/.buildx-cache/frontend 2>/dev/null || true
+
   # ============================================
   # Integration Check
   # ============================================
   integration:
     name: Integration Check
     needs: [backend-test, backend-docker, frontend-build, frontend-docker]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -291,7 +307,7 @@ jobs:
   e2e:
     name: E2E - Playwright
     needs: [frontend-build, backend-docker]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -405,7 +421,7 @@ jobs:
       - frontend-docker
       - integration
       - e2e
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     if: always()
 
     steps:
