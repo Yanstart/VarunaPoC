@@ -95,10 +95,14 @@ jobs:
 
       - name: Install OpenSlide system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            openslide-tools \
-            libopenslide0
+          if dpkg -s libopenslide0 > /dev/null 2>&1; then
+            echo "OpenSlide already installed — skipping"
+          else
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends \
+              openslide-tools \
+              libopenslide0
+          fi
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -112,12 +116,12 @@ jobs:
           cd backend
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio "httpx>=0.25.0,<0.28.0" matplotlib
+          pip install pytest pytest-cov pytest-asyncio pytest-xdist "httpx>=0.25.0,<0.28.0" matplotlib
 
       - name: Run pytest
         run: |
           cd backend
-          pytest --cov=. --cov-report=xml --cov-report=term-missing --verbose -m "not slow"
+          pytest -n auto --cov=. --cov-report=xml --cov-report=term-missing --verbose -m "not slow"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -366,7 +370,12 @@ jobs:
       - name: Install Playwright browsers
         run: |
           cd frontend
-          npx playwright install --with-deps chromium
+          if dpkg -s libgbm1 > /dev/null 2>&1; then
+            echo "System deps present — installing browser only"
+            npx playwright install chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Build frontend
         run: |
