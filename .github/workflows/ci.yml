@@ -163,7 +163,8 @@ jobs:
           CONTAINER="ci-backend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
           docker run -d --name "$CONTAINER" -P varuna-backend:ci-test
-          PORT=$(docker port "$CONTAINER" 8000/tcp | head -1 | cut -d: -f2)
+          PORT=$(docker port "$CONTAINER" 8000/tcp | awk -F: '{print $NF}' | head -1)
+          echo "Extracted port: '$PORT' (raw: $(docker port "$CONTAINER" 8000/tcp))"
           for i in $(seq 1 30); do
             if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
               echo "Backend container healthy on port $PORT"
@@ -278,7 +279,8 @@ jobs:
           CONTAINER="ci-frontend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
           docker run -d --name "$CONTAINER" -P varuna-frontend:ci-test
-          PORT=$(docker port "$CONTAINER" 80/tcp | head -1 | cut -d: -f2)
+          PORT=$(docker port "$CONTAINER" 80/tcp | awk -F: '{print $NF}' | head -1)
+          echo "Extracted port: '$PORT' (raw: $(docker port "$CONTAINER" 80/tcp))"
           for i in $(seq 1 30); do
             if curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
               echo "Frontend container healthy on port $PORT"
@@ -333,8 +335,8 @@ jobs:
 
       - name: Wait for services and test
         run: |
-          BE_PORT=$(docker port "integ-backend-${{ github.run_id }}" 8000/tcp | head -1 | cut -d: -f2)
-          FE_PORT=$(docker port "integ-frontend-${{ github.run_id }}" 80/tcp | head -1 | cut -d: -f2)
+          BE_PORT=$(docker port "integ-backend-${{ github.run_id }}" 8000/tcp | awk -F: '{print $NF}' | head -1)
+          FE_PORT=$(docker port "integ-frontend-${{ github.run_id }}" 80/tcp | awk -F: '{print $NF}' | head -1)
           for i in $(seq 1 30); do
             if curl -sf "http://localhost:$BE_PORT/api/health" > /dev/null 2>&1; then
               echo "Backend healthy on port $BE_PORT"
@@ -427,7 +429,7 @@ jobs:
           docker run -d --name "$CONTAINER" -P \
             -e CORS_ORIGINS="*" \
             varuna-backend:e2e-test
-          PORT=$(docker port "$CONTAINER" 8000/tcp | head -1 | cut -d: -f2)
+          PORT=$(docker port "$CONTAINER" 8000/tcp | awk -F: '{print $NF}' | head -1)
           echo "port=$PORT" >> "$GITHUB_OUTPUT"
 
       - name: Wait for backend healthy
