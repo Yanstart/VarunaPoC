@@ -60,6 +60,7 @@ ignore = [
     "RET505",  # Unnecessary elif (stylistic)
     "PIE810",  # Call endswith once (minor optimization)
     "E402",    # Module level import not at top (conditional imports)
+    "ISC001",  # Implicit string concat (conflicts with Black formatter)
 ]
 
 # Exclude directories
@@ -87,6 +88,8 @@ exclude = [
 "monitoring.py" = ["I001", "F401", "F841", "TRY203", "ARG001"]
 # Routes - legacy FastAPI routes + ML routes with FastAPI Depends pattern
 "routes/**/*.py" = ["I001", "F401", "RET504", "TRY301", "B008", "UP", "ARG001", "DTZ003", "ERA001"]
+# FHIR - standard resource definitions with long FHIR URLs (ISC001 from Black formatting)
+"fhir/**/*.py" = ["ISC001", "B008", "ARG001"]
 # Quality routes - FastAPI Depends pattern
 "quality/routes.py" = ["B008", "ARG001"]
 # Core interfaces - ML Provider protocol with Optional types

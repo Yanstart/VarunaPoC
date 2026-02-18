@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 # Try to import optional dependencies
 _HAS_BIOFORMATS = False
 try:
-    import jpype
     import bioformats
+    import jpype
 
     del jpype  # Only needed for availability check
     _HAS_BIOFORMATS = True

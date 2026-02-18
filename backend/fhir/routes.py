@@ -109,7 +109,7 @@ async def get_diagnostic_report(
     smart_launch_id: str | None = Query(None, description="SMART launch ID"),
     specimen_type: str | None = Query(None, description="Specimen type"),
     pdf_url: str | None = Query(None, description="PDF report URL"),
-    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),  # noqa: B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Generate a FHIR R4 DiagnosticReport for a slide.
@@ -173,7 +173,7 @@ async def get_diagnostic_report(
 async def search_diagnostic_reports_endpoint(
     patient: str | None = Query(None, description="Patient ID filter"),
     status: str | None = Query(None, description="Report status filter"),
-    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),  # noqa: B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Search DiagnosticReports by patient and/or status.
@@ -220,9 +220,7 @@ async def get_us_core_patient(
     given_name: str = Query("Unknown", description="Given name"),
     gender: str = Query("unknown", description="Administrative gender"),
     birth_date: str | None = Query(None, description="Birth date (YYYY-MM-DD)"),
-    current_user: CurrentUser = Depends(
-        require_role("MEDECIN", "ADMIN_TECHNIQUE")
-    ),  # noqa: ARG001, B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Return a US Core Patient resource (USCDI v3 required elements).
@@ -251,9 +249,7 @@ async def get_ca_core_patient(
     birth_date: str | None = Query(None, description="Birth date (YYYY-MM-DD)"),
     health_number: str | None = Query(None, description="Provincial health number"),
     jurisdiction: str = Query("ON", description="Province code (ON, QC, BC, AB)"),
-    current_user: CurrentUser = Depends(
-        require_role("MEDECIN", "ADMIN_TECHNIQUE")
-    ),  # noqa: ARG001, B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Return a CA Core Patient resource (pan-Canadian required elements).
@@ -288,9 +284,7 @@ async def get_mcode_cancer_condition(
     histology_display: str = Query("Adenocarcinoma, NOS", description="Histology display"),
     body_site_code: str = Query("80248005", description="SNOMED CT body site code"),
     body_site_display: str = Query("Left breast structure", description="Body site display"),
-    current_user: CurrentUser = Depends(
-        require_role("MEDECIN", "ADMIN_TECHNIQUE")
-    ),  # noqa: ARG001, B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Return an mCODE PrimaryCancerCondition resource.
@@ -319,9 +313,7 @@ async def get_mcode_tnm_stage(
     t_category: str = Query("T2", description="T category"),
     n_category: str = Query("N0", description="N category"),
     m_category: str = Query("M0", description="M category"),
-    current_user: CurrentUser = Depends(
-        require_role("MEDECIN", "ADMIN_TECHNIQUE")
-    ),  # noqa: ARG001, B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Return an mCODE TNMStageGroup observation.
@@ -354,9 +346,7 @@ async def get_mcode_tumor_marker(
     patient_id: str = Query(..., description="Patient reference"),
     marker: str = Query(..., description="Marker name (ki67, her2, er, pr)"),
     value: str | None = Query(None, description="Result value"),
-    current_user: CurrentUser = Depends(
-        require_role("MEDECIN", "ADMIN_TECHNIQUE")
-    ),  # noqa: ARG001, B008
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Return an mCODE TumorMarkerTest observation.

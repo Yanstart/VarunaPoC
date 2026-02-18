@@ -138,11 +138,11 @@ class ClusteringService:
         model_id: str,
     ) -> ClusterResult:
         """Real clustering via KMeans on cached embeddings."""
-        import numpy as np
-        from sklearn.cluster import KMeans
-
         # Extract slide_id from path for cache lookup
         from pathlib import Path
+
+        import numpy as np
+        from sklearn.cluster import KMeans
 
         slide_id = Path(slide_path).stem
 

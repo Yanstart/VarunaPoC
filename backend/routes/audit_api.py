@@ -30,9 +30,7 @@ router = APIRouter(prefix="/api/audit", tags=["Audit"])
 @router.get("/events")
 async def get_audit_events(
     user: str | None = Query(None, description="Filtrer par identifiant utilisateur (sub)"),
-    type: str | None = Query(
-        None, alias="type", description="Filtrer par type d'evenement"
-    ),  # noqa: A002
+    event_type: str | None = Query(None, alias="type", description="Filtrer par type d'evenement"),
     from_date: str | None = Query(None, alias="from", description="Date de debut ISO (inclusive)"),
     to_date: str | None = Query(None, alias="to", description="Date de fin ISO (inclusive)"),
     limit: int = Query(100, ge=1, le=1000, description="Nombre max de resultats"),
@@ -53,7 +51,7 @@ async def get_audit_events(
     """
     events = search_audit_events(
         user_sub=user,
-        event_type=type,
+        event_type=event_type,
         from_date=from_date,
         to_date=to_date,
         limit=limit,

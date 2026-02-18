@@ -23,15 +23,15 @@ from pydantic import BaseModel, Field
 
 from services.apsr import APSRBuilder, APSRRequest, APSRResult
 from services.ehealth_be import (
-    EHealthSTSClient,
     EhBoxMessage,
+    EHealthSTSClient,
     RIZIVValidation,
     SAMLAssertion,
     SSINValidation,
     validate_riziv,
     validate_ssin,
 )
-from services.hl7v2_parser import HL7v2ParseResult, HL7v2Parser
+from services.hl7v2_parser import HL7v2Parser, HL7v2ParseResult
 
 logger = logging.getLogger(__name__)
 
