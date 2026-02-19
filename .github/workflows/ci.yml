@@ -422,38 +422,28 @@ jobs:
           docker build -t varuna-backend:e2e-test .
 
       - name: Start backend container
-        id: e2e-backend
         run: |
           CONTAINER="e2e-backend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
+          # Share runner's network namespace so backend is on localhost:8000
+          # DooD: runner is a container, $(hostname) returns its container ID
           docker run -d --name "$CONTAINER" \
+            --network="container:$(hostname)" \
             -e CORS_ORIGINS="*" \
             varuna-backend:e2e-test
-          # Get container bridge IP (DooD: runner and container share bridge network)
-          IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER")
-          echo "Backend container IP: $IP"
-          echo "ip=$IP" >> "$GITHUB_OUTPUT"
 
       - name: Wait for backend healthy
         run: |
-          CONTAINER="e2e-backend-${{ github.run_id }}"
-          IP=${{ steps.e2e-backend.outputs.ip }}
           for i in $(seq 1 30); do
-            if docker exec "$CONTAINER" curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
-              echo "Backend healthy inside container (attempt $i)"
-              # Also verify bridge IP is reachable from runner
-              if curl -sf "http://$IP:8000/api/health" > /dev/null 2>&1; then
-                echo "Backend reachable at $IP:8000"
-              else
-                echo "WARNING: Bridge IP $IP:8000 not reachable from runner"
-              fi
+            if curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+              echo "Backend healthy on localhost:8000 (attempt $i)"
               exit 0
             fi
             echo "Waiting for backend... ($i/30)"
             sleep 2
           done
           echo "Backend failed to start"
-          docker logs "$CONTAINER"
+          docker logs "e2e-backend-${{ github.run_id }}"
           exit 1
 
       - name: Run Playwright tests
@@ -463,7 +453,7 @@ jobs:
         env:
           CI: true
           BASE_URL: http://localhost:5173
-          API_URL: http://${{ steps.e2e-backend.outputs.ip }}:8000
+          API_URL: http://localhost:8000
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
