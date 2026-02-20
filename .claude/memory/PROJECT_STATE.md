@@ -1,6 +1,6 @@
 # Etat du Projet - VarunaPoC
 
-**Derniere mise a jour:** 2026-02-12
+**Derniere mise a jour:** 2026-02-20
 **Mis a jour par:** Cerveau d'Orchestration
 
 ---
@@ -10,9 +10,10 @@
 ### Version & Phase
 - **Version:** 2.0.0
 - **Phase:** Phase 3.1 (Auth) COMPLETE, Phase 4 (Quality) COMPLETE
-- **Branche Git:** `main` (commit 1b867c5, merge PR #55)
+- **Branche Git:** `main` (commit 96261b2)
 - **Plan:** MVP 15 semaines (cf. PROPOSAL_VARUNA_v2.md)
 - **Prochaine etape:** Phase 3.3 Integration PACS Telemis
+- **Issues:** 124/124 closed, all PRs merged
 
 ### Sante du Projet
 
@@ -25,7 +26,7 @@
 | Documentation | 9/10 | Proposal v2, hospital evaluation, architecture, manuel, API docs |
 | MLOps | 5/10 | Slideflow + Phikon-v2 integre, pas de monitoring/drift/feedback loop |
 | Performance | 8/10 | Tiles < 15ms keep-alive, 94 lames 10 formats |
-| CI/CD | 9/10 | 8/8 CI jobs pass, security scans, CD pipeline, all green |
+| CI/CD | 9/10 | 10/10 CI jobs pass, security scans, CD pipeline (GHCR), all green |
 
 ---
 
@@ -262,21 +263,35 @@ HOSPITAL_DEPLOYMENT_EVALUATION.md    # Evaluation deploiement hospitalier (racin
 
 ---
 
-## Git Status (2026-02-12)
+## Git Status (2026-02-20)
 
 ### Branches
-- `main` - Production stable (commit 1b867c5)
-- `feature/slideflow-integration` - Merged to main
+- `main` - Production stable (commit 96261b2)
+- `develop` - Development branch
 
 ### Commits Recents
 ```
-1b867c5 Merge pull request #55 from Yanstart/feature/slideflow-integration
-52a293f fix(lint): Resolve all ESLint errors and Bandit false positives
-ec3303a feat(quality): Add inter-annotator agreement metrics (Phase 4)
-4667955 chore: Update deployment manifest to main-1492935
-1492935 fix(ci): Resolve remaining CI failures
-56cb8a7 feat(phase3): Add OIDC PKCE auth, RBAC, audit trail, and system patterns doc
+96261b2 fix(ci): share runner network namespace for E2E backend container
+5acb054 fix(ci): use container bridge IP for E2E Playwright tests
+b79f143 fix(ci): add docker prune before builds to prevent disk full errors
+f899aae fix(ci): use --network=host for e2e backend container
+5f6fbc9 fix(ci): use docker exec for health checks (DooD compatible)
 ```
+
+### CI/CD Pipeline Status
+**CI (ci.yml)** — 10 jobs, ALL PASS:
+- Detect Changes, Backend Lint/Test/Docker, Frontend Lint/Build/Docker, Integration, E2E Playwright, CI Status
+
+**Security (security.yml)** — 7 jobs:
+- PASS: Secret Scan, Dependency Scan (x2), Docker Scan (x2)
+- FAIL (informational, continue-on-error): CodeQL (x2), Python Security, JS Security, HIPAA Compliance
+
+**CD (cd.yml)** — on push to main:
+- Build + push to GHCR, GitHub Release on tags, deployment manifest update
+
+**Other**: notify-failure.yml, update-project.yml
+
+**Self-hosted runner toggle**: `vars.USE_SELF_HOSTED` (DooD compatible)
 
 ---
 

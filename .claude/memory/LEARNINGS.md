@@ -313,7 +313,51 @@ destroy() {
 
 ---
 
-## Template pour Nouvelles Entrees
+## 2026-02-19 - Docker Health Checks Fail on DooD (exit 125)
+
+**Contexte:** CI Docker build jobs test container health with curl
+**Probleme:** `docker run --publish -d` + `curl localhost:PORT` fails on DooD runners. Port mapping requires Docker host networking, but in DooD the runner IS a container — published ports go to the Docker host, not the runner's localhost.
+**Solution:** Use `docker exec` instead of port mapping:
+```bash
+docker run -d --name "$CONTAINER" varuna-backend:ci-test  # no --publish
+docker exec "$CONTAINER" curl -sf http://localhost:8000/api/health
+```
+**A Retenir:** On DooD runners, never rely on `--publish` port mapping. Always use `docker exec` for health checks.
+**Fichiers:** `.github/workflows/ci.yml` (backend-docker, frontend-docker, integration)
+
+---
+
+## 2026-02-19 - E2E Backend Needs Runner's Network Namespace
+
+**Contexte:** Playwright E2E tests need both frontend (localhost:5173) and backend (localhost:8000)
+**Probleme:** Frontend runs natively on the runner, but backend runs in Docker. In DooD, backend container's localhost is NOT the runner's localhost.
+**Solution:** Share the runner's network namespace: `docker run --network="container:$(hostname)"`. Since the runner IS a Docker container, `$(hostname)` returns its container ID.
+**A Retenir:** For E2E on DooD: native processes + Docker containers must share network namespace via `--network="container:$(hostname)"`.
+**Fichiers:** `.github/workflows/ci.yml` (e2e job)
+
+---
+
+## 2026-02-19 - Docker Disk Full on Self-Hosted Runners
+
+**Contexte:** Docker builds fail sporadically with "no space left on device"
+**Probleme:** Self-hosted runners accumulate dangling images, build caches, and stopped containers between runs.
+**Solution:** Add `docker system prune -af --volumes` before Docker build steps.
+**A Retenir:** Self-hosted runners don't auto-clean like ephemeral GitHub runners. Always prune before builds.
+**Fichiers:** `.github/workflows/ci.yml` (backend-docker, frontend-docker)
+
+---
+
+## 2026-02-20 - pytest-xdist for Parallel Tests
+
+**Contexte:** Backend tests taking too long in CI
+**Probleme:** Sequential pytest takes minutes on large test suite
+**Solution:** Added `pytest-xdist` with `-n auto` flag — auto-detects CPU count and runs tests in parallel
+**A Retenir:** `pytest -n auto` can significantly speed up test suites. Ensure tests are independent (no shared state/DB).
+**Fichiers:** `.github/workflows/ci.yml` (backend-test), `backend/requirements.txt`
+
+---
+
+
 
 ```markdown
 ## [DATE] - [SUJET]
@@ -327,4 +371,4 @@ destroy() {
 
 ---
 
-**Derniere mise a jour:** 2026-02-12
+**Derniere mise a jour:** 2026-02-20
