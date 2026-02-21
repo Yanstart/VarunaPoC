@@ -6,7 +6,7 @@ version: "3.8"
 
 services:
   backend:
-    image: ghcr.io/Yanstart/VarunaPoC/backend:main-96261b2
+    image: ghcr.io/Yanstart/VarunaPoC/backend:main-0e5ba03
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -24,7 +24,7 @@ services:
       start_period: 15s
 
   frontend:
-    image: ghcr.io/Yanstart/VarunaPoC/frontend:main-96261b2
+    image: ghcr.io/Yanstart/VarunaPoC/frontend:main-0e5ba03
     restart: unless-stopped
     ports:
       - "80:80"
