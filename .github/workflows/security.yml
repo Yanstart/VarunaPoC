@@ -192,10 +192,8 @@ jobs:
           push: false
           load: true
           tags: varuna-${{ matrix.component }}:security-scan
-          cache-from: |
-            type=local,src=/tmp/.buildx-cache/${{ matrix.component }}
-            type=registry,ref=localhost:5000/varuna/${{ matrix.component }}:buildcache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new/${{ matrix.component }},mode=max
+          cache-from: type=local,src=/data/VarunaPoC/.buildx-cache/${{ matrix.component }}
+          cache-to: type=local,dest=/data/VarunaPoC/.buildx-cache-new/${{ matrix.component }},mode=max
 
       - name: Run Trivy vulnerability scanner (Docker image)
         uses: aquasecurity/trivy-action@master
@@ -224,8 +222,8 @@ jobs:
       - name: Rotate Docker build cache
         if: always()
         run: |
-          rm -rf /tmp/.buildx-cache/${{ matrix.component }}
-          mv /tmp/.buildx-cache-new/${{ matrix.component }} /tmp/.buildx-cache/${{ matrix.component }} 2>/dev/null || true
+          rm -rf /data/VarunaPoC/.buildx-cache/${{ matrix.component }}
+          mv /data/VarunaPoC/.buildx-cache-new/${{ matrix.component }} /data/VarunaPoC/.buildx-cache/${{ matrix.component }} 2>/dev/null || true
 
   # ============================================
   # Code Quality & SAST

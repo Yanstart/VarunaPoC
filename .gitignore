@@ -2,6 +2,8 @@
 # Docker storage (moved to /data for disk space)
 # =========================
 .docker-storage/
+.buildx-cache/
+.buildx-cache-new/
 
 # =========================
 # Ignorer les fichiers d'images (toutes extensions)
