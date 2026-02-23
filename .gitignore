@@ -1,4 +1,9 @@
 # =========================
+# Docker storage (moved to /data for disk space)
+# =========================
+.docker-storage/
+
+# =========================
 # Ignorer les fichiers d'images (toutes extensions)
 # =========================
 *.jpg

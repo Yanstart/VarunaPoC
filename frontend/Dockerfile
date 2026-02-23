@@ -25,7 +25,8 @@ ARG VITE_API_URL=http://localhost:8000
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Build Vite application for production
-RUN npm run build
+# Limit Node heap to avoid OOM in memory-constrained CI environments
+RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
 
 # ============================================
 # Stage 2: Serve with Nginx
