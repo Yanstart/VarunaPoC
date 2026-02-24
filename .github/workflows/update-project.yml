@@ -3,7 +3,7 @@ name: Update GitHub Project on PR Merge
 on:
   pull_request:
     types: [closed]
-    branches: [main, develop]
+    branches: [main]
 
 env:
   PROJECT_ID: "PVT_kwHOA_-NCs4BOVLg"

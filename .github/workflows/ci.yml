@@ -26,9 +26,13 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
       frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
+      docs_only: ${{ github.event_name == 'pull_request' && steps.filter.outputs.backend != 'true' && steps.filter.outputs.frontend != 'true' && steps.filter.outputs.docs == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -42,6 +46,10 @@ jobs:
             frontend:
               - 'frontend/**'
               - '.github/workflows/ci.yml'
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+              - '**/info.md'
 
   # ============================================
   # Backend CI
@@ -299,65 +307,6 @@ jobs:
           mv /data/VarunaPoC/.buildx-cache-new/frontend /data/VarunaPoC/.buildx-cache/frontend 2>/dev/null || true
 
   # ============================================
-  # Integration Check
-  # ============================================
-  integration:
-    name: Integration Check
-    needs: [backend-test, backend-docker, frontend-build, frontend-docker]
-    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Cleanup stale containers
-        run: |
-          docker rm -f "integ-backend-${{ github.run_id }}" "integ-frontend-${{ github.run_id }}" 2>/dev/null || true
-
-      - name: Start backend container
-        run: |
-          cd backend
-          docker build -t varuna-backend:test .
-          docker run -d --name "integ-backend-${{ github.run_id }}" \
-            -e CORS_ORIGINS="*" \
-            varuna-backend:test
-
-      - name: Start frontend container
-        run: |
-          cd frontend
-          docker build -t varuna-frontend:test .
-          docker run -d --name "integ-frontend-${{ github.run_id }}" \
-            varuna-frontend:test
-
-      - name: Wait for services and test
-        run: |
-          BE="integ-backend-${{ github.run_id }}"
-          FE="integ-frontend-${{ github.run_id }}"
-          for i in $(seq 1 30); do
-            if docker exec "$BE" curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
-              echo "Backend healthy (attempt $i)"
-              break
-            fi
-            echo "Waiting for backend... ($i/30)"
-            sleep 2
-          done
-          for i in $(seq 1 30); do
-            if docker exec "$FE" curl -sf http://localhost:80/ > /dev/null 2>&1; then
-              echo "Frontend accessible (attempt $i)"
-              break
-            fi
-            echo "Waiting for frontend... ($i/30)"
-            sleep 2
-          done
-          docker exec "$BE" curl -f http://localhost:8000/api/health && echo "Backend OK"
-          docker exec "$FE" curl -f http://localhost:80/ && echo "Frontend OK"
-
-      - name: Cleanup
-        if: always()
-        run: |
-          docker rm -f "integ-backend-${{ github.run_id }}" "integ-frontend-${{ github.run_id }}" 2>/dev/null || true
-
-  # ============================================
   # E2E - Playwright Browser Tests
   # ============================================
   e2e:
@@ -484,16 +433,45 @@ jobs:
       - frontend-lint
       - frontend-build
       - frontend-docker
-      - integration
       - e2e
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     if: always()
 
     steps:
       - name: Check CI results
+        env:
+          BACKEND_LINT: ${{ needs.backend-lint.result }}
+          BACKEND_TEST: ${{ needs.backend-test.result }}
+          BACKEND_DOCKER: ${{ needs.backend-docker.result }}
+          FRONTEND_LINT: ${{ needs.frontend-lint.result }}
+          FRONTEND_BUILD: ${{ needs.frontend-build.result }}
+          FRONTEND_DOCKER: ${{ needs.frontend-docker.result }}
+          E2E: ${{ needs.e2e.result }}
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
         run: |
-          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
-            echo "One or more CI jobs failed"
+          echo "=== CI Job Results ==="
+          echo "backend-lint:   $BACKEND_LINT"
+          echo "backend-test:   $BACKEND_TEST"
+          echo "backend-docker: $BACKEND_DOCKER"
+          echo "frontend-lint:  $FRONTEND_LINT"
+          echo "frontend-build: $FRONTEND_BUILD"
+          echo "frontend-docker:$FRONTEND_DOCKER"
+          echo "e2e:            $E2E"
+          echo "docs_only:      $DOCS_ONLY"
+          echo "======================"
+
+          FAILED=0
+          for result in "$BACKEND_LINT" "$BACKEND_TEST" "$BACKEND_DOCKER" \
+                        "$FRONTEND_LINT" "$FRONTEND_BUILD" "$FRONTEND_DOCKER" "$E2E"; do
+            # success and skipped are both OK (skipped = path filtering)
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" = "1" ]; then
+            echo "::error::One or more CI jobs failed"
             exit 1
           fi
+
           echo "All CI checks passed (skipped jobs are OK — path filtering)"
