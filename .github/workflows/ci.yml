@@ -2,9 +2,9 @@ name: CI - Continuous Integration
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   push:
-    branches: [main, develop]
+    branches: [main]
 
 # Cancel in-progress runs for same PR/branch
 concurrency:
