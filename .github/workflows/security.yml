@@ -3,11 +3,11 @@ name: Security Scanning
 on:
   # Run on every PR
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
-  # Run on push to main/develop
+  # Run on push to main
   push:
-    branches: [main, develop]
+    branches: [main]
 
   # Run daily at 2 AM UTC
   schedule:
