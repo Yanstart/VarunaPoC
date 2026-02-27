@@ -1596,7 +1596,7 @@ async def get_slide_tags(
         "stain": raw_tags.get("stain"),
         "marker": raw_tags.get("marker"),
         "pathology": None,  # Will be populated by ML in future
-        "confidence": raw_tags.get("confidence", 0.0),
+        "confidence": str(raw_tags.get("confidence", 0.0)),
     }
     source = raw_tags.get("source", "unknown")
 
