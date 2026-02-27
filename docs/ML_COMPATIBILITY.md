@@ -1,6 +1,6 @@
 # ML Compatibility Matrix
 
-Generated: 2026-02-27 08:06
+Generated: 2026-02-27 09:51
 OpenSlide: 3.4.1 | Slideflow: latest | Backend: OpenVINO (auto)
 
 ## Summary
@@ -8,37 +8,19 @@ OpenSlide: 3.4.1 | Slideflow: latest | Backend: OpenVINO (auto)
 | Metric | Count | % |
 |--------|-------|---|
 | Total slides scanned | 91 | 100% |
-| OpenSlide opens | 51 | 56% |
-| MPP metadata present | 44 | 48% |
-| ML-compatible (Slideflow) | 44 | 48% |
-| High load risk (>5000 tiles) | 42 | 46% |
+| OpenSlide opens | 73 | 80% |
+| MPP metadata present | 70 | 76% |
+| ML-compatible (Slideflow) | 69 | 75% |
+| High load risk (>5000 tiles) | 67 | 73% |
 
 ## Failure Reasons
 
+### Slideflow error at 10x
+
+- `CMU-1.tiff`
+
 ### OpenSlide cannot open this file
 
-- `000002.dcm`
-- `000003.dcm`
-- `000004.dcm`
-- `000005.dcm`
-- `000006.dcm`
-- `000007.dcm`
-- `000008.dcm`
-- `000009.dcm`
-- `000010.dcm`
-- `000011.dcm`
-- `000012.dcm`
-- `000013.dcm`
-- `000014.dcm`
-- `1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dcm`
-- `1.3.6.1.4.1.36533.1881662823325113479691652532302192524914036.dcm`
-- `1.3.6.1.4.1.36533.21773233891171386611617621819013191107166.dcm`
-- `1.3.6.1.4.1.36533.2391938919943337319712912711949255392271.dcm`
-- `1.3.6.1.4.1.36533.2411761230176195652241589819186191207215116.dcm`
-- `1.3.6.1.4.1.36533.2642199142199497125516614013324167247234250.dcm`
-- `DCM_0.dcm`
-- `DCM_2.dcm`
-- `DCM_3.dcm`
 - `Hamamatsu-1.ndpi`
 - `Leica-3.scn`
 - `Leica-Fluorescence-1.scn`
@@ -58,15 +40,8 @@ OpenSlide: 3.4.1 | Slideflow: latest | Backend: OpenVINO (auto)
 - `Zeiss-5-SlidePreview-Zstd1-HiLo.czi`
 - `Zeiss-5-Uncompressed.czi`
 
-### DICOM format explicitly blocked for ML
-
-- `DCM_1.dcm`
-- `DCM_4.dcm`
-- `DCM_5.dcm`
-
 ### No MPP metadata — Slideflow cannot determine tile scale
 
-- `CMU-1.tiff`
 - `OS-1.vsi`
 - `OS-2.vsi`
 - `OS-3.vsi`
@@ -153,87 +128,312 @@ OpenSlide: 3.4.1 | Slideflow: latest | Backend: OpenVINO (auto)
 - **count**: Compatible but HIGH LOAD: ~30,450 tiles — may block server for 1-5 minutes on CPU.
 - **cluster**: Compatible but HIGH LOAD: ~30,450 tiles — may block server for 1-5 minutes on CPU.
 
-### generic-tiff (.dcm)
+### dicom (.dcm)
 
-> **ML: INCOMPATIBLE** — None of these slides work with ML
+> **ML: COMPATIBLE with server load risks on large slides**
 
 | Slide | MP | openslid | mpp_avai | slideflo | predict | features | heatmap | detect | focus | measure | quality | count | cluster | tags |
 |-------|-----|------|------|------|------|------|------|------|------|------|------|------|------|------|
-| `DCM_1.dcm` | 1 | OK | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | OK |
-| `DCM_4.dcm` | 0 | OK | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | OK |
-| `DCM_5.dcm` | 1 | OK | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | OK |
+| `000002.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000003.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000004.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000005.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000006.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000007.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000008.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000009.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000010.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000011.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000012.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000013.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `000014.dcm` | 3464 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `1.3.6.1.4.1.36533.1161292` | 516 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `1.3.6.1.4.1.36533.1881662` | 516 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `1.3.6.1.4.1.36533.2177323` | 516 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `1.3.6.1.4.1.36533.2391938` | 516 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `1.3.6.1.4.1.36533.2411761` | 516 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `1.3.6.1.4.1.36533.2642199` | 516 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `DCM_0.dcm` | 269 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `DCM_1.dcm` | 269 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `DCM_2.dcm` | 269 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `DCM_3.dcm` | 269 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `DCM_4.dcm` | 269 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+| `DCM_5.dcm` | 269 | OK | OK | OK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | RISK | OK |
+
+**`000002.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000003.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000004.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000005.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000006.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000007.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000008.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000009.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000010.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000011.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000012.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000013.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`000014.dcm`**:
+- **predict**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **features**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **heatmap**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **detect**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **focus**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **measure**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **quality**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **count**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+- **cluster**: Compatible but EXTREME LOAD: ~68,864 tiles — will block single-worker server for 10+ minutes on CPU. Use batch endpoint or region-based inference.
+
+**`1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+
+**`1.3.6.1.4.1.36533.1881662823325113479691652532302192524914036.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+
+**`1.3.6.1.4.1.36533.21773233891171386611617621819013191107166.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+
+**`1.3.6.1.4.1.36533.2391938919943337319712912711949255392271.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+
+**`1.3.6.1.4.1.36533.2411761230176195652241589819186191207215116.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+
+**`1.3.6.1.4.1.36533.2642199142199497125516614013324167247234250.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~10,192 tiles — may block server for 1-5 minutes on CPU.
+
+**`DCM_0.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
 
 **`DCM_1.dcm`**:
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: DICOM format explicitly blocked for ML
-  - _Extension in _UNSUPPORTED_ML_FORMATS_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
+- **predict**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+
+**`DCM_2.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+
+**`DCM_3.dcm`**:
+- **predict**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
 
 **`DCM_4.dcm`**:
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: DICOM format explicitly blocked for ML
-  - _Extension in _UNSUPPORTED_ML_FORMATS_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
+- **predict**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
 
 **`DCM_5.dcm`**:
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: DICOM format explicitly blocked for ML
-  - _Extension in _UNSUPPORTED_ML_FORMATS_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
+- **predict**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **features**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **heatmap**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **detect**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **focus**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **measure**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **quality**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **count**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
+- **cluster**: Compatible but HIGH LOAD: ~5,304 tiles — may block server for 1-5 minutes on CPU.
 
 ### generic-tiff (.tiff)
 
@@ -241,31 +441,29 @@ OpenSlide: 3.4.1 | Slideflow: latest | Backend: OpenVINO (auto)
 
 | Slide | MP | openslid | mpp_avai | slideflo | predict | features | heatmap | detect | focus | measure | quality | count | cluster | tags |
 |-------|-----|------|------|------|------|------|------|------|------|------|------|------|------|------|
-| `CMU-1.tiff` | 1514 | OK | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | OK |
+| `CMU-1.tiff` | 1514 | OK | OK | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | OK |
 
 **`CMU-1.tiff`**:
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **predict**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **features**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **heatmap**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **detect**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **focus**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **measure**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **quality**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **count**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
-- **cluster**: Slideflow prerequisite failed: No MPP metadata — Slideflow cannot determine tile scale
-  - _openslide.mpp-x property is missing. Generic TIFF files lack scanner resolution metadata._
+- **slideflow_wsi**: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **predict**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **features**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **heatmap**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **detect**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **focus**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **measure**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **quality**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **count**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
+- **cluster**: Slideflow prerequisite failed: Slideflow error at 10x
+  - _Could not detect microns-per-pixel for slide: /data/VarunaPoC/Slides/Generic-TIFF/CMU-1.tiff_
 
 ### hamamatsu (.ndpi)
 
@@ -949,651 +1147,6 @@ OpenSlide: 3.4.1 | Slideflow: latest | Backend: OpenVINO (auto)
   - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/Zeiss CZI and ZVI/Zeiss-5-Uncompressed.czi'_
 - **tags**: Cannot read slide metadata
   - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/Zeiss CZI and ZVI/Zeiss-5-Uncompressed.czi'_
-
-### unknown (.dcm)
-
-> **ML: INCOMPATIBLE** — None of these slides work with ML
-
-| Slide | MP | openslid | mpp_avai | slideflo | predict | features | heatmap | detect | focus | measure | quality | count | cluster | tags |
-|-------|-----|------|------|------|------|------|------|------|------|------|------|------|------|------|
-| `000002.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000003.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000004.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000005.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000006.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000007.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000008.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000009.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000010.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000011.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000012.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000013.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `000014.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `1.3.6.1.4.1.36533.1161292` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `1.3.6.1.4.1.36533.1881662` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `1.3.6.1.4.1.36533.2177323` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `1.3.6.1.4.1.36533.2391938` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `1.3.6.1.4.1.36533.2411761` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `1.3.6.1.4.1.36533.2642199` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `DCM_0.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `DCM_2.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-| `DCM_3.dcm` | 0 | FAIL | FAIL | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK | BLOCK |
-
-**`000002.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000002.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000002.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000002.dcm'_
-
-**`000003.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000003.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000003.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000003.dcm'_
-
-**`000004.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000004.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000004.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000004.dcm'_
-
-**`000005.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000005.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000005.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000005.dcm'_
-
-**`000006.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000006.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000006.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000006.dcm'_
-
-**`000007.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000007.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000007.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000007.dcm'_
-
-**`000008.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000008.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000008.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000008.dcm'_
-
-**`000009.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000009.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000009.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000009.dcm'_
-
-**`000010.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000010.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000010.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000010.dcm'_
-
-**`000011.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000011.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000011.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000011.dcm'_
-
-**`000012.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000012.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000012.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000012.dcm'_
-
-**`000013.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000013.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000013.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000013.dcm'_
-
-**`000014.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000014.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000014.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/000014.dcm'_
-
-**`1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dc_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dc_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dc_
-
-**`1.3.6.1.4.1.36533.1881662823325113479691652532302192524914036.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.1881662823325113479691652532302192524914036.d_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.1881662823325113479691652532302192524914036.d_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.1881662823325113479691652532302192524914036.d_
-
-**`1.3.6.1.4.1.36533.21773233891171386611617621819013191107166.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.21773233891171386611617621819013191107166.dcm_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.21773233891171386611617621819013191107166.dcm_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.21773233891171386611617621819013191107166.dcm_
-
-**`1.3.6.1.4.1.36533.2391938919943337319712912711949255392271.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2391938919943337319712912711949255392271.dcm'_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2391938919943337319712912711949255392271.dcm'_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2391938919943337319712912711949255392271.dcm'_
-
-**`1.3.6.1.4.1.36533.2411761230176195652241589819186191207215116.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2411761230176195652241589819186191207215116.d_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2411761230176195652241589819186191207215116.d_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2411761230176195652241589819186191207215116.d_
-
-**`1.3.6.1.4.1.36533.2642199142199497125516614013324167247234250.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2642199142199497125516614013324167247234250.d_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2642199142199497125516614013324167247234250.d_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _UnidentifiedImageError: cannot identify image file '/data/VarunaPoC/Slides/DICOM/1.3.6.1.4.1.36533.2642199142199497125516614013324167247234250.d_
-
-**`DCM_0.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-
-**`DCM_2.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-
-**`DCM_3.dcm`**:
-- **openslide_open**: OpenSlide cannot open this format
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-- **mpp_available**: No microns-per-pixel metadata in slide properties
-  - _This format does not embed scanner resolution. All ML features requiring tiling will fail._
-- **slideflow_wsi**: OpenSlide cannot open this file
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
-- **predict**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **features**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **heatmap**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **detect**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **focus**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **measure**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **quality**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **count**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **cluster**: DICOM format blocked for ML analysis
-  - _routes/ml.py: _UNSUPPORTED_ML_FORMATS_
-- **tags**: Cannot read slide metadata
-  - _OpenSlideError: Unsupported TIFF compression: 33003_
 
 ### unknown (.ndpi)
 

@@ -65,7 +65,8 @@ class SlideReport:
 
 # ── Constants ───────────────────────────────────────────────────────────────
 
-BLOCKED_EXTENSIONS = {".dcm", ".dicom"}
+# DICOM supported since OpenSlide 4.0 (openslide-bin wheel)
+BLOCKED_EXTENSIONS: set[str] = set()
 UNSUPPORTED_OPENSLIDE = {".vsi", ".zvi"}
 
 # Slides above this tile count risk blocking the server for > 60s
@@ -172,7 +173,20 @@ def test_slideflow_wsi(slide: SlideInfo) -> FeatureResult:
 
     # Actually try opening with Slideflow
     try:
-        import slideflow as sf
+        import slideflow as sf  # noqa: I001
+        # Patch DICOM support (OpenSlide 4.0 supports it, but Slideflow's
+        # format whitelist predates this)
+        import slideflow.util
+        for ext in ("dcm", "dicom"):
+            if ext not in slideflow.util.SUPPORTED_FORMATS:
+                slideflow.util.SUPPORTED_FORMATS.append(ext)
+        try:
+            from slideflow.slide.backends import vips as _vips_backend
+            for ext in ("dcm", "dicom"):
+                if ext not in _vips_backend.SUPPORTED_BACKEND_FORMATS:
+                    _vips_backend.SUPPORTED_BACKEND_FORMATS.append(ext)
+        except ImportError:
+            pass
         preferred_mags = ["10x", "20x", "5x", "40x"]
         for mag in preferred_mags:
             try:

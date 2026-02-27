@@ -284,6 +284,26 @@ class _PhikonExtractor:
             return self._infer_pytorch(obj)
 
 
+def _patch_slideflow_dicom_support():
+    """Add DICOM (.dcm) to Slideflow's supported formats.
+
+    Slideflow's format whitelist predates OpenSlide 4.0 DICOM support.
+    We patch both the global list and the vips backend list so that
+    Slideflow delegates .dcm files to libvips/OpenSlide as usual.
+    """
+    try:
+        import slideflow.util
+        for ext in ("dcm", "dicom"):
+            if ext not in slideflow.util.SUPPORTED_FORMATS:
+                slideflow.util.SUPPORTED_FORMATS.append(ext)
+        from slideflow.slide.backends import vips as _vips_backend
+        for ext in ("dcm", "dicom"):
+            if ext not in _vips_backend.SUPPORTED_BACKEND_FORMATS:
+                _vips_backend.SUPPORTED_BACKEND_FORMATS.append(ext)
+    except Exception:
+        pass
+
+
 class SlideflowProvider:
     """
     ML Provider basé sur Slideflow - mode progressif.
@@ -342,6 +362,7 @@ class SlideflowProvider:
             import slideflow as sf
 
             self.sf = sf
+            _patch_slideflow_dicom_support()
             logger.debug(f"Slideflow version: {sf.__version__}")
             return True
         except ImportError:
