@@ -74,14 +74,16 @@
 .viewer-main {
     flex: 1;
     position: relative;
-    display: grid;
-    grid-template-columns: 1fr 350px;
+    display: flex;
+    overflow: hidden;
 }
 
 /* Zone OpenSeadragon */
 .viewer-area {
+    flex: 1;
     position: relative;
     background: #000;
+    min-width: 0;
 }
 
 .viewer {
@@ -92,6 +94,8 @@
 
 /* Info Panel */
 .info {
+    width: 350px;
+    min-width: 350px;
     background: #1a1a1a;
     border-left: 1px solid #333;
     padding: 20px;

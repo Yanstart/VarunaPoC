@@ -106,14 +106,10 @@
     letter-spacing: 0.3px;
 }
 
-/* Viewer layout adjustment for sidebar */
+/* Viewer layout: viewer-body is now a direct child in the template */
 .viewer-body {
     display: flex;
     flex: 1;
     overflow: hidden;
-}
-
-.viewer-body .viewer-main {
-    flex: 1;
-    min-width: 0;
+    min-height: 0;
 }
