@@ -43,3 +43,7 @@ pyvips>=3.1.0
 transformers>=5.0.0
 timm>=1.0.0
 imghdr-lts>=1.0.0
+
+# ML: Optimized inference (ML_BACKEND=auto|pytorch|onnx|openvino)
+onnxruntime>=1.18.0
+openvino>=2024.0.0
