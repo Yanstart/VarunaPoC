@@ -1,21 +1,21 @@
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 openslide-python==1.3.1
-Pillow==10.2.0
+Pillow>=10.4.0
 python-multipart==0.0.6
 prometheus-client==0.19.0
 
 # Phase 2: Database + Annotations
-sqlalchemy[asyncio]==2.0.25
-asyncpg==0.29.0
+sqlalchemy[asyncio]>=2.0.29
+asyncpg>=0.30.0
 geoalchemy2==0.14.3
 alembic==1.13.1
-shapely==2.0.2
+shapely>=2.0.4
 python-dotenv==1.0.1
 
 # Phase 2: Detection pipeline
 scikit-image==0.22.0
-scipy==1.12.0
+scipy>=1.14.0
 
 # Phase 3: Auth (OIDC + JWT)
 python-jose[cryptography]==3.3.0
@@ -32,9 +32,6 @@ cachetools>=5.3.0
 
 # Rate limiting
 slowapi>=0.1.9
-
-# Phase 6: Wave 2 ML
-# scipy already included above (>=1.11.0 satisfied by 1.12.0)
 
 # Similarity search
 faiss-cpu>=1.7.4
