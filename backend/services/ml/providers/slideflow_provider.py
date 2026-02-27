@@ -108,8 +108,8 @@ def _find_onnx_model() -> Optional[Path]:
     env_path = os.getenv("ML_ONNX_MODEL", "")
     candidates = [
         Path(env_path) if env_path else Path("/dev/null"),
-        Path(__file__).parent.parent.parent / "ml_models" / "phikon-v2.quant.onnx",
-        Path(__file__).parent.parent.parent / "ml_models" / "phikon-v2.onnx",
+        Path(__file__).parent.parent.parent.parent / "ml_models" / "phikon-v2.quant.onnx",
+        Path(__file__).parent.parent.parent.parent / "ml_models" / "phikon-v2.onnx",
     ]
     for path in candidates:
         if path.is_file():
