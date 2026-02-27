@@ -326,6 +326,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# ML exported models (ONNX, OpenVINO IR)
+backend/ml_models/
+
 # Audit logs (Phase 3: Auth)
 backend/logs/
 

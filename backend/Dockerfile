@@ -10,16 +10,15 @@ LABEL version="1.7.0"
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for OpenSlide
-# OpenSlide requires: libopenslide0, openslide-tools
-# Build tools: build-essential, python3-dev (needed for openslide-python compilation)
-# Additional deps: curl (healthcheck)
+# Install system dependencies
+# OpenSlide 4.0 C library is provided by openslide-bin pip wheel (no apt needed)
+# Build tools: build-essential, python3-dev (needed for native Python extensions)
+# Additional deps: curl (healthcheck), libvips (pyvips image processing)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openslide-tools \
-    libopenslide0 \
     curl \
     build-essential \
     python3-dev \
+    libvips42t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better Docker layer caching)
@@ -33,6 +32,15 @@ RUN pip install --no-cache-dir --upgrade pip && \
 RUN apt-get purge -y --auto-remove \
     build-essential \
     python3-dev
+
+# Prepare OpenSlide 4.0 for libvips: create .so.0 symlink
+# libvips expects libopenslide.so.0 (3.x soname), but openslide-bin ships .so.1 (4.x)
+# The symlink is created at build time (before switching to non-root user).
+# LD_LIBRARY_PATH is set by config_openslide.py at startup via os.execv re-exec.
+RUN OSBIN_DIR=$(python -c "from pathlib import Path; import openslide_bin; print(Path(openslide_bin.__file__).parent)") && \
+    ln -sf libopenslide.so.1 "$OSBIN_DIR/libopenslide.so.0" && \
+    echo "$OSBIN_DIR" > /tmp/openslide_bin_path && \
+    echo "OpenSlide 4.0 symlink created in $OSBIN_DIR"
 
 # Copy application code
 COPY . .

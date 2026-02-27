@@ -19,8 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: read
-      pull-requests: read
-      repository-projects: write
+      pull-requests: write
 
     steps:
       - name: Extract linked issues from PR

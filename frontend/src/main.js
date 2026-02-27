@@ -398,12 +398,15 @@ async function showViewerPage(slide) {
             </header>
 
             <main class="viewer-main">
-                <div class="viewer-area">
-                    <div id="viewer" class="viewer"></div>
-                    <div id="ml-panel-container"></div>
-                </div>
-                <div id="info" class="info">
-                    <div class="loading">Loading slide...</div>
+                <div class="viewer-body">
+                    <div class="viewer-area">
+                        <div id="viewer" class="viewer"></div>
+                        <div id="ml-panel-container"></div>
+                    </div>
+                    <div id="info" class="info">
+                        <div class="loading">Loading slide...</div>
+                    </div>
+                    <div id="case-sidebar-container"></div>
                 </div>
             </main>
         </div>
@@ -546,28 +549,13 @@ async function showViewerPage(slide) {
 
 /**
  * Initialize the case sidebar in the viewer.
- * Wraps the viewer-main in a flex container and adds the sidebar.
+ * Populates the sidebar container with sibling slides from the same case.
  *
  * @param {Object} slide - Current slide
  */
 async function _initCaseSidebar(slide) {
-    const viewerMain = document.querySelector('.viewer-main');
-    if (!viewerMain) { return; }
-
-    // Wrap viewer-main content in a viewer-body flex container
-    const viewerBody = document.createElement('div');
-    viewerBody.className = 'viewer-body';
-
-    // Move existing viewer-main children into viewer-body
-    while (viewerMain.firstChild) {
-        viewerBody.appendChild(viewerMain.firstChild);
-    }
-    viewerMain.appendChild(viewerBody);
-
-    // Create sidebar container
-    const sidebarContainer = document.createElement('div');
-    sidebarContainer.id = 'case-sidebar-container';
-    viewerBody.appendChild(sidebarContainer);
+    const sidebarContainer = document.querySelector('#case-sidebar-container');
+    if (!sidebarContainer) { return; }
 
     // Determine case data: from case browser navigation or from slide info
     let casePath = null;

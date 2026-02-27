@@ -39,7 +39,7 @@ PATHOLOGY_LABELS = [
 
 
 def upgrade() -> None:
-    now = datetime.now(UTC).isoformat()
+    now = datetime.now(UTC)
     for label in PATHOLOGY_LABELS:
         op.execute(
             sa.text(
@@ -47,7 +47,10 @@ def upgrade() -> None:
                 "VALUES (:id, :name, :color, :category, :sort_order, :created_at) "
                 "ON CONFLICT (name) DO NOTHING"
             ).bindparams(
-                id=str(uuid.uuid4()),
+                sa.bindparam("id", type_=sa.Uuid),
+                sa.bindparam("created_at", type_=sa.DateTime(timezone=True)),
+            ).params(
+                id=uuid.uuid4(),
                 name=label["name"],
                 color=label["color"],
                 category=label["category"],

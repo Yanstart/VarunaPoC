@@ -31,7 +31,8 @@ from services.ml import TagExtractor, TagRouter
 from services.slide_scanner import get_slide_path_by_id
 
 # Formats not supported by Slideflow/OpenSlide for ML analysis
-_UNSUPPORTED_ML_FORMATS = {".dcm", ".dicom"}
+# Note: DICOM (.dcm) supported since OpenSlide 4.0 (openslide-bin wheel)
+_UNSUPPORTED_ML_FORMATS: set[str] = set()
 
 
 def _check_slide_format(slide_path: str, slide_id: str):
@@ -43,7 +44,7 @@ def _check_slide_format(slide_path: str, slide_id: str):
         raise HTTPException(
             status_code=400,
             detail=f"Slide format '{ext}' is not supported for ML analysis. "
-            f"Supported formats: SVS, MRXS, NDPI, BIF, TIFF, SCN.",
+            f"Supported formats: SVS, MRXS, NDPI, BIF, TIFF, SCN, DCM.",
         )
 
 
@@ -1596,7 +1597,7 @@ async def get_slide_tags(
         "stain": raw_tags.get("stain"),
         "marker": raw_tags.get("marker"),
         "pathology": None,  # Will be populated by ML in future
-        "confidence": raw_tags.get("confidence", 0.0),
+        "confidence": str(raw_tags.get("confidence", 0.0)),
     }
     source = raw_tags.get("source", "unknown")
 

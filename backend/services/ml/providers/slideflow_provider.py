@@ -80,27 +80,64 @@ KNOWN_EXTRACTORS = {
 CUSTOM_EXTRACTORS = {"phikon-v2"}
 
 
+def _resolve_ml_backend(requested: str) -> str:
+    """Resolve ML_BACKEND=auto to the best available backend."""
+    if requested != "auto":
+        return requested
+
+    # Try openvino first (best Intel optimization), then onnx, then pytorch
+    try:
+        import openvino
+        if _find_onnx_model():
+            return "openvino"
+    except ImportError:
+        pass
+
+    try:
+        import onnxruntime
+        if _find_onnx_model():
+            return "onnx"
+    except ImportError:
+        pass
+
+    return "pytorch"
+
+
+def _find_onnx_model() -> Optional[Path]:
+    """Locate the exported ONNX model file."""
+    env_path = os.getenv("ML_ONNX_MODEL", "")
+    candidates = [
+        Path(env_path) if env_path else Path("/dev/null"),
+        Path(__file__).parent.parent.parent.parent / "ml_models" / "phikon-v2.quant.onnx",
+        Path(__file__).parent.parent.parent.parent / "ml_models" / "phikon-v2.onnx",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
 class _PhikonExtractor:
     """
     Wrapper Phikon-v2 compatible with Slideflow's extractor API.
 
-    Phikon-v2 (Owkin) is a DINOv2-based pathology foundation model trained
-    on large-scale histopathology data from TCGA. Produces 1024-dim embeddings
-    that capture tissue morphology, cellular architecture, and staining patterns.
+    Supports multiple inference backends via ML_BACKEND env var:
+    - pytorch:  Original PyTorch (transformers AutoModel)
+    - onnx:     ONNX Runtime (requires exported .onnx model)
+    - openvino: OpenVINO Runtime (requires exported .onnx model)
+    - auto:     Best available (openvino > onnx > pytorch)
 
-    Paper: Filiot et al. (2024) "Phikon-v2: A large-scale vision foundation
-           model for digital pathology"
+    Paper: Filiot et al. (2024) "Phikon-v2"
     HuggingFace: owkin/phikon-v2
     """
 
-    def __init__(self, device="cpu"):
-        import torch
-        from transformers import AutoImageProcessor, AutoModel
+    # ImageNet/DINOv2 normalization constants
+    MEAN = [0.485, 0.456, 0.406]
+    STD = [0.229, 0.224, 0.225]
 
-        logger.info("Loading Phikon-v2 pathology foundation model...")
-        self.phikon = AutoModel.from_pretrained("owkin/phikon-v2")
-        self.image_processor = AutoImageProcessor.from_pretrained("owkin/phikon-v2")
-        self.phikon.eval()
+    def __init__(self, device="cpu"):
+        requested_backend = os.getenv("ML_BACKEND", "auto")
+        self._inference_backend = _resolve_ml_backend(requested_backend)
 
         # Slideflow-compatible attributes
         self.num_features = 1024
@@ -114,14 +151,73 @@ class _PhikonExtractor:
         self.wsi_normalizer = None
         self.preprocess_kwargs = {}
 
-        if device == "cuda":
-            self.phikon = self.phikon.cuda()
+        # Backend-specific model references
+        self._pt_model = None
+        self._onnx_session = None
+        self._ov_infer = None
+        self._ov_output_key = None
 
-        # Cache normalization tensors
-        self._mean = torch.tensor(self.image_processor.image_mean).view(1, 3, 1, 1)
-        self._std = torch.tensor(self.image_processor.image_std).view(1, 3, 1, 1)
+        if self._inference_backend == "openvino":
+            self._load_openvino()
+        elif self._inference_backend == "onnx":
+            self._load_onnx()
+        else:
+            self._load_pytorch()
 
-        logger.info(f"Phikon-v2 loaded (1024-dim, device: {device})")
+        # Cache normalization arrays for onnx/openvino (numpy)
+        self._np_mean = np.array(self.MEAN, dtype=np.float32).reshape(1, 3, 1, 1)
+        self._np_std = np.array(self.STD, dtype=np.float32).reshape(1, 3, 1, 1)
+
+        logger.info(
+            f"Phikon-v2 loaded (1024-dim, backend: {self._inference_backend}, "
+            f"device: {device})"
+        )
+
+    def _load_pytorch(self):
+        import torch
+        from transformers import AutoModel
+
+        logger.info("Loading Phikon-v2 via PyTorch...")
+        self._pt_model = AutoModel.from_pretrained("owkin/phikon-v2")
+        self._pt_model.eval()
+        if self._device == "cuda":
+            self._pt_model = self._pt_model.cuda()
+
+        # Cache torch normalization tensors
+        self._torch_mean = torch.tensor(self.MEAN).view(1, 3, 1, 1)
+        self._torch_std = torch.tensor(self.STD).view(1, 3, 1, 1)
+
+    def _load_onnx(self):
+        import onnxruntime as ort
+
+        onnx_path = _find_onnx_model()
+        if not onnx_path:
+            logger.warning("ONNX model not found, falling back to PyTorch")
+            self._inference_backend = "pytorch"
+            self._load_pytorch()
+            return
+
+        logger.info(f"Loading Phikon-v2 via ONNX Runtime: {onnx_path}")
+        self._onnx_session = ort.InferenceSession(
+            str(onnx_path),
+            providers=["CPUExecutionProvider"],
+        )
+
+    def _load_openvino(self):
+        import openvino as ov
+
+        onnx_path = _find_onnx_model()
+        if not onnx_path:
+            logger.warning("ONNX model not found, falling back to PyTorch")
+            self._inference_backend = "pytorch"
+            self._load_pytorch()
+            return
+
+        logger.info(f"Loading Phikon-v2 via OpenVINO: {onnx_path}")
+        core = ov.Core()
+        compiled = core.compile_model(str(onnx_path), "CPU")
+        self._ov_infer = compiled.create_infer_request()
+        self._ov_output_key = compiled.output(0)
 
     @property
     def device(self):
@@ -133,26 +229,79 @@ class _PhikonExtractor:
     def is_tensorflow(self):
         return False
 
-    def __call__(self, obj, **kwargs):
-        import slideflow as sf
+    def _preprocess_numpy(self, tensor) -> np.ndarray:
+        """Convert torch uint8 tensor (B,3,H,W) to normalized float32 numpy."""
         import torch
 
-        if isinstance(obj, sf.WSI):
-            from slideflow.model.extractors._slide import features_from_slide
+        arr = tensor.cpu().numpy() if isinstance(tensor, torch.Tensor) else np.asarray(tensor)
+        arr = arr.astype(np.float32) / 255.0
+        return (arr - self._np_mean) / self._np_std
 
-            return features_from_slide(self, obj, **kwargs)
+    def _infer_pytorch(self, images_tensor):
+        """Run inference via PyTorch."""
+        import torch
 
-        # obj is a tensor (B, 3, H, W) uint8 from Slideflow's tile pipeline
-        images = obj.float() / 255.0
-        mean = self._mean.to(images.device)
-        std = self._std.to(images.device)
+        images = images_tensor.float() / 255.0
+        mean = self._torch_mean.to(images.device)
+        std = self._torch_std.to(images.device)
         images = (images - mean) / std
 
         with torch.no_grad():
-            outputs = self.phikon(pixel_values=images)
-            features = outputs.last_hidden_state[:, 0, :]  # CLS token
+            outputs = self._pt_model(pixel_values=images)
+            return outputs.last_hidden_state[:, 0, :]
 
-        return features
+    def _infer_onnx(self, images_tensor):
+        """Run inference via ONNX Runtime."""
+        import torch
+
+        np_input = self._preprocess_numpy(images_tensor)
+        result = self._onnx_session.run(None, {"pixel_values": np_input})
+        features = result[0][:, 0, :]
+        return torch.tensor(features, device=images_tensor.device)
+
+    def _infer_openvino(self, images_tensor):
+        """Run inference via OpenVINO."""
+        import torch
+
+        np_input = self._preprocess_numpy(images_tensor)
+        self._ov_infer.infer({"pixel_values": np_input})
+        result = self._ov_infer.get_output_tensor(0).data
+        features = result[:, 0, :]
+        return torch.tensor(features.copy(), device=images_tensor.device)
+
+    def __call__(self, obj, **kwargs):
+        import slideflow as sf
+
+        if isinstance(obj, sf.WSI):
+            from slideflow.model.extractors._slide import features_from_slide
+            return features_from_slide(self, obj, **kwargs)
+
+        if self._inference_backend == "openvino":
+            return self._infer_openvino(obj)
+        elif self._inference_backend == "onnx":
+            return self._infer_onnx(obj)
+        else:
+            return self._infer_pytorch(obj)
+
+
+def _patch_slideflow_dicom_support():
+    """Add DICOM (.dcm) to Slideflow's supported formats.
+
+    Slideflow's format whitelist predates OpenSlide 4.0 DICOM support.
+    We patch both the global list and the vips backend list so that
+    Slideflow delegates .dcm files to libvips/OpenSlide as usual.
+    """
+    try:
+        import slideflow.util
+        for ext in ("dcm", "dicom"):
+            if ext not in slideflow.util.SUPPORTED_FORMATS:
+                slideflow.util.SUPPORTED_FORMATS.append(ext)
+        from slideflow.slide.backends import vips as _vips_backend
+        for ext in ("dcm", "dicom"):
+            if ext not in _vips_backend.SUPPORTED_BACKEND_FORMATS:
+                _vips_backend.SUPPORTED_BACKEND_FORMATS.append(ext)
+    except Exception:
+        pass
 
 
 class SlideflowProvider:
@@ -213,6 +362,7 @@ class SlideflowProvider:
             import slideflow as sf
 
             self.sf = sf
+            _patch_slideflow_dicom_support()
             logger.debug(f"Slideflow version: {sf.__version__}")
             return True
         except ImportError:
