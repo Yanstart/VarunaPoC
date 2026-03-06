@@ -19,6 +19,8 @@ import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
 import { annotationStore } from '../services/AnnotationStore.js';
+import { userFriendlyMLError } from '../services/mlErrors.js';
+import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
 class DetectionPanel {
     /**
@@ -29,8 +31,10 @@ class DetectionPanel {
     constructor(container, options = {}) {
         this.container = container;
         this.slideId = options.slideId || null;
+        this._viewerInstance = options.viewerInstance || null;
 
         // State
+        this.analysisScope = 'slide';
         this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_detection_open') !== 'true'; } catch (_) { return true; } })();
         this.isDetecting = false;
         this.threshold = 0.5;
@@ -49,6 +53,9 @@ class DetectionPanel {
         this.accepted = new Set();
         /** @type {Set<number>} Indices of rejected detections */
         this.rejected = new Set();
+
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
 
         this.element = null;
         this._create();
@@ -157,6 +164,20 @@ class DetectionPanel {
 
                 ${this._buildLabelSelector()}
 
+                <div class="detection-panel__scope">
+                    <label>Portee</label>
+                    <div class="detection-panel__scope-radios">
+                        <label class="detection-panel__scope-option">
+                            <input type="radio" name="detect-scope" value="slide" ${this.analysisScope === 'slide' ? 'checked' : ''}>
+                            Lame entiere
+                        </label>
+                        <label class="detection-panel__scope-option">
+                            <input type="radio" name="detect-scope" value="viewport" ${this.analysisScope === 'viewport' ? 'checked' : ''}>
+                            Vue actuelle
+                        </label>
+                    </div>
+                </div>
+
                 <button class="detection-panel__btn detection-panel__btn--primary" ${!this.slideId ? 'disabled' : ''}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -180,6 +201,13 @@ class DetectionPanel {
         });
 
         this._bindLabelSelector();
+
+        // Scope radios
+        this.element.querySelectorAll('input[name="detect-scope"]').forEach((radio) => {
+            radio.addEventListener('change', (e) => {
+                this.analysisScope = e.target.value;
+            });
+        });
 
         // Detect button
         this.element.querySelector('.detection-panel__btn--primary').addEventListener('click', () => {
@@ -410,8 +438,12 @@ class DetectionPanel {
     async _runDetection() {
         if (!this.slideId || this.isDetecting) {return;}
 
+        const canProceed = await requestMLWorkerAccess('D\u00e9tection automatique');
+        if (!canProceed) return;
+
         this.isDetecting = true;
         this._renderLoading();
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'detection', label: 'D\u00e9tection automatique' });
         eventBus.emit(Events.DETECTION_START, { slideId: this.slideId });
 
         try {
@@ -448,9 +480,10 @@ class DetectionPanel {
         } catch (err) {
             console.error('[DetectionPanel] Detection failed:', err);
             eventBus.emit(Events.DETECTION_ERROR, { error: err.message });
-            this._renderError(err.message);
+            this._renderError(userFriendlyMLError(err));
         } finally {
             this.isDetecting = false;
+            eventBus.emit(Events.ML_WORKER_FREE);
         }
     }
 
@@ -591,6 +624,8 @@ class DetectionPanel {
     }
 
     destroy() {
+        this._unsubscribers.forEach(unsub => unsub());
+        this._unsubscribers = [];
         this._resetState();
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);

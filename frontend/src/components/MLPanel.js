@@ -13,6 +13,8 @@
 import { apiService } from '../services/ApiService.js';
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
+import { userFriendlyMLError } from '../services/mlErrors.js';
+import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
 /**
  * MLPanel component
@@ -27,9 +29,11 @@ class MLPanel {
     constructor(container, options = {}) {
         this.container = container;
         this.viewerId = options.viewerId || null;
+        this._viewerInstance = options.viewerInstance || null;
         this.slideId = null;
 
         // State
+        this.analysisScope = 'slide';
         this.selectedModelId = null;
         this.prediction = null;
         this.heatmapVisible = false;
@@ -77,6 +81,19 @@ class MLPanel {
                     <select class="ml-panel__model-select" disabled>
                         <option value="">Chargement...</option>
                     </select>
+                </div>
+                <div class="ml-panel__scope">
+                    <label class="ml-panel__scope-label">Portee</label>
+                    <div class="ml-panel__scope-radios">
+                        <label class="ml-panel__scope-option">
+                            <input type="radio" name="ml-scope" value="slide" checked>
+                            Lame entiere
+                        </label>
+                        <label class="ml-panel__scope-option">
+                            <input type="radio" name="ml-scope" value="viewport">
+                            Vue actuelle
+                        </label>
+                    </div>
                 </div>
                 <div class="ml-panel__actions">
                     <button class="ml-panel__btn ml-panel__btn--predict" disabled>
@@ -147,6 +164,13 @@ class MLPanel {
      * @private
      */
     _setupEventListeners() {
+        // Scope radios
+        this.element.querySelectorAll('input[name="ml-scope"]').forEach((radio) => {
+            radio.addEventListener('change', (e) => {
+                this.analysisScope = e.target.value;
+            });
+        });
+
         // Predict button
         this.predictBtn.addEventListener('click', () => this._runPrediction());
 
@@ -232,6 +256,9 @@ class MLPanel {
     async _runPrediction() {
         if (!this.slideId || this.isLoading) {return;}
 
+        const canProceed = await requestMLWorkerAccess('Analyse IA');
+        if (!canProceed) return;
+
         this.isLoading = true;
         this.predictBtn.disabled = true;
         this.predictBtn.innerHTML = `
@@ -248,16 +275,27 @@ class MLPanel {
             </div>
         `;
 
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'ml', label: 'Analyse IA' });
         eventBus.emit(Events.ML_PREDICTION_START, {
             viewerId: this.viewerId,
             slideId: this.slideId,
         });
 
         try {
-            const result = await apiService.predict(this.slideId, {
+            const predictOptions = {
                 numMcSamples: 10,
                 modelId: this.selectedModelId || undefined,
-            });
+            };
+
+            // Viewport mode: send pixel region
+            if (this.analysisScope === 'viewport' && this._viewerInstance) {
+                const region = this._viewerInstance.getViewportPixelBounds();
+                if (region) {
+                    predictOptions.region = region;
+                }
+            }
+
+            const result = await apiService.predict(this.slideId, predictOptions);
 
             this.prediction = result;
             this._displayResults(result);
@@ -273,7 +311,7 @@ class MLPanel {
 
         } catch (error) {
             console.error('ML Prediction error:', error);
-            this._displayError(error.message || 'Prediction failed');
+            this._displayError(userFriendlyMLError(error));
 
             eventBus.emit(Events.ML_PREDICTION_ERROR, {
                 viewerId: this.viewerId,
@@ -283,6 +321,7 @@ class MLPanel {
         } finally {
             this.isLoading = false;
             this.predictBtn.disabled = false;
+            // Safe: static SVG icon, no user data
             this.predictBtn.innerHTML = `
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="10"/>
@@ -291,6 +330,7 @@ class MLPanel {
                 </svg>
                 Analyser la lame
             `;
+            eventBus.emit(Events.ML_WORKER_FREE);
         }
     }
 

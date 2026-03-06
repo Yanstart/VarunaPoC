@@ -7,7 +7,7 @@
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
-  "accessTokenLifespan": 300,
+  "accessTokenLifespan": 3600,
   "accessTokenLifespanForImplicitFlow": 900,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,
@@ -149,8 +149,8 @@
           "type": "password",
           "userLabel": "Initial password",
           "createdDate": 1707523200000,
-          "secretData": "{\"value\":\"sYq0R4TIyOkXwKKfhAA+PUWXPKy1o97mLFXwFQzWcJx1b8NmLqzQPZ0d7M3R8rPQ\",\"salt\":\"8qT8NrH8Y4e8xT5M2g2d+A==\",\"additionalParameters\":{}}",
-          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+          "secretData": "{\"value\": \"HDjBENk/rM10Z1j36l0G8Jf68SN0Ko8QfOy9gTXBRSw=\", \"salt\": \"1dvkPYRf4PXffFvqIxm6Bw==\", \"additionalParameters\": {}}",
+          "credentialData": "{\"hashIterations\": 27500, \"algorithm\": \"pbkdf2-sha256\", \"additionalParameters\": {}}"
         }
       ],
       "disableableCredentialTypes": [],
@@ -175,8 +175,8 @@
           "type": "password",
           "userLabel": "Initial password",
           "createdDate": 1707523200000,
-          "secretData": "{\"value\":\"sYq0R4TIyOkXwKKfhAA+PUWXPKy1o97mLFXwFQzWcJx1b8NmLqzQPZ0d7M3R8rPQ\",\"salt\":\"8qT8NrH8Y4e8xT5M2g2d+A==\",\"additionalParameters\":{}}",
-          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+          "secretData": "{\"value\": \"07v56gvN7umzVN3TDzZuPkNdSp/Q4fkxT3oMBaLXr7Y=\", \"salt\": \"TWMOxp8oYdO9hAI1sYwb5Q==\", \"additionalParameters\": {}}",
+          "credentialData": "{\"hashIterations\": 27500, \"algorithm\": \"pbkdf2-sha256\", \"additionalParameters\": {}}"
         }
       ],
       "disableableCredentialTypes": [],
@@ -201,8 +201,8 @@
           "type": "password",
           "userLabel": "Initial password",
           "createdDate": 1707523200000,
-          "secretData": "{\"value\":\"sYq0R4TIyOkXwKKfhAA+PUWXPKy1o97mLFXwFQzWcJx1b8NmLqzQPZ0d7M3R8rPQ\",\"salt\":\"8qT8NrH8Y4e8xT5M2g2d+A==\",\"additionalParameters\":{}}",
-          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+          "secretData": "{\"value\": \"h317B4aEPE+94hBdUJ1KTy2ENlVkOIhcsGNGiFR3Lv0=\", \"salt\": \"fvJYlFEXaT9LwdtFmbLuFQ==\", \"additionalParameters\": {}}",
+          "credentialData": "{\"hashIterations\": 27500, \"algorithm\": \"pbkdf2-sha256\", \"additionalParameters\": {}}"
         }
       ],
       "disableableCredentialTypes": [],
@@ -227,8 +227,8 @@
           "type": "password",
           "userLabel": "Initial password",
           "createdDate": 1707523200000,
-          "secretData": "{\"value\":\"sYq0R4TIyOkXwKKfhAA+PUWXPKy1o97mLFXwFQzWcJx1b8NmLqzQPZ0d7M3R8rPQ\",\"salt\":\"8qT8NrH8Y4e8xT5M2g2d+A==\",\"additionalParameters\":{}}",
-          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+          "secretData": "{\"value\": \"RmN4qaQYCD03c4oBhh/qumyRR8zIVv6hJXf8X5VhJkI=\", \"salt\": \"NYhuo7xGxSv+VJDHqgMOcg==\", \"additionalParameters\": {}}",
+          "credentialData": "{\"hashIterations\": 27500, \"algorithm\": \"pbkdf2-sha256\", \"additionalParameters\": {}}"
         }
       ],
       "disableableCredentialTypes": [],
@@ -497,15 +497,6 @@
   "internationalizationEnabled": false,
   "supportedLocales": [],
   "defaultLocale": "",
-  "authenticationFlows": [],
-  "authenticatorConfig": [],
-  "requiredActions": [],
-  "browserFlow": "browser",
-  "registrationFlow": "registration",
-  "directGrantFlow": "direct grant",
-  "resetCredentialsFlow": "reset credentials",
-  "clientAuthenticationFlow": "clients",
-  "dockerAuthenticationFlow": "docker auth",
   "attributes": {
     "cibaBackchannelTokenDeliveryMode": "poll",
     "cibaExpiresIn": "120",

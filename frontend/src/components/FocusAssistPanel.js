@@ -14,7 +14,10 @@
  */
 
 import { eventBus } from '../core/EventBus.js';
+import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { userFriendlyMLError } from '../services/mlErrors.js';
+import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
 class FocusAssistPanel {
     /**
@@ -38,6 +41,9 @@ class FocusAssistPanel {
         this.element = null;
         /** @type {HTMLElement|null} */
         this._body = null;
+
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
 
         this._create();
     }
@@ -338,8 +344,12 @@ class FocusAssistPanel {
     async _loadZones() {
         if (!this.slideId || this.isLoading) {return;}
 
+        const canProceed = await requestMLWorkerAccess('Zones d\u2019int\u00e9r\u00eat IA');
+        if (!canProceed) return;
+
         this.isLoading = true;
         this._renderLoading();
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'focusAssist', label: 'Zones d\u2019int\u00e9r\u00eat IA' });
 
         try {
             const response = await apiService.getFocusZones(this.slideId, {
@@ -352,9 +362,10 @@ class FocusAssistPanel {
             this._renderResults();
         } catch (err) {
             console.error('[FocusAssistPanel] Failed to load zones:', err);
-            this._renderError(err.message || 'Erreur inconnue');
+            this._renderError(userFriendlyMLError(err));
         } finally {
             this.isLoading = false;
+            eventBus.emit(Events.ML_WORKER_FREE);
         }
     }
 
@@ -401,6 +412,8 @@ class FocusAssistPanel {
      * Destroy the panel and clean up
      */
     destroy() {
+        this._unsubscribers.forEach(unsub => unsub());
+        this._unsubscribers = [];
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);
         }

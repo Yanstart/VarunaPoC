@@ -76,6 +76,8 @@ export const Events = Object.freeze({
     ML_HEATMAP_OPACITY_CHANGE: 'ml:heatmapOpacityChange',
     ML_MODEL_LOADED: 'ml:modelLoaded',
     ML_MODEL_UNLOADED: 'ml:modelUnloaded',
+    ML_WORKER_BUSY: 'ml:workerBusy',
+    ML_WORKER_FREE: 'ml:workerFree',
 
     // Annotation events
     ANNOTATION_CREATED: 'annotation:created',

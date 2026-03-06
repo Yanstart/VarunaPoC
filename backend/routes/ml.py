@@ -17,6 +17,7 @@ References:
 
 import base64
 import logging
+import os
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
@@ -28,7 +29,72 @@ from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
 from core.interfaces import get_provider
 from services.ml import TagExtractor, TagRouter
+from services.ml.worker import (
+    MLWorkerBusyError,
+    MLWorkerDownError,
+    MLWorkerExecutionError,
+    MLWorkerProxy,
+    MLWorkerTimeoutError,
+)
 from services.slide_scanner import get_slide_path_by_id
+
+# ---------------------------------------------------------------------------
+# ML Worker: isolated process for heavy inference
+# ---------------------------------------------------------------------------
+_ml_worker: Optional[MLWorkerProxy] = None
+
+
+def get_ml_worker() -> MLWorkerProxy:
+    """Get or create the ML worker singleton."""
+    global _ml_worker
+    if _ml_worker is None:
+        _ml_worker = MLWorkerProxy()
+        _ml_worker.start()
+    elif not _ml_worker.is_alive():
+        _ml_worker.restart()
+    return _ml_worker
+
+
+# ---------------------------------------------------------------------------
+# Error translation: technical errors -> readable French messages
+# ---------------------------------------------------------------------------
+ML_ERROR_MESSAGES = {
+    "microns-per-pixel": "Cette lame n'a pas de metadonnees de resolution (MPP).",
+    "missing_mpp": "Cette lame n'a pas de metadonnees de resolution (MPP).",
+    "busy": "Le moteur d'inference est occupe. Reessayez dans quelques secondes.",
+    "out of memory": "Memoire insuffisante pour analyser cette lame.",
+    "oom": "Memoire insuffisante pour analyser cette lame.",
+    "timeout": "L'analyse a pris trop de temps (>2 min).",
+    "model not loaded": "Le modele IA n'est pas charge. Contactez l'administrateur.",
+    "no model loaded": "Aucun modele IA n'est charge.",
+    "not supported for ml": "Ce format de lame n'est pas supporte pour l'analyse IA.",
+    "provider unavailable": "Le moteur d'analyse IA n'est pas disponible.",
+}
+
+
+def _translate_ml_error(error: Exception) -> HTTPException:
+    """Translate an ML error into an HTTPException with a readable French message."""
+    if isinstance(error, MLWorkerBusyError):
+        return HTTPException(status_code=429, detail=str(error))
+
+    if isinstance(error, MLWorkerTimeoutError):
+        return HTTPException(status_code=504, detail=str(error))
+
+    if isinstance(error, MLWorkerDownError):
+        return HTTPException(
+            status_code=503,
+            detail="Le service d'analyse IA n'est pas disponible actuellement.",
+        )
+
+    # Check known patterns in the error message
+    error_str = str(error).lower()
+    for pattern, message in ML_ERROR_MESSAGES.items():
+        if pattern in error_str:
+            return HTTPException(status_code=500, detail=message)
+
+    # Default: generic error
+    return HTTPException(status_code=500, detail=str(error))
+
 
 # Formats not supported by Slideflow/OpenSlide for ML analysis
 # Note: DICOM (.dcm) supported since OpenSlide 4.0 (openslide-bin wheel)
@@ -51,6 +117,21 @@ def _check_slide_format(slide_path: str, slide_id: str):
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ml", tags=["Machine Learning"])
+
+
+# ============================================================================
+# CANCEL ENDPOINT
+# ============================================================================
+
+
+@router.post("/cancel", summary="Cancel the current ML job")
+async def cancel_ml_job(
+    _user: CurrentUser = Depends(get_current_user),
+):
+    """Cancel the running ML job by restarting the worker process."""
+    worker = get_ml_worker()
+    cancelled = worker.cancel_current()
+    return {"status": "cancelled" if cancelled else "idle"}
 
 
 # ============================================================================
@@ -454,7 +535,6 @@ def get_disk_cache():
 async def predict_slide(
     slide_id: str,
     request: PredictionRequest = PredictionRequest(),
-    provider=Depends(get_ml_provider),
     tag_extractor=Depends(get_tag_extractor),
     tag_router=Depends(get_tag_router),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
@@ -466,7 +546,7 @@ async def predict_slide(
     1. Récupérer slide depuis DB/storage
     2. Extraire tags (organ, stain) via TagExtractor
     3. Router vers modèle approprié via TagRouter
-    4. Inference via MLProvider
+    4. Inference via ML Worker (process isolé)
     5. Retourner résultat
 
     Args:
@@ -478,7 +558,8 @@ async def predict_slide(
 
     Errors:
         404: Slide introuvable
-        400: Paramètres invalides
+        429: Worker occupe
+        504: Timeout
         500: Erreur ML
 
     Examples:
@@ -499,68 +580,18 @@ async def predict_slide(
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        # Check if provider is already loaded in extractor mode
-        # → skip tag routing (no trained models needed)
-        if provider.model_loaded and getattr(provider, "mode", "") == "extractor":
-            # Phase 1-2: Use pre-loaded feature extractor directly
-            region_tuple = (
-                (request.region.x, request.region.y, request.region.width, request.region.height)
-                if request.region
-                else None
-            )
-
-            result = provider.predict(slide_path, region=region_tuple)
-
-            return PredictionResponse(
-                slide_id=slide_id,
-                prediction_class=result.prediction_class,
-                confidence=result.confidence,
-                uncertainty=result.uncertainty,
-                probabilities=result.probabilities,
-                execution_time_ms=result.execution_time_ms,
-                model_id=result.model_id,
-                model_name=provider.model_config.get("extractor_name", "feature_extractor"),
-                tags=result.metadata,
-            )
-
-        # Phase 3: Full tag routing → specialized model
-        from pathlib import Path
-
-        ext = Path(slide_path).suffix.upper().lstrip(".")
-        slide_format = ext if ext else "UNKNOWN"
-
-        # Extract tags
-        logger.info(f"Extracting tags for: {slide_id}")
-        tags = tag_extractor.extract_tags(slide_path, slide_format)
-
-        # Route to model
-        if request.model_id:
-            route = tag_router.get_route_by_model_id(request.model_id)
-            if not route:
-                raise HTTPException(status_code=404, detail=f"Model {request.model_id} not found")
-        else:
-            route = tag_router.route(tags)
-
-        # Load model
-        logger.info(f"Loading model: {route.model_id}")
-        model_config = {
-            "model_id": route.model_id,
-            "model_name": route.model_name,
-            "version": route.model_version,
-            "classes": route.required_tags.get("classes", []),
-            "tile_size": 224,
-            "num_mc_samples": request.num_mc_samples,
-        }
-        provider.load_model(route.model_path, model_config)
-
-        # Predict
+        worker = get_ml_worker()
         region_tuple = (
             (request.region.x, request.region.y, request.region.width, request.region.height)
             if request.region
             else None
         )
 
-        result = provider.predict(slide_path, region=region_tuple)
+        result = await worker.submit("predict", slide_path, region=region_tuple)
+
+        # Model name from env config (model itself is in worker process)
+        model_name = os.getenv("ML_EXTRACTOR", "feature_extractor")
+        tags = result.metadata
 
         return PredictionResponse(
             slide_id=slide_id,
@@ -570,26 +601,30 @@ async def predict_slide(
             probabilities=result.probabilities,
             execution_time_ms=result.execution_time_ms,
             model_id=result.model_id,
-            model_name=route.model_name,
+            model_name=model_name,
             tags=tags,
         )
 
     except HTTPException:
         raise
+    except (MLWorkerBusyError, MLWorkerTimeoutError, MLWorkerDownError) as e:
+        logger.warning(f"ML worker error: {e}")
+        raise _translate_ml_error(e)
+    except MLWorkerExecutionError as e:
+        logger.error(f"ML prediction failed in worker: {e}")
+        raise _translate_ml_error(e)
     except MLProviderError as e:
         logger.error(f"ML prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Internal error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 @router.post("/features/{slide_id}", response_model=FeatureExtractionResponse)
 async def extract_features(
     slide_id: str,
     request: FeatureExtractionRequest = FeatureExtractionRequest(),
-    provider=Depends(get_ml_provider),
-    tag_router=Depends(get_tag_router),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -621,23 +656,13 @@ async def extract_features(
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        # In extractor mode, the provider is already loaded with the extractor
-        # → use it directly without routing
-        if not provider.model_loaded:
-            # Fallback: try to load via routing if provider not pre-loaded
-            route = tag_router.get_route_by_model_id(request.model_id or "feature_extractor")
-            model_config = {
-                "model_id": route.model_id if route else "feature_extractor",
-                "embedding_dim": 512,
-            }
-            provider.load_model(
-                route.model_path if route else "mock://feature_extractor", model_config
-            )
+        # Extract features via ML worker (heavy — isolated process)
+        worker = get_ml_worker()
+        result = await worker.submit(
+            "extract_features", slide_path, request.tile_size, request.overlap
+        )
 
-        # Extract features
-        result = provider.extract_features(slide_path, request.tile_size, request.overlap)
-
-        response = FeatureExtractionResponse(
+        return FeatureExtractionResponse(
             slide_id=slide_id,
             num_patches=result.num_patches,
             embedding_dim=result.embedding_dim,
@@ -646,13 +671,14 @@ async def extract_features(
             storage_path=None,
         )
 
-        return response
-
     except HTTPException:
         raise
-    except MLProviderError as e:
+    except (MLWorkerBusyError, MLWorkerTimeoutError, MLWorkerDownError) as e:
+        logger.warning(f"ML worker error: {e}")
+        raise _translate_ml_error(e)
+    except (MLWorkerExecutionError, MLProviderError) as e:
         logger.error(f"Feature extraction failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
 
 
 @router.get("/heatmap/{slide_id}")
@@ -661,7 +687,6 @@ async def get_heatmap(
     prediction_class: str = Query(..., description="Target class for heatmap"),
     resolution_level: int = Query(2, ge=0, le=5, description="Resolution level (0=max)"),
     colormap: str = Query("jet", description="Matplotlib colormap (jet, hot, viridis, etc.)"),
-    provider=Depends(get_ml_provider),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -691,8 +716,11 @@ async def get_heatmap(
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        # Generate heatmap
-        result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
+        # Generate heatmap via ML worker (heavy — isolated process)
+        worker = get_ml_worker()
+        result = await worker.submit(
+            "generate_heatmap", slide_path, prediction_class, resolution_level
+        )
 
         # Convert to RGB PNG
         rgb_heatmap = result.to_rgb(colormap=colormap)
@@ -719,9 +747,12 @@ async def get_heatmap(
 
     except HTTPException:
         raise
-    except MLProviderError as e:
+    except (MLWorkerBusyError, MLWorkerTimeoutError, MLWorkerDownError) as e:
+        logger.warning(f"ML worker error: {e}")
+        raise _translate_ml_error(e)
+    except (MLWorkerExecutionError, MLProviderError) as e:
         logger.error(f"Heatmap generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
 
 
 @router.post("/detect/{slide_id}")
@@ -732,7 +763,6 @@ async def detect_regions_endpoint(
     simplify_tolerance: float = Query(2.0, ge=0.0, description="Douglas-Peucker tolerance"),
     resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution level"),
     prediction_class: str = Query("tissue", description="Target class for heatmap"),
-    provider=Depends(get_ml_provider),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -756,14 +786,16 @@ async def detect_regions_endpoint(
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        # Generate heatmap via existing ML provider
-        heatmap_result = provider.generate_heatmap(
+        # Generate heatmap via ML worker (heavy — isolated process)
+        worker = get_ml_worker()
+        heatmap_result = await worker.submit(
+            "generate_heatmap",
             slide_path,
             prediction_class,
             resolution_level,
         )
 
-        # Run detection pipeline
+        # Run detection pipeline (lightweight, runs in main process)
         geojson = run_pipeline(
             heatmap=heatmap_result.heatmap,
             slide_dimensions=heatmap_result.slide_dimensions,
@@ -791,12 +823,15 @@ async def detect_regions_endpoint(
 
     except HTTPException:
         raise
-    except MLProviderError as e:
+    except (MLWorkerBusyError, MLWorkerTimeoutError, MLWorkerDownError) as e:
+        logger.warning(f"ML worker error: {e}")
+        raise _translate_ml_error(e)
+    except (MLWorkerExecutionError, MLProviderError) as e:
         logger.error(f"Detection failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Detection error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Detection error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 def _compute_focus_zones(heatmap, slide_dimensions, threshold, top_n):
@@ -854,7 +889,6 @@ async def get_focus_zones(
     threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum attention score"),
     resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution"),
     prediction_class: str = Query("tissue", description="Target class"),
-    provider=Depends(get_ml_provider),
     disk_cache: DiskCache = Depends(get_disk_cache),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
@@ -871,10 +905,13 @@ async def get_focus_zones(
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        # Check disk cache for heatmap
-        model_id = (
-            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
-        )
+        # Model ID from env config (model itself is in worker process)
+        ml_mode = os.getenv("ML_MODE", "extractor")
+        if ml_mode == "classifier":
+            model_id = os.getenv("ML_MODEL_ID", "custom_classifier")
+        else:
+            extractor = os.getenv("ML_EXTRACTOR", "resnet50_imagenet")
+            model_id = f"{extractor}_features"
         cached_heatmap = disk_cache.load_heatmap(slide_id, model_id)
 
         if cached_heatmap is not None:
@@ -886,9 +923,10 @@ async def get_focus_zones(
             slide_dimensions = slide.dimensions
             slide.close()
         else:
-            # Generate heatmap
-            heatmap_result = provider.generate_heatmap(
-                slide_path, prediction_class, resolution_level
+            # Generate heatmap via ML worker (heavy — isolated process)
+            worker = get_ml_worker()
+            heatmap_result = await worker.submit(
+                "generate_heatmap", slide_path, prediction_class, resolution_level
             )
             heatmap = heatmap_result.heatmap
             slide_dimensions = heatmap_result.slide_dimensions
@@ -914,12 +952,15 @@ async def get_focus_zones(
 
     except HTTPException:
         raise
-    except MLProviderError as e:
+    except (MLWorkerBusyError, MLWorkerTimeoutError, MLWorkerDownError) as e:
+        logger.warning(f"ML worker error: {e}")
+        raise _translate_ml_error(e)
+    except (MLWorkerExecutionError, MLProviderError) as e:
         logger.error(f"Focus assist failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Focus assist error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Focus assist error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 @router.get("/measure/{slide_id}", response_model=MeasurementResponse)
@@ -928,7 +969,6 @@ async def measure_slide(
     threshold: float = Query(0.5, ge=0.0, le=1.0),
     prediction_class: str = Query("tissue"),
     resolution_level: int = Query(2, ge=0, le=5),
-    provider=Depends(get_ml_provider),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Auto-measure tumor dimensions in millimeters."""
@@ -945,8 +985,11 @@ async def measure_slide(
         mpp = float(slide.properties.get("openslide.mpp-x", "0.25"))
         slide.close()
 
-        # Generate heatmap
-        heatmap_result = provider.generate_heatmap(slide_path, prediction_class, resolution_level)
+        # Generate heatmap via ML worker (heavy — isolated process)
+        worker = get_ml_worker()
+        heatmap_result = await worker.submit(
+            "generate_heatmap", slide_path, prediction_class, resolution_level
+        )
 
         # Extract contours
         from services.detection.postprocessing import heatmap_to_contours
@@ -971,19 +1014,21 @@ async def measure_slide(
 
     except HTTPException:
         raise
-    except MLProviderError as e:
+    except (MLWorkerBusyError, MLWorkerTimeoutError, MLWorkerDownError) as e:
+        logger.warning(f"ML worker error: {e}")
+        raise _translate_ml_error(e)
+    except (MLWorkerExecutionError, MLProviderError) as e:
         logger.error(f"Measurement failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Measurement error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Measurement error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 @router.post("/count/{slide_id}", response_model=CountingResponse)
 async def count_cells(
     slide_id: str,
     request: CountRequest = CountRequest(),
-    provider=Depends(get_ml_provider),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -994,20 +1039,19 @@ async def count_cells(
 
     Used by frontend CellCountingPanel (Wave 4).
     """
-    from services.ml.counting import CellCountingService
-
     try:
         slide_path = get_slide_path_by_id(slide_id)
         if not slide_path:
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        service = CellCountingService()
-        result = service.count_cells(
-            slide_path=slide_path,
-            provider=provider,
+        worker = get_ml_worker()
+        region_data = request.region.model_dump() if request.region else None
+        result = await worker.submit(
+            "count_cells",
+            slide_path,
             stain=request.stain,
-            region=request.region,
+            region=region_data,
         )
 
         return CountingResponse(
@@ -1023,40 +1067,27 @@ async def count_cells(
         raise
     except MLProviderError as e:
         logger.error(f"Cell counting failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Cell counting error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Cell counting error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 @router.post("/cluster/{slide_id}", response_model=ClusteringResponse)
 async def cluster_slide(
     slide_id: str,
     n_clusters: int = Query(4, ge=2, le=8, description="Number of clusters"),
-    provider=Depends(get_ml_provider),
-    disk_cache: DiskCache = Depends(get_disk_cache),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Clustering morphologique -- identifie les patterns dans une lame."""
-    from services.ml.clustering import ClusteringService
-
     try:
         slide_path = get_slide_path_by_id(slide_id)
         if not slide_path:
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        model_id = (
-            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
-        )
-
-        service = ClusteringService()
-        result = service.cluster(
-            slide_path=slide_path,
-            n_clusters=n_clusters,
-            disk_cache=disk_cache,
-            model_id=model_id,
-        )
+        worker = get_ml_worker()
+        result = await worker.submit("cluster", slide_path, n_clusters=n_clusters)
 
         return ClusteringResponse(
             clusters=[
@@ -1080,17 +1111,15 @@ async def cluster_slide(
         raise
     except MLProviderError as e:
         logger.error(f"Clustering failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Clustering error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Clustering error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 @router.get("/quality/{slide_id}", response_model=QualityResponse)
 async def get_slide_quality(
     slide_id: str,
-    provider=Depends(get_ml_provider),
-    disk_cache: DiskCache = Depends(get_disk_cache),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -1099,24 +1128,14 @@ async def get_slide_quality(
     Retourne un score global, un label, une liste d'artefacts detectes
     et une recommandation.
     """
-    from services.ml.quality import QualityService
-
     try:
         slide_path = get_slide_path_by_id(slide_id)
         if not slide_path:
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
-        model_id = (
-            provider.model_config.get("model_id", "unknown") if provider.model_loaded else "unknown"
-        )
-
-        service = QualityService()
-        result = service.assess_quality(
-            slide_path=slide_path,
-            disk_cache=disk_cache,
-            model_id=model_id,
-        )
+        worker = get_ml_worker()
+        result = await worker.submit("assess_quality", slide_path)
 
         return QualityResponse(
             overall_score=result.overall_score,
@@ -1138,16 +1157,15 @@ async def get_slide_quality(
         raise
     except MLProviderError as e:
         logger.error(f"Quality assessment failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Quality assessment error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Quality assessment error: {e!s}")
+        raise _translate_ml_error(e)
 
 
 @router.get("/drift/{model_id}", response_model=DriftReportResponse)
 async def get_drift_report(
     model_id: str,
-    provider=Depends(get_ml_provider),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ):
     """Get drift report for a specific model."""
@@ -1184,7 +1202,6 @@ async def get_drift_report(
 
 @router.get("/drift", response_model=AllDriftReportsResponse)
 async def get_all_drift_reports(
-    provider=Depends(get_ml_provider),
     tag_router=Depends(get_tag_router),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ):
@@ -1613,17 +1630,24 @@ async def get_slide_tags(
 
 @router.get("/health")
 async def health_check(
-    provider=Depends(get_ml_provider), current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Health check pour ML services.
 
     Returns:
-        {"status": "ok", "provider": "slideflow", "device": "cuda"}
+        {"status": "ok", "provider": "slideflow", "device": "cpu"}
 
     Examples:
         ```bash
         curl "http://localhost:8000/api/ml/health"
         ```
     """
-    return {"status": "ok", "provider": "slideflow", "device": provider.device}
+    provider_name = os.getenv("ML_PROVIDER", "slideflow")
+    worker_alive = _ml_worker.is_alive() if _ml_worker else False
+    return {
+        "status": "ok",
+        "provider": provider_name,
+        "device": "cpu",
+        "worker_alive": worker_alive,
+    }

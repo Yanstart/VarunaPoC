@@ -19,6 +19,8 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { userFriendlyMLError } from '../services/mlErrors.js';
+import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
 class ClusteringPanel {
     /**
@@ -39,6 +41,9 @@ class ClusteringPanel {
         // Per-cluster visibility (all visible by default)
         this._visibleClusters = new Set();
         this._opacity = 0.5;
+
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
 
         this.element = null;
         this._create();
@@ -299,8 +304,12 @@ class ClusteringPanel {
     async _runClustering() {
         if (!this.slideId || this.isClustering) return;
 
+        const canProceed = await requestMLWorkerAccess('Clustering morphologique');
+        if (!canProceed) return;
+
         this.isClustering = true;
         this._renderLoading();
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'clustering', label: 'Clustering morphologique' });
         eventBus.emit(Events.CLUSTERING_START, { slideId: this.slideId, nClusters: this.nClusters });
 
         try {
@@ -324,9 +333,10 @@ class ClusteringPanel {
         } catch (err) {
             console.error('[ClusteringPanel] Clustering failed:', err);
             eventBus.emit(Events.CLUSTERING_ERROR, { error: err.message });
-            this._renderError(err.message);
+            this._renderError(userFriendlyMLError(err));
         } finally {
             this.isClustering = false;
+            eventBus.emit(Events.ML_WORKER_FREE);
         }
     }
 
@@ -348,6 +358,8 @@ class ClusteringPanel {
     }
 
     destroy() {
+        this._unsubscribers.forEach(unsub => unsub());
+        this._unsubscribers = [];
         this.result = null;
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);

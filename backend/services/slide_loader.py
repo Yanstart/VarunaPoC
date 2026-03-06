@@ -41,23 +41,19 @@ def get_slide_metadata(slide_path: str) -> Dict:
         - level_downsamples indique facteur réduction (ex: 2.0 = 50% taille)
         - vendor détecté via propriétés OpenSlide (ex: "3DHISTECH")
     """
-    try:
-        slide = openslide.OpenSlide(slide_path)
+    slide = openslide.OpenSlide(slide_path)
 
-        metadata = {
-            "dimensions": list(slide.dimensions),
-            "level_count": slide.level_count,
-            "level_dimensions": [list(d) for d in slide.level_dimensions],
-            "level_downsamples": list(slide.level_downsamples),
-            "vendor": slide.properties.get(openslide.PROPERTY_NAME_VENDOR, "Unknown"),
-            "format": _detect_format(slide_path, slide),
-        }
+    metadata = {
+        "dimensions": list(slide.dimensions),
+        "level_count": slide.level_count,
+        "level_dimensions": [list(d) for d in slide.level_dimensions],
+        "level_downsamples": list(slide.level_downsamples),
+        "vendor": slide.properties.get(openslide.PROPERTY_NAME_VENDOR, "Unknown"),
+        "format": _detect_format(slide_path, slide),
+    }
 
-        slide.close()
-        return metadata
-
-    except OpenSlideError as e:
-        raise RuntimeError(f"Cannot open slide: {e}")
+    slide.close()
+    return metadata
 
 
 def get_slide_overview_bytes(slide_path: str, max_size: int = 2000, quality: int = 85) -> bytes:

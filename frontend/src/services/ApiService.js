@@ -709,6 +709,14 @@ class ApiService {
      * @param {number} [params.n_clusters=4] - Number of clusters (2-8)
      * @returns {Promise<Object>} Clustering result
      */
+    /**
+     * Cancel the current ML job (restarts the worker)
+     * @returns {Promise<Object>} { status: 'cancelled' | 'idle' }
+     */
+    async cancelML() {
+        return this.post('/api/ml/cancel', {});
+    }
+
     async clusterSlide(slideId, params = {}) {
         const queryParams = new URLSearchParams();
         if (params.n_clusters !== undefined) queryParams.set('n_clusters', params.n_clusters);

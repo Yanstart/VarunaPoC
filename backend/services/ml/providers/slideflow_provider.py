@@ -88,6 +88,7 @@ def _resolve_ml_backend(requested: str) -> str:
     # Try openvino first (best Intel optimization), then onnx, then pytorch
     try:
         import openvino
+
         if _find_onnx_model():
             return "openvino"
     except ImportError:
@@ -95,6 +96,7 @@ def _resolve_ml_backend(requested: str) -> str:
 
     try:
         import onnxruntime
+
         if _find_onnx_model():
             return "onnx"
     except ImportError:
@@ -169,8 +171,7 @@ class _PhikonExtractor:
         self._np_std = np.array(self.STD, dtype=np.float32).reshape(1, 3, 1, 1)
 
         logger.info(
-            f"Phikon-v2 loaded (1024-dim, backend: {self._inference_backend}, "
-            f"device: {device})"
+            f"Phikon-v2 loaded (1024-dim, backend: {self._inference_backend}, " f"device: {device})"
         )
 
     def _load_pytorch(self):
@@ -274,6 +275,7 @@ class _PhikonExtractor:
 
         if isinstance(obj, sf.WSI):
             from slideflow.model.extractors._slide import features_from_slide
+
             return features_from_slide(self, obj, **kwargs)
 
         if self._inference_backend == "openvino":
@@ -293,10 +295,12 @@ def _patch_slideflow_dicom_support():
     """
     try:
         import slideflow.util
+
         for ext in ("dcm", "dicom"):
             if ext not in slideflow.util.SUPPORTED_FORMATS:
                 slideflow.util.SUPPORTED_FORMATS.append(ext)
         from slideflow.slide.backends import vips as _vips_backend
+
         for ext in ("dcm", "dicom"):
             if ext not in _vips_backend.SUPPORTED_BACKEND_FORMATS:
                 _vips_backend.SUPPORTED_BACKEND_FORMATS.append(ext)
@@ -388,6 +392,90 @@ class SlideflowProvider:
     # WSI HELPERS
     # ========================================================================
 
+    def _estimate_tiles(self, slide_path: str, target_mag: float, tile_size: int = 224) -> int:
+        """
+        Estimate tile count at a given magnification without opening a full WSI.
+
+        Uses OpenSlide to read dimensions and MPP, then calculates the grid.
+        Returns -1 if MPP is unavailable.
+        """
+        try:
+            import openslide
+
+            slide = openslide.open_slide(slide_path)
+            w, h = slide.dimensions
+            mpp = slide.properties.get("openslide.mpp-x")
+            slide.close()
+
+            mpp_val = 0.5 if not mpp else float(mpp)
+
+            # Unreliable MPP — assume ~20x native (mpp=0.5)
+            if mpp_val <= 0 or mpp_val > 10:
+                mpp_val = 0.5
+                logger.debug(
+                    f"Unreliable MPP for {Path(slide_path).name}, "
+                    f"assuming mpp={mpp_val} for tile estimation"
+                )
+
+            native_mag = 10.0 / mpp_val
+            downsample = native_mag / target_mag
+            extract_px = downsample * tile_size
+
+            if extract_px <= 0:
+                return -1
+
+            return int((w / extract_px) * (h / extract_px))
+
+        except Exception as e:
+            logger.debug(f"Tile estimation failed: {e}")
+            return -1
+
+    def _select_magnification(self, slide_path: str, tile_size: int = 224) -> list:
+        """
+        Select magnification adaptively based on estimated tile count.
+
+        Reads ML_MAX_TILES (default 500) and ML_ADAPTIVE_STRIDE (default true).
+        Iterates from highest to lowest magnification, returning the first
+        where estimated tiles <= max_tiles.
+        """
+        adaptive = os.getenv("ML_ADAPTIVE_STRIDE", "true").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+        if not adaptive:
+            return ["10x", "20x", "5x", "40x"]
+
+        max_tiles = int(os.getenv("ML_MAX_TILES", "500"))
+        candidates = [
+            ("10x", 10.0),
+            ("5x", 5.0),
+            ("2.5x", 2.5),
+            ("1.25x", 1.25),
+        ]
+
+        best_mag = candidates[-1][0]
+        best_tiles = float("inf")
+
+        for mag_str, mag_val in candidates:
+            estimated = self._estimate_tiles(slide_path, mag_val, tile_size)
+            if estimated < 0:
+                # No MPP — fall back to original behavior
+                logger.debug("No MPP available, using default magnification order")
+                return ["10x", "20x", "5x", "40x"]
+            if estimated <= max_tiles:
+                logger.info(f"Adaptive mag: {mag_str} (~{estimated} tiles, max={max_tiles})")
+                return [mag_str]
+            if estimated < best_tiles:
+                best_tiles = estimated
+                best_mag = mag_str
+
+        logger.info(
+            f"Adaptive mag: {best_mag} (~{int(best_tiles)} tiles, max={max_tiles}) "
+            f"— all exceed limit, using lowest"
+        )
+        return [best_mag]
+
     def _open_wsi(self, slide_path: str, tile_size: int = 224) -> "sf.WSI":
         """
         Open a WSI with automatic magnification detection.
@@ -395,19 +483,34 @@ class SlideflowProvider:
         Tries 10x first (good coverage/resolution tradeoff), then falls back
         to the closest available magnification if 10x is not available.
         """
-        preferred_mags = ["10x", "20x", "5x", "40x"]
+        preferred_mags = self._select_magnification(slide_path, tile_size)
+
+        # Try to import slideflow's typed MPP exception (may not exist in all versions)
+        try:
+            from slideflow.errors import SlideMissingMPPError
+        except ImportError:
+            SlideMissingMPPError = None  # noqa: N806
 
         for mag in preferred_mags:
             try:
                 wsi = self.sf.WSI(slide_path, tile_px=tile_size, tile_um=mag)
-                logger.debug(f"Opened WSI at {mag}: {slide_path}")
+                num_tiles = getattr(wsi, "estimated_num_tiles", "?")
+                logger.info(
+                    f"Opened WSI at {mag} (~{num_tiles} tiles): " f"{Path(slide_path).name}"
+                )
                 return wsi
             except Exception as e:
-                if "magnification" in str(e).lower() or "mpp" in str(e).lower():
+                if SlideMissingMPPError and isinstance(e, SlideMissingMPPError):
+                    continue
+                err_msg = str(e).lower()
+                if "magnification" in err_msg or "mpp" in err_msg or "microns-per-pixel" in err_msg:
                     continue
                 raise
 
-        # Last resort: use smallest available magnification from slide metadata
+        # Last resort: force MPP and try adaptive magnification
+        default_mpp = 0.5  # ~20x, safe default for histology
+        slide_name = Path(slide_path).name
+
         try:
             import openslide
 
@@ -415,27 +518,43 @@ class SlideflowProvider:
             mpp = slide.properties.get("openslide.mpp-x")
             slide.close()
             if mpp:
-                # Convert mpp to approximate magnification
                 mpp_val = float(mpp)
-                approx_mag = round(10.0 / mpp_val)
-                mag_str = f"{approx_mag}x"
-                logger.info(f"Using calculated magnification {mag_str} (mpp={mpp_val})")
-                return self.sf.WSI(slide_path, tile_px=tile_size, tile_um=mag_str)
+                if 0.1 <= mpp_val <= 5.0:
+                    approx_mag = round(10.0 / mpp_val)
+                    mag_str = f"{approx_mag}x"
+                    logger.info(f"Using calculated magnification {mag_str} (mpp={mpp_val})")
+                    return self.sf.WSI(slide_path, tile_px=tile_size, tile_um=mag_str)
         except Exception:  # nosec B110
             pass
 
-        # No MPP metadata available - slide cannot be processed by Slideflow
-        slide_name = Path(slide_path).name
-        raise HeatmapGenerationError(
-            f"Slide '{slide_name}' has no resolution metadata (microns-per-pixel). "
-            f"Generic TIFF files often lack this information. "
-            f"ML analysis requires slides with MPP data (SVS, MRXS, NDPI, SCN formats recommended).",
-            slide_path=slide_path,
-            prediction_class="",
-            method="open_wsi",
-            provider="slideflow",
-            details={"reason": "missing_mpp", "slide": slide_name},
+        # Force MPP — try adaptive mags first, then fixed tile_um fallback
+        logger.warning(
+            f"Bad/missing MPP for {slide_name}, forcing mpp={default_mpp} "
+            f"with adaptive magnification"
         )
+        for mag in preferred_mags:
+            try:
+                wsi = self.sf.WSI(slide_path, tile_px=tile_size, tile_um=mag, mpp=default_mpp)
+                num_tiles = getattr(wsi, "estimated_num_tiles", "?")
+                logger.info(
+                    f"Opened WSI at {mag} (~{num_tiles} tiles, forced mpp): " f"{slide_name}"
+                )
+                return wsi
+            except Exception:
+                continue
+
+        # Ultimate fallback: fixed tile_um
+        try:
+            return self.sf.WSI(slide_path, tile_px=tile_size, tile_um=256, mpp=default_mpp)
+        except Exception as e:
+            raise HeatmapGenerationError(
+                f"Cannot open slide '{slide_name}' for ML analysis: {e}",
+                slide_path=slide_path,
+                prediction_class="",
+                method="open_wsi",
+                provider="slideflow",
+                details={"reason": "missing_mpp", "slide": slide_name},
+            )
 
     # ========================================================================
     # MODEL MANAGEMENT
@@ -715,6 +834,23 @@ class SlideflowProvider:
         try:
             tile_size = self.model_config.get("tile_size", 224)
             wsi = self._open_wsi(slide_path, tile_size)
+
+            # Region filtering: mask tiles outside viewport
+            if region and hasattr(wsi, "coord") and len(wsi.coord) > 0:
+                x, y, w, h = region
+                in_region = (
+                    (wsi.coord[:, 0] >= x)
+                    & (wsi.coord[:, 0] < x + w)
+                    & (wsi.coord[:, 1] >= y)
+                    & (wsi.coord[:, 1] < y + h)
+                )
+                for i in range(len(wsi.coord)):
+                    if not in_region[i]:
+                        gx, gy = int(wsi.coord[i, 2]), int(wsi.coord[i, 3])
+                        if 0 <= gx < wsi.grid.shape[0] and 0 <= gy < wsi.grid.shape[1]:
+                            wsi.grid[gx, gy] = 0
+                active = int(wsi.grid.sum())
+                logger.info(f"Region filter: ~{active} tiles in viewport")
 
             # Extract features using foundation model
             features = self.extractor(wsi)
@@ -1015,17 +1151,24 @@ class SlideflowProvider:
 
             if raw_features.ndim == 3:
                 # Shape (h, w, dim) → compute norm per spatial position
-                feature_norms = np.linalg.norm(raw_features, axis=2)
+                # float64 to prevent overflow when features have large magnitudes
+                feature_norms = np.linalg.norm(raw_features.astype(np.float64), axis=2).astype(
+                    np.float32
+                )
             else:
                 # Shape (n, dim) → need to reshape to 2D grid
-                norms = np.linalg.norm(raw_features, axis=1)
+                norms = np.linalg.norm(raw_features.astype(np.float64), axis=1).astype(np.float32)
                 grid_size = int(np.ceil(np.sqrt(len(norms))))
                 padded = np.zeros(grid_size * grid_size)
                 padded[: len(norms)] = norms
                 feature_norms = padded.reshape(grid_size, grid_size)
 
-            # Normalize [0, 1] - cast to float32 (GPU features may be float16)
-            feature_norms = feature_norms.astype(np.float32)
+            # Sanitize any residual NaN/inf from extreme magnitudes
+            feature_norms = np.nan_to_num(feature_norms, nan=0.0, posinf=0.0, neginf=0.0).astype(
+                np.float32
+            )
+
+            # Normalize [0, 1]
             heatmap = (feature_norms - feature_norms.min()) / (
                 feature_norms.max() - feature_norms.min() + 1e-8
             )
@@ -1047,9 +1190,9 @@ class SlideflowProvider:
                     img = img.resize((target_size, target_size), Image.BILINEAR)
                     heatmap = np.array(img).astype(np.float32) / 255.0
 
-            # Re-normalize after resize
+            # Re-normalize after resize and clamp to valid range
             heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
-            heatmap = heatmap.astype(np.float32)
+            heatmap = np.clip(heatmap, 0.0, 1.0).astype(np.float32)
 
             slide_dimensions = wsi.dimensions if hasattr(wsi, "dimensions") else (20000, 15000)
 

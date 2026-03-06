@@ -60,6 +60,9 @@ import { MagnificationBar } from './components/MagnificationBar.js';
 // Legacy support
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from './components/Viewer.js';
 
+// ML worker access control (tracks busy state + current job label)
+import { isMLWorkerBusy } from './services/mlWorkerAccess.js';
+
 // ==========================================
 // APPLICATION STATE
 // ==========================================
@@ -448,7 +451,7 @@ async function showViewerPage(slide) {
 
     // Initialize ML Panel (hidden by default)
     const mlContainer = document.querySelector('#ml-panel-container');
-    appState.mlPanel = new MLPanel(mlContainer, { viewerId });
+    appState.mlPanel = new MLPanel(mlContainer, { viewerId, viewerInstance });
     appState.mlPanel.setSlide(slide.id);
     mlContainer.classList.add('is-hidden');
 
@@ -473,14 +476,14 @@ async function showViewerPage(slide) {
             detectionContainer.id = 'detection-panel-container';
             detectionContainer.style.marginTop = '8px';
             mlContainer2.appendChild(detectionContainer);
-            appState.detectionPanel = new DetectionPanel(detectionContainer, { slideId: slide.id });
+            appState.detectionPanel = new DetectionPanel(detectionContainer, { slideId: slide.id, viewerInstance });
 
             // Wave 4: Cell Counting Panel
             const cellCountingContainer = document.createElement('div');
             cellCountingContainer.id = 'cell-counting-panel-container';
             cellCountingContainer.style.marginTop = '8px';
             mlContainer2.appendChild(cellCountingContainer);
-            appState.cellCountingPanel = new CellCountingPanel(cellCountingContainer, { slideId: slide.id });
+            appState.cellCountingPanel = new CellCountingPanel(cellCountingContainer, { slideId: slide.id, viewerInstance });
 
             // Wave 4: Clustering Panel
             const clusteringContainer = document.createElement('div');
@@ -784,7 +787,10 @@ function handleCaseSelect(caseData) {
         return;
     }
     console.warn('[App] Navigating to case:', caseData.name, `(${caseData.slides.length} slides)`);
-    const firstSlide = caseData.slides[0];
+    const firstSlide = caseData.slides.find(s => s.is_supported !== false) || caseData.slides[0];
+    if (firstSlide.is_supported === false) {
+        console.warn('[App] No supported slides in case:', caseData.name);
+    }
     // Store case data on appState for sidebar use (Task A3)
     appState.currentCase = caseData;
     showViewerPage(firstSlide);
@@ -799,6 +805,20 @@ function handleCaseSelect(caseData) {
  */
 async function handleSlideSwitch(newSlide) {
     console.warn('[App] Rapid slide switch to:', newSlide.name);
+
+    // Cancel running ML job if worker is busy
+    if (isMLWorkerBusy()) {
+        const confirmed = confirm(
+            'Une analyse IA est en cours. Voulez-vous l\'annuler et changer de lame ?',
+        );
+        if (!confirmed) return;
+        try {
+            await apiService.cancelML();
+        } catch (e) {
+            console.warn('[App] ML cancel failed:', e);
+        }
+        eventBus.emit(Events.ML_WORKER_FREE);
+    }
 
     // 1. Update app state
     appState.selectedSlide = newSlide;
