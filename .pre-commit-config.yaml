@@ -77,6 +77,18 @@ repos:
         args: ["--profile", "black"]
         files: ^backend/
 
+  # =========================
+  # Implementation docs check
+  # =========================
+  - repo: local
+    hooks:
+      - id: check-implementation-docs
+        name: Implementation docs up-to-date
+        entry: Scripts/check-implementation-docs.sh
+        language: script
+        files: ^docs/implementation/
+        pass_filenames: false
+
 # Configuration for detect-secrets
 # Run: detect-secrets scan > .secrets.baseline
 # to create the baseline file

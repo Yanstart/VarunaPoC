@@ -38,9 +38,6 @@ export class QualityBadge {
         this._destroyed = false;
 
         this._build();
-        if (slideId) {
-            this._fetchQuality(slideId);
-        }
     }
 
     /**
@@ -61,7 +58,7 @@ export class QualityBadge {
         // Text label
         this._label = document.createElement('span');
         this._label.className = 'quality-badge__label';
-        this._label.textContent = 'Qualit\u00e9 : ...';
+        this._label.textContent = 'Qualit\u00e9 : cliquez pour \u00e9valuer';
         this.el.appendChild(this._label);
 
         // Tooltip (hidden by default)
@@ -86,7 +83,10 @@ export class QualityBadge {
      * @private
      */
     async _fetchQuality(slideId) {
-        if (this._destroyed) return;
+        if (this._destroyed || this._loading) return;
+
+        this._loading = true;
+        this._label.textContent = 'Qualit\u00e9 : \u00e9valuation...';
 
         if (this.eventBus) {
             this.eventBus.emit(Events.QUALITY_LOADING, { slideId });
@@ -110,6 +110,8 @@ export class QualityBadge {
             if (this.eventBus) {
                 this.eventBus.emit(Events.QUALITY_ERROR, { slideId, error: err });
             }
+        } finally {
+            this._loading = false;
         }
     }
 
@@ -236,6 +238,12 @@ export class QualityBadge {
      * @private
      */
     _toggleTooltip() {
+        // First click with no data: trigger manual quality assessment
+        if (!this._data && this.slideId && !this._loading) {
+            this._fetchQuality(this.slideId);
+            return;
+        }
+
         if (this._tooltip && this._data) {
             const isVisible = this._tooltip.style.display !== 'none';
             this._tooltip.style.display = isVisible ? 'none' : 'block';
@@ -251,14 +259,10 @@ export class QualityBadge {
         this._data = null;
         this._hideTooltip();
 
-        // Reset to loading state
+        // Reset to idle state (user clicks to trigger)
         this.el.className = 'quality-badge';
         this._dot.className = 'quality-badge__dot';
-        this._label.textContent = 'Qualit\u00e9 : ...';
-
-        if (slideId) {
-            this._fetchQuality(slideId);
-        }
+        this._label.textContent = 'Qualit\u00e9 : cliquez pour \u00e9valuer';
     }
 
     /**

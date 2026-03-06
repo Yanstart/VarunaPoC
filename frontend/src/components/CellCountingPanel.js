@@ -20,6 +20,8 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { userFriendlyMLError } from '../services/mlErrors.js';
+import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
 class CellCountingPanel {
     /**
@@ -30,12 +32,17 @@ class CellCountingPanel {
     constructor(container, options = {}) {
         this.container = container;
         this.slideId = options.slideId || null;
+        this._viewerInstance = options.viewerInstance || null;
 
         // State
+        this.analysisScope = 'slide';
         this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_cellcounting_open') !== 'true'; } catch (_) { return true; } })();
         this.isCounting = false;
         this.stain = 'Ki67';
         this.result = null;
+
+        /** @type {Array<Function>} Unsubscribe functions for event listeners */
+        this._unsubscribers = [];
 
         this.element = null;
         this._create();
@@ -119,6 +126,32 @@ class CellCountingPanel {
         select.addEventListener('change', (e) => { this.stain = e.target.value; });
         control.appendChild(select);
         section.appendChild(control);
+
+        // Scope toggle
+        const scopeDiv = document.createElement('div');
+        scopeDiv.className = 'cell-counting-panel__scope';
+        const scopeLabel = document.createElement('label');
+        scopeLabel.textContent = 'Portee';
+        scopeDiv.appendChild(scopeLabel);
+
+        const scopeRadios = document.createElement('div');
+        scopeRadios.className = 'cell-counting-panel__scope-radios';
+
+        for (const opt of [{ value: 'slide', text: 'Lame entiere' }, { value: 'viewport', text: 'Vue actuelle' }]) {
+            const lbl = document.createElement('label');
+            lbl.className = 'cell-counting-panel__scope-option';
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'cellcount-scope';
+            radio.value = opt.value;
+            if (this.analysisScope === opt.value) radio.checked = true;
+            radio.addEventListener('change', (e) => { this.analysisScope = e.target.value; });
+            lbl.appendChild(radio);
+            lbl.appendChild(document.createTextNode(` ${opt.text}`));
+            scopeRadios.appendChild(lbl);
+        }
+        scopeDiv.appendChild(scopeRadios);
+        section.appendChild(scopeDiv);
 
         // Count button
         const btn = document.createElement('button');
@@ -280,14 +313,34 @@ class CellCountingPanel {
     async _runCounting() {
         if (!this.slideId || this.isCounting) return;
 
+        const canProceed = await requestMLWorkerAccess('Comptage cellulaire');
+        if (!canProceed) return;
+
         this.isCounting = true;
         this._renderLoading();
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'cellCounting', label: 'Comptage cellulaire' });
         eventBus.emit(Events.CELL_COUNTING_START, { slideId: this.slideId, stain: this.stain });
 
         try {
-            this.result = await apiService.countCells(this.slideId, {
-                stain: this.stain,
-            });
+            const countParams = { stain: this.stain };
+
+            if (this.analysisScope === 'viewport' && this._viewerInstance) {
+                const bounds = this._viewerInstance.getViewportPixelBounds();
+                if (bounds) {
+                    // Backend expects GeoJSON Polygon for count endpoint
+                    const { x, y, width, height } = bounds;
+                    countParams.region = {
+                        type: 'Polygon',
+                        coordinates: [[
+                            [x, y], [x + width, y],
+                            [x + width, y + height], [x, y + height],
+                            [x, y],
+                        ]],
+                    };
+                }
+            }
+
+            this.result = await apiService.countCells(this.slideId, countParams);
 
             this._renderResults();
             eventBus.emit(Events.CELL_COUNTING_COMPLETE, {
@@ -297,9 +350,10 @@ class CellCountingPanel {
         } catch (err) {
             console.error('[CellCountingPanel] Counting failed:', err);
             eventBus.emit(Events.CELL_COUNTING_ERROR, { error: err.message });
-            this._renderError(err.message);
+            this._renderError(userFriendlyMLError(err));
         } finally {
             this.isCounting = false;
+            eventBus.emit(Events.ML_WORKER_FREE);
         }
     }
 
@@ -321,6 +375,8 @@ class CellCountingPanel {
     }
 
     destroy() {
+        this._unsubscribers.forEach(unsub => unsub());
+        this._unsubscribers = [];
         this.result = null;
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);

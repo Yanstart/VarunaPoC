@@ -17,6 +17,7 @@ import OpenSeadragon from 'openseadragon';
 import { ViewerState, ViewerStates } from './ViewerState.js';
 import { eventBus } from '../core/EventBus.js';
 import { Events, OSD_CONFIG, API } from '../core/Constants.js';
+import { authService } from '../services/AuthService.js';
 
 /**
  * Generate unique ID for viewer instances
@@ -157,6 +158,12 @@ class ViewerInstance {
             blendTime: OSD_CONFIG.BLEND_TIME,
             animationTime: OSD_CONFIG.ANIMATION_TIME,
 
+            // Auth: send Bearer token with tile requests
+            loadTilesWithAjax: true,
+            ajaxHeaders: authService.accessToken
+                ? { 'Authorization': `Bearer ${authService.accessToken}` }
+                : {},
+
             // No initial tile source
             tileSources: null,
         });
@@ -276,7 +283,11 @@ class ViewerInstance {
         try {
             // Fetch DZI metadata
             console.warn(`[ViewerInstance] Loading DZI metadata for slide "${slideId}"`);
-            const response = await fetch(`${API.BASE_URL}/api/slides/${slideId}/dzi.json`);
+            const headers = {};
+            if (authService.accessToken) {
+                headers['Authorization'] = `Bearer ${authService.accessToken}`;
+            }
+            const response = await fetch(`${API.BASE_URL}/api/slides/${slideId}/dzi.json`, { headers });
 
             if (!response.ok) {
                 throw new Error(`Failed to load DZI metadata: ${response.statusText}`);
@@ -290,6 +301,13 @@ class ViewerInstance {
 
             // Create tile source
             const tileSource = this._createTileSource(slideId, dziMetadata);
+
+            // Update auth headers before opening
+            if (authService.accessToken) {
+                this._osdViewer.ajaxHeaders = {
+                    'Authorization': `Bearer ${authService.accessToken}`,
+                };
+            }
 
             // Open in OpenSeadragon
             this._osdViewer.open(tileSource);
@@ -410,6 +428,33 @@ class ViewerInstance {
             width: bounds.width,
             height: bounds.height,
             zoom: zoom,
+        };
+    }
+
+    /**
+     * Get viewport bounds in slide pixel coordinates.
+     *
+     * Converts OpenSeadragon normalized viewport coords to absolute pixel
+     * coordinates using tiledImage.viewportToImageCoordinates() for precision.
+     *
+     * @returns {Object|null} { x, y, width, height } in slide pixels, or null
+     */
+    getViewportPixelBounds() {
+        if (!this._osdViewer || !this.slideMetadata) return null;
+        const tiledImage = this._osdViewer.world.getItemAt(0);
+        if (!tiledImage) return null;
+
+        const bounds = this._osdViewer.viewport.getBounds();
+        const tl = tiledImage.viewportToImageCoordinates(bounds.x, bounds.y);
+        const br = tiledImage.viewportToImageCoordinates(
+            bounds.x + bounds.width, bounds.y + bounds.height,
+        );
+
+        return {
+            x: Math.max(0, Math.round(tl.x)),
+            y: Math.max(0, Math.round(tl.y)),
+            width: Math.round(Math.abs(br.x - tl.x)),
+            height: Math.round(Math.abs(br.y - tl.y)),
         };
     }
 

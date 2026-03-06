@@ -15,7 +15,7 @@ shapely>=2.0.4
 python-dotenv==1.0.1
 
 # Phase 2: Detection pipeline
-scikit-image==0.22.0
+scikit-image>=0.24.0
 scipy>=1.14.0
 
 # Phase 3: Auth (OIDC + JWT)
