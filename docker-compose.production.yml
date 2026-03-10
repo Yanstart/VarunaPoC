@@ -296,8 +296,11 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
       KC_HTTP_PORT: 8080
       KC_HEALTH_ENABLED: "true"
-      KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      # HTTPS enforcement: Keycloak runs HTTP internally, nginx terminates TLS
+      KC_PROXY: edge
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-keycloak}
+      KC_HOSTNAME_STRICT_HTTPS: "true"
     ports:
       - "8180:8080"
     volumes:
