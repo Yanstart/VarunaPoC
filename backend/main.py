@@ -300,6 +300,14 @@ try:
 except ImportError:
     print("[INFO] Audit API module disabled")
 
+# GDPR data subject rights (Art. 15-20)
+try:
+    from routes import gdpr
+
+    app.include_router(gdpr.router)
+except ImportError:
+    print("[INFO] GDPR module disabled")
+
 # Regional standards — ABDM, SS-MIX2, I18n
 try:
     from routes import regional
