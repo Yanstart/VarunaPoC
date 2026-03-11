@@ -31,7 +31,8 @@ from fastapi.responses import PlainTextResponse
 # IMPORTANT: Configure OpenSlide DLL path AVANT tout import
 # (Nécessaire sur Windows pour trouver libopenslide-0.dll)
 import config_openslide
-from routes import ml, slides, viewstate
+from core.feature_flags import feature_registry
+from routes import capabilities, ml, slides, viewstate
 
 # Phase 2: Annotations (optional - requires sqlalchemy + asyncpg)
 try:
@@ -211,6 +212,7 @@ if MONITORING_ENABLED:
 app.include_router(slides.router)
 app.include_router(ml.router, prefix="/api")
 app.include_router(viewstate.router)
+app.include_router(capabilities.router)
 if ANNOTATIONS_ENABLED:
     app.include_router(annotations.router)
     app.include_router(annotations.label_router)
@@ -228,85 +230,127 @@ if quality_routes is not None and QUALITY_ENABLED and ANNOTATIONS_ENABLED:
     app.include_router(quality_routes.router)
 
 # Legacy sweep: Processing pipeline (batch tiles, normalization, outliers)
+PROCESSING_ENABLED = False
 try:
     from routes import processing
 
     app.include_router(processing.router)
+    PROCESSING_ENABLED = True
 except ImportError:
     print("[INFO] Processing module disabled")
 
 # Legacy sweep: Collaboration (sharing, WebSocket, merge)
+COLLABORATION_ENABLED = False
 try:
     from routes import sharing, ws
 
     app.include_router(sharing.router)
     app.include_router(ws.router)
+    COLLABORATION_ENABLED = True
 except ImportError:
     print("[INFO] Collaboration modules disabled")
 
 # Legacy sweep: Embeddings (UNI, Phikon, Virchow, CTransPath)
+EMBEDDINGS_ENABLED = False
 try:
     from routes import embeddings
 
     app.include_router(embeddings.router)
+    EMBEDDINGS_ENABLED = True
 except ImportError:
     print("[INFO] Embeddings module disabled")
 
 # Legacy sweep: DICOM export
+DICOM_EXPORT_ENABLED = False
 try:
     from routes import exports
 
     app.include_router(exports.router)
+    DICOM_EXPORT_ENABLED = True
 except ImportError:
     print("[INFO] DICOM export module disabled")
 
 # Legacy sweep: Plugin manager
+PLUGINS_ENABLED = False
 try:
     from routes import plugins
 
     app.include_router(plugins.router)
+    PLUGINS_ENABLED = True
 except ImportError:
     print("[INFO] Plugin manager disabled")
 
 # DICOMweb endpoints — WADO-RS, STOW-RS, QIDO-RS, SR, annotations
+DICOMWEB_ENABLED = False
 try:
     from routes import dicomweb
 
     app.include_router(dicomweb.router)
+    DICOMWEB_ENABLED = True
 except ImportError:
     print("[INFO] DICOMweb module disabled")
 
 # Standards: Integration (eHealth BE, HL7v2, APSR)
+INTEGRATION_ENABLED = False
 try:
     from routes import integration
 
     app.include_router(integration.router)
+    INTEGRATION_ENABLED = True
 except ImportError:
     print("[INFO] Integration module disabled")
 
 # Standards: Terminology (SNOMED CT, LOINC)
+TERMINOLOGY_ENABLED = False
 try:
     from routes import terminology
 
     app.include_router(terminology.router)
+    TERMINOLOGY_ENABLED = True
 except ImportError:
     print("[INFO] Terminology module disabled")
 
 # Standards: Audit API (search, GDPR register)
+AUDIT_ENABLED = False
 try:
     from routes import audit_api
 
     app.include_router(audit_api.router)
+    AUDIT_ENABLED = True
 except ImportError:
     print("[INFO] Audit API module disabled")
 
 # Regional standards — ABDM, SS-MIX2, I18n
+REGIONAL_ENABLED = False
 try:
     from routes import regional
 
     app.include_router(regional.router)
+    REGIONAL_ENABLED = True
 except ImportError:
     print("[INFO] Regional module disabled")
+
+# ── Feature flag registry ──────────────────────────────────────────────
+# Register all feature flags so GET /api/capabilities can report them.
+ML_ENABLED = os.getenv("ML_ENABLED", "true").lower() == "true"
+
+feature_registry.register("annotations", ANNOTATIONS_ENABLED)
+feature_registry.register("auth", AUTH_ENABLED)
+feature_registry.register("fhir", FHIR_ENABLED)
+feature_registry.register("quality", QUALITY_ENABLED)
+feature_registry.register("monitoring", MONITORING_ENABLED)
+feature_registry.register("rate_limiting", RATE_LIMITING_ENABLED)
+feature_registry.register("ml", ML_ENABLED)
+feature_registry.register("processing", PROCESSING_ENABLED)
+feature_registry.register("collaboration", COLLABORATION_ENABLED)
+feature_registry.register("embeddings", EMBEDDINGS_ENABLED)
+feature_registry.register("dicom_export", DICOM_EXPORT_ENABLED)
+feature_registry.register("plugins", PLUGINS_ENABLED)
+feature_registry.register("dicomweb", DICOMWEB_ENABLED)
+feature_registry.register("integration", INTEGRATION_ENABLED)
+feature_registry.register("terminology", TERMINOLOGY_ENABLED)
+feature_registry.register("audit", AUDIT_ENABLED)
+feature_registry.register("regional", REGIONAL_ENABLED)
 
 
 @app.get("/", tags=["health"])
