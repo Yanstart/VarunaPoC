@@ -157,7 +157,7 @@ services:
       SLIDES_REPOSITORY_PATH: /slides
       LOG_LEVEL: ${LOG_LEVEL:-info}
       UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://keycloak:8080/realms/varuna}
       ML_ENABLED: ${ML_ENABLED:-true}
