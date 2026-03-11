@@ -10,12 +10,11 @@ LABEL stage="builder"
 
 WORKDIR /app
 
-# Copy ONLY package.json (not package-lock.json which contains Windows-specific deps)
-COPY package.json ./
+# Copy package files for reproducible installs
+COPY package.json package-lock.json ./
 
-# Install ALL dependencies (including dev deps needed for build)
-# Without lockfile, npm will resolve deps fresh for Linux platform
-RUN npm install
+# Install exact dependency versions from lockfile
+RUN npm ci
 
 # Copy source code
 COPY . .
