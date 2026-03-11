@@ -319,7 +319,7 @@ services:
     profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_INSTALL_PLUGINS: redis-datasource
       GF_SERVER_ROOT_URL: http://localhost:3000
       GF_ANALYTICS_REPORTING_ENABLED: "false"
@@ -356,7 +356,7 @@ services:
     profiles: ["monitoring"]
     command:
       - '--redis.addr=redis:6379'
-      - '--redis.password=${REDIS_PASSWORD:-}'
+      - '--redis.password=${REDIS_PASSWORD:?REDIS_PASSWORD is required}'
     expose:
       - "9121"
     depends_on:
