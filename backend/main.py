@@ -219,6 +219,15 @@ if ANNOTATIONS_ENABLED:
 if auth_routes is not None:
     app.include_router(auth_routes.router)
 
+# Break-glass emergency access routes (requires auth module)
+try:
+    from routes import breakglass as breakglass_routes
+
+    app.include_router(breakglass_routes.router)
+    print("[INFO] Break-glass routes loaded")
+except ImportError:
+    print("[INFO] Break-glass routes disabled")
+
 # Phase 3: FHIR routes
 if fhir_routes is not None and FHIR_ENABLED:
     app.include_router(fhir_routes.router)
