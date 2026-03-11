@@ -22,7 +22,11 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 
-load_dotenv()  # Load .env file (ML config, CORS, etc.)
+load_dotenv()  # Load .env file before Settings reads env vars
+
+from settings import get_settings
+
+settings = get_settings()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,10 +96,9 @@ try:
     from slowapi.errors import RateLimitExceeded
     from slowapi.util import get_remote_address
 
-    # Read rate limit config from env (with defaults)
-    _default_rate = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
-    _tile_rate = os.getenv("RATE_LIMIT_TILES", "500/minute")
-    _ml_rate = os.getenv("RATE_LIMIT_ML", "30/minute")
+    _default_rate = settings.rate_limit_default
+    _tile_rate = settings.rate_limit_tiles
+    _ml_rate = settings.rate_limit_ml
 
     limiter = Limiter(
         key_func=get_remote_address,
@@ -182,18 +185,7 @@ if RATE_LIMITING_ENABLED:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
-# Read from environment variable (Phase 2.1+) or use defaults (Phase 1)
-cors_origins_env = os.getenv("CORS_ORIGINS", "")
-if cors_origins_env:
-    # Phase 2.1: Read from env (comma-separated list)
-    allow_origins = [origin.strip() for origin in cors_origins_env.split(",")]
-else:
-    # Phase 1: Default localhost origins
-    allow_origins = [
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:8080",  # Docker frontend
-        "http://localhost",  # Frontend on port 80
-    ]
+allow_origins = settings.cors_origin_list
 
 app.add_middleware(
     CORSMiddleware,
