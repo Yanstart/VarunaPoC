@@ -1,0 +1,24 @@
+# Trivy CVE Ignore List
+# ====================
+#
+# This file lists CVEs that Trivy should skip during scanning.
+# The dependency-gate job in .github/workflows/security.yml uses this file
+# to allow merge even when a known CVE has no available fix or is not applicable.
+#
+# EXCEPTION PROCESS:
+# 1. A CRITICAL/HIGH CVE blocks the merge via the dependency-gate job.
+# 2. If the CVE has no fix available or is not exploitable in our context,
+#    open a follow-up issue to track it, then add it here with justification.
+# 3. Each entry MUST include: CVE ID, justification, tracking issue, and expiry date.
+# 4. Review this file monthly — remove entries once a fix is released.
+#
+# FORMAT:
+#   # <justification> (tracking: #NNN, expires: YYYY-MM-DD)
+#   CVE-YYYY-NNNNN
+#
+# EXAMPLES (uncommented when needed):
+#   # No fix available in current OpenSlide release (tracking: #000, expires: 2026-06-01)
+#   CVE-2024-00000
+#
+#   # Not exploitable: requires local filesystem access we don't expose (tracking: #000, expires: 2026-06-01)
+#   CVE-2024-99999
