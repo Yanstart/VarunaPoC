@@ -9,13 +9,14 @@ import logging
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.database import get_db
 from core.tenant import get_current_tenant
+from rate_limiting import annotation_write_rate, limit
 from schemas.annotation import (
     AnnotationBatchCreate,
     AnnotationCreate,
@@ -39,7 +40,9 @@ router = APIRouter(prefix="/api/annotations", tags=["Annotations"])
 
 
 @router.post("/{slide_id}", response_model=AnnotationResponse, status_code=201)
+@limit(annotation_write_rate)
 async def create_annotation(
+    request: Request,
     slide_id: str,
     data: AnnotationCreate,
     db: AsyncSession = Depends(get_db),
@@ -140,7 +143,9 @@ async def get_annotation(
 
 
 @router.put("/{slide_id}/{annotation_id}", response_model=AnnotationResponse)
+@limit(annotation_write_rate)
 async def update_annotation(
+    request: Request,
     slide_id: str,
     annotation_id: UUID,
     data: AnnotationUpdate,
@@ -158,7 +163,9 @@ async def update_annotation(
 
 
 @router.delete("/{slide_id}/{annotation_id}", status_code=204)
+@limit(annotation_write_rate)
 async def delete_annotation(
+    request: Request,
     slide_id: str,
     annotation_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -174,7 +181,9 @@ async def delete_annotation(
 
 
 @router.post("/{slide_id}/batch", response_model=List[AnnotationResponse], status_code=201)
+@limit(annotation_write_rate)
 async def batch_create_annotations(
+    request: Request,
     slide_id: str,
     data: AnnotationBatchCreate,
     db: AsyncSession = Depends(get_db),
