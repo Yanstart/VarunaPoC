@@ -110,14 +110,33 @@ except ImportError:
 try:
     from slowapi import Limiter, _rate_limit_exceeded_handler
     from slowapi.errors import RateLimitExceeded
-    from slowapi.util import get_remote_address
+    from starlette.requests import Request as _StarletteRequest
+
+    def _get_real_client_ip(request: _StarletteRequest) -> str:
+        """Extract client IP using X-Real-IP (set by nginx to $remote_addr).
+
+        Nginx is the trust boundary: it sets X-Real-IP to the actual TCP peer
+        address and overrides X-Forwarded-For with $remote_addr, preventing
+        client-supplied header spoofing.  We prefer X-Real-IP because it is
+        always a single address, then fall back to X-Forwarded-For (first
+        entry) and finally to the ASGI transport peer.
+        """
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip.strip()
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        if request.client:
+            return request.client.host
+        return "127.0.0.1"
 
     _default_rate = settings.rate_limit_default
     _tile_rate = settings.rate_limit_tiles
     _ml_rate = settings.rate_limit_ml
 
     limiter = Limiter(
-        key_func=get_remote_address,
+        key_func=_get_real_client_ip,
         default_limits=[_default_rate],
         headers_enabled=True,  # Add X-RateLimit-* headers
     )
