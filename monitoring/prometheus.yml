@@ -13,16 +13,16 @@ global:
     institution: "CHU UCL Namur"
     application: "VarunaPoC"
 
-# Alertmanager configuration (optional, for production)
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets:
-#           - alertmanager:9093
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
 
-# Load rules once and periodically evaluate them
-# rule_files:
-#   - "alerts/*.yml"
+# Load alert rules and periodically evaluate them
+rule_files:
+  - "alerts/*.yml"
 
 # Scrape configurations
 scrape_configs:
