@@ -114,6 +114,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
       SLIDES_REPOSITORY_PATH: /slides
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://keycloak:8080/realms/varuna}
