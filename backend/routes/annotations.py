@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.database import get_db
+from core.tenant import get_current_tenant
 from schemas.annotation import (
     AnnotationBatchCreate,
     AnnotationCreate,
@@ -43,13 +44,14 @@ async def create_annotation(
     data: AnnotationCreate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Create a single annotation on a slide."""
     try:
         # Populate created_by from authenticated user if not set
         if not data.created_by:
             data.created_by = current_user.username
-        result = await annotation_service.create_annotation(db, slide_id, data)
+        result = await annotation_service.create_annotation(db, slide_id, data, tenant_id=tenant_id)
         return AnnotationResponse(**result)
     except Exception as e:
         logger.error(f"Failed to create annotation: {e}")
@@ -70,6 +72,7 @@ async def list_annotations(
     bbox_y2: Optional[float] = Query(None, description="Spatial filter: max Y"),
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """
     List annotations for a slide with optional filters.
@@ -87,6 +90,7 @@ async def list_annotations(
         label_id=label_id,
         min_confidence=min_confidence,
         bbox=bbox,
+        tenant_id=tenant_id,
     )
     return [AnnotationResponse(**r) for r in results]
 
@@ -96,6 +100,7 @@ async def get_annotation_stats(
     slide_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """
     Get annotation statistics for a slide.
@@ -103,7 +108,7 @@ async def get_annotation_stats(
     Returns total count, counts by label, counts by type,
     and confidence distribution (high/medium/low/unscored).
     """
-    return await annotation_service.get_annotation_stats(db, slide_id)
+    return await annotation_service.get_annotation_stats(db, slide_id, tenant_id=tenant_id)
 
 
 @router.get("/{slide_id}/export", response_model=GeoJSONFeatureCollection)
@@ -111,9 +116,10 @@ async def export_annotations(
     slide_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Export all annotations for a slide as GeoJSON FeatureCollection."""
-    return await annotation_service.export_annotations_geojson(db, slide_id)
+    return await annotation_service.export_annotations_geojson(db, slide_id, tenant_id=tenant_id)
 
 
 @router.get("/{slide_id}/{annotation_id}", response_model=AnnotationResponse)
@@ -122,9 +128,12 @@ async def get_annotation(
     annotation_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Get a single annotation by ID."""
-    result = await annotation_service.get_annotation(db, slide_id, annotation_id)
+    result = await annotation_service.get_annotation(
+        db, slide_id, annotation_id, tenant_id=tenant_id
+    )
     if not result:
         raise HTTPException(status_code=404, detail="Annotation not found")
     return AnnotationResponse(**result)
@@ -137,9 +146,12 @@ async def update_annotation(
     data: AnnotationUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Update an annotation."""
-    result = await annotation_service.update_annotation(db, slide_id, annotation_id, data)
+    result = await annotation_service.update_annotation(
+        db, slide_id, annotation_id, data, tenant_id=tenant_id
+    )
     if not result:
         raise HTTPException(status_code=404, detail="Annotation not found")
     return AnnotationResponse(**result)
@@ -151,9 +163,12 @@ async def delete_annotation(
     annotation_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Delete an annotation."""
-    deleted = await annotation_service.delete_annotation(db, slide_id, annotation_id)
+    deleted = await annotation_service.delete_annotation(
+        db, slide_id, annotation_id, tenant_id=tenant_id
+    )
     if not deleted:
         raise HTTPException(status_code=404, detail="Annotation not found")
 
@@ -164,10 +179,13 @@ async def batch_create_annotations(
     data: AnnotationBatchCreate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Batch create annotations (used by auto-detection pipeline)."""
     try:
-        results = await annotation_service.batch_create_annotations(db, slide_id, data.annotations)
+        results = await annotation_service.batch_create_annotations(
+            db, slide_id, data.annotations, tenant_id=tenant_id
+        )
         return [AnnotationResponse(**r) for r in results]
     except Exception as e:
         logger.error(f"Batch create failed: {e}")
@@ -185,9 +203,10 @@ label_router = APIRouter(prefix="/api/labels", tags=["Labels"])
 async def list_labels(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """List all annotation labels."""
-    labels = await annotation_service.get_labels(db)
+    labels = await annotation_service.get_labels(db, tenant_id=tenant_id)
     return [LabelResponse.model_validate(label) for label in labels]
 
 
@@ -196,6 +215,7 @@ async def create_label(
     data: LabelCreate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Create a new annotation label."""
     try:
@@ -203,6 +223,7 @@ async def create_label(
             db,
             name=data.name,
             color=data.color,
+            tenant_id=tenant_id,
             category=data.category,
             description=data.description,
             sort_order=data.sort_order,
@@ -218,9 +239,10 @@ async def get_label(
     label_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Get a label by ID."""
-    label = await annotation_service.get_label(db, label_id)
+    label = await annotation_service.get_label(db, label_id, tenant_id=tenant_id)
     if not label:
         raise HTTPException(status_code=404, detail="Label not found")
     return LabelResponse.model_validate(label)
@@ -232,10 +254,11 @@ async def update_label(
     data: LabelUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Update a label."""
     update_data = data.model_dump(exclude_unset=True)
-    label = await annotation_service.update_label(db, label_id, **update_data)
+    label = await annotation_service.update_label(db, label_id, tenant_id=tenant_id, **update_data)
     if not label:
         raise HTTPException(status_code=404, detail="Label not found")
     return LabelResponse.model_validate(label)
@@ -246,8 +269,9 @@ async def delete_label(
     label_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+    tenant_id: str = Depends(get_current_tenant),
 ):
     """Delete a label."""
-    deleted = await annotation_service.delete_label(db, label_id)
+    deleted = await annotation_service.delete_label(db, label_id, tenant_id=tenant_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Label not found")

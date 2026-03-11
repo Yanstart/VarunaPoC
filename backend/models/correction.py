@@ -9,7 +9,7 @@ Supports: confirmed, rejected, refined (geometry edit), relabeled.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +20,9 @@ class Correction(Base):
     __tablename__ = "corrections"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default=text("'default'"), index=True
+    )
     annotation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("annotations.id", ondelete="CASCADE"),
@@ -48,6 +51,8 @@ class Correction(Base):
     # Relationships
     annotation = relationship("Annotation", lazy="selectin")
     corrected_label = relationship("AnnotationLabel", lazy="selectin")
+
+    __table_args__ = (Index("idx_corrections_tenant", "tenant_id"),)
 
     def __repr__(self):
         return (

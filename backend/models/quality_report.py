@@ -8,7 +8,7 @@ with a TTL-based expiration. Optional - quality module works without it.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Index, String
+from sqlalchemy import DateTime, Index, String, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +19,9 @@ class QualityReport(Base):
     __tablename__ = "quality_reports"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default=text("'default'"), index=True
+    )
     slide_id: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
     report_type: Mapped[str] = mapped_column(
         String(50), nullable=False
@@ -34,6 +37,7 @@ class QualityReport(Base):
     __table_args__ = (
         Index("idx_quality_reports_lookup", "slide_id", "report_type"),
         Index("idx_quality_reports_expires", "expires_at"),
+        Index("idx_quality_reports_tenant", "tenant_id"),
     )
 
     def __repr__(self):

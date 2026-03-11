@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Float, ForeignKey, Index, String
+from sqlalchemy import DateTime, Float, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,9 @@ class Annotation(Base):
     __tablename__ = "annotations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default=text("'default'"), index=True
+    )
     slide_id: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
     geometry: Mapped[str] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0), nullable=False
@@ -52,7 +55,10 @@ class Annotation(Base):
     # Relationship
     label = relationship("AnnotationLabel", back_populates="annotations", lazy="selectin")
 
-    __table_args__ = (Index("idx_annotations_geometry", "geometry", postgresql_using="gist"),)
+    __table_args__ = (
+        Index("idx_annotations_geometry", "geometry", postgresql_using="gist"),
+        Index("idx_annotations_tenant_slide", "tenant_id", "slide_id"),
+    )
 
     def __repr__(self):
         return (

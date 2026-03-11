@@ -8,7 +8,7 @@ Each annotation references a label for consistent color and category display.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +19,10 @@ class AnnotationLabel(Base):
     __tablename__ = "annotation_labels"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    tenant_id: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default=text("'default'"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     color: Mapped[str] = mapped_column(String(7), nullable=False, default="#FF0000")
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -35,6 +38,11 @@ class AnnotationLabel(Base):
 
     # Relationship
     annotations = relationship("Annotation", back_populates="label", lazy="selectin")
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_labels_tenant_name"),
+        Index("idx_labels_tenant", "tenant_id"),
+    )
 
     def __repr__(self):
         return f"<AnnotationLabel(name='{self.name}', color='{self.color}')>"
