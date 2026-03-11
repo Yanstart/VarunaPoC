@@ -327,7 +327,7 @@ class ApiService {
      * @returns {Promise<{ count: number, slides: Array }>}
      */
     async fetchSlides() {
-        return this.get('/api/slides/');
+        return this.get('/api/v1/slides/');
     }
 
     /**
@@ -336,7 +336,7 @@ class ApiService {
      * @returns {Promise<Object>} Slide metadata
      */
     async getSlideByName(name) {
-        return this.get(`/api/slides/by-name/${encodeURIComponent(name)}`, { useCache: false });
+        return this.get(`/api/v1/slides/by-name/${encodeURIComponent(name)}`, { useCache: false });
     }
 
     /**
@@ -345,7 +345,7 @@ class ApiService {
      * @returns {Promise<Object>} Slide metadata
      */
     async getSlideInfo(slideId) {
-        return this.get(`/api/slides/${slideId}/info`);
+        return this.get(`/api/v1/slides/${slideId}/info`);
     }
 
     /**
@@ -354,7 +354,7 @@ class ApiService {
      * @returns {Promise<Object>} DZI metadata
      */
     async getDziMetadata(slideId) {
-        return this.get(`/api/slides/${slideId}/dzi.json`);
+        return this.get(`/api/v1/slides/${slideId}/dzi.json`);
     }
 
     /**
@@ -363,7 +363,7 @@ class ApiService {
      * @returns {string} Overview image URL
      */
     getOverviewUrl(slideId) {
-        return `${this.baseUrl}/api/slides/${slideId}/overview`;
+        return `${this.baseUrl}/api/v1/slides/${slideId}/overview`;
     }
 
     /**
@@ -375,7 +375,7 @@ class ApiService {
      * @returns {string} Tile URL
      */
     getTileUrl(slideId, level, x, y) {
-        return `${this.baseUrl}/api/slides/${slideId}/tiles/${level}/${x}_${y}.jpg`;
+        return `${this.baseUrl}/api/v1/slides/${slideId}/tiles/${level}/${x}_${y}.jpg`;
     }
 
     // ==========================================
@@ -388,7 +388,7 @@ class ApiService {
      * @returns {Promise<Object>} Directory contents
      */
     async browse(path = '/') {
-        return this.get('/api/slides/browse', {
+        return this.get('/api/v1/slides/browse', {
             params: { path },
         });
     }
@@ -402,7 +402,7 @@ class ApiService {
      * @returns {Promise<Object>} ML service status
      */
     async getMLHealth() {
-        return this.get('/api/ml/health', { useCache: false });
+        return this.get('/api/v1/ml/health', { useCache: false });
     }
 
     /**
@@ -410,7 +410,7 @@ class ApiService {
      * @returns {Promise<Array>} List of models
      */
     async listModels() {
-        return this.get('/api/ml/models');
+        return this.get('/api/v1/ml/models');
     }
 
     /**
@@ -420,7 +420,7 @@ class ApiService {
      * @returns {Promise<Object>} Load result
      */
     async loadModel(modelId, config = {}) {
-        return this.post('/api/ml/models/reload', {
+        return this.post('/api/v1/ml/models/reload', {
             model_id: modelId,
             ...config,
         });
@@ -557,7 +557,7 @@ class ApiService {
      * @returns {Promise<Object>} Created annotation
      */
     async createAnnotation(slideId, data) {
-        return this.post(`/api/annotations/${encodeURIComponent(slideId)}`, data);
+        return this.post(`/api/v1/annotations/${encodeURIComponent(slideId)}`, data);
     }
 
     /**
@@ -567,7 +567,7 @@ class ApiService {
      * @returns {Promise<Array>} List of annotations
      */
     async getAnnotations(slideId, params = {}) {
-        return this.get(`/api/annotations/${encodeURIComponent(slideId)}`, {
+        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}`, {
             useCache: false,
             params,
         });
@@ -581,7 +581,7 @@ class ApiService {
      * @returns {Promise<Object>} Updated annotation
      */
     async updateAnnotation(slideId, annotationId, data) {
-        const url = `${this.baseUrl}/api/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
+        const url = `${this.baseUrl}/api/v1/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
         return this._fetchWithBody(url, 'PUT', data);
     }
 
@@ -592,7 +592,7 @@ class ApiService {
      * @returns {Promise<void>}
      */
     async deleteAnnotation(slideId, annotationId) {
-        const url = `${this.baseUrl}/api/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
+        const url = `${this.baseUrl}/api/v1/annotations/${encodeURIComponent(slideId)}/${annotationId}`;
         const headers = {};
         this._injectAuthHeader(headers);
         const response = await fetch(url, { method: 'DELETE', headers });
@@ -608,7 +608,7 @@ class ApiService {
      * @returns {Promise<Array>} Created annotations
      */
     async batchCreateAnnotations(slideId, annotations) {
-        return this.post(`/api/annotations/${encodeURIComponent(slideId)}/batch`, {
+        return this.post(`/api/v1/annotations/${encodeURIComponent(slideId)}/batch`, {
             annotations,
         });
     }
@@ -619,7 +619,7 @@ class ApiService {
      * @returns {Promise<Object>} GeoJSON FeatureCollection
      */
     async exportAnnotations(slideId) {
-        return this.get(`/api/annotations/${encodeURIComponent(slideId)}/export`, {
+        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}/export`, {
             useCache: false,
         });
     }
@@ -630,7 +630,7 @@ class ApiService {
      * @returns {Promise<Object>} Stats with total, by_type, by_label, confidence_distribution
      */
     async getAnnotationStats(slideId) {
-        return this.get(`/api/annotations/${encodeURIComponent(slideId)}/stats`, {
+        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}/stats`, {
             useCache: false,
         });
     }
@@ -644,7 +644,7 @@ class ApiService {
      * @returns {Promise<Array>} List of labels
      */
     async getLabels() {
-        return this.get('/api/labels/');
+        return this.get('/api/v1/labels/');
     }
 
     /**
@@ -653,7 +653,7 @@ class ApiService {
      * @returns {Promise<Object>} Created label
      */
     async createLabel(data) {
-        return this.post('/api/labels/', data);
+        return this.post('/api/v1/labels/', data);
     }
 
     // ==========================================
@@ -714,7 +714,7 @@ class ApiService {
      * @returns {Promise<Object>} { status: 'cancelled' | 'idle' }
      */
     async cancelML() {
-        return this.post('/api/ml/cancel', {});
+        return this.post('/api/v1/ml/cancel', {});
     }
 
     async clusterSlide(slideId, params = {}) {
@@ -755,7 +755,7 @@ class ApiService {
      * @returns {Promise<Object>} AllDriftReportsResponse with reports array
      */
     async getAllDriftReports() {
-        return this.get('/api/ml/drift');
+        return this.get('/api/v1/ml/drift');
     }
 
     // ==========================================
@@ -767,7 +767,7 @@ class ApiService {
      * @returns {Promise<Object>} Auth status with user info
      */
     async getAuthMe() {
-        return this.get('/api/auth/me', { useCache: false });
+        return this.get('/api/v1/auth/me', { useCache: false });
     }
 
     /**
@@ -777,7 +777,7 @@ class ApiService {
      * @returns {Promise<Object>} Break-glass activation result
      */
     async activateBreakGlass(reason, durationMinutes = 30) {
-        return this.post('/api/auth/break-glass', {
+        return this.post('/api/v1/auth/break-glass', {
             reason,
             duration_minutes: durationMinutes,
         });
@@ -789,7 +789,7 @@ class ApiService {
      * @returns {Promise<Object>} Save confirmation
      */
     async saveSessionState(state) {
-        return this.post('/api/auth/session', state);
+        return this.post('/api/v1/auth/session', state);
     }
 
     /**
@@ -797,7 +797,7 @@ class ApiService {
      * @returns {Promise<Object>} Saved session state
      */
     async loadSessionState() {
-        return this.get('/api/auth/session', { useCache: false });
+        return this.get('/api/v1/auth/session', { useCache: false });
     }
 
     // ==========================================
@@ -884,7 +884,7 @@ class ApiService {
      * @returns {Promise<Object>} WorklistResponse with items and counts
      */
     async getWorklist() {
-        return this.get('/api/slides/worklist', { useCache: false });
+        return this.get('/api/v1/slides/worklist', { useCache: false });
     }
 
     /**
@@ -893,7 +893,7 @@ class ApiService {
      * @returns {Promise<Object>} HistoryResponse with items and total
      */
     async getHistory(limit = 20) {
-        return this.get(`/api/slides/history?limit=${limit}`, { useCache: false });
+        return this.get(`/api/v1/slides/history?limit=${limit}`, { useCache: false });
     }
 
     // ==========================================
@@ -905,7 +905,7 @@ class ApiService {
      * @returns {Promise<Object>} Health status
      */
     async checkHealth() {
-        return this.get('/api/health', { useCache: false });
+        return this.get('/api/v1/health', { useCache: false });
     }
 
     /**

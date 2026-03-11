@@ -35,7 +35,7 @@ from services.hl7v2_parser import HL7v2Parser, HL7v2ParseResult
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/integration", tags=["Integration"])
+router = APIRouter(prefix="/integration", tags=["Integration"])
 
 # ---------------------------------------------------------------------------
 # Singleton service instances

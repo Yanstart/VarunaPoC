@@ -17,7 +17,7 @@ def test_browse_endpoint_requires_path(client):
 
     Devrait retourner une erreur 400/404/422 ou la racine.
     """
-    response = client.get("/api/slides/browse")
+    response = client.get("/api/v1/slides/browse")
 
     # Endpoint should handle missing path gracefully
     # 404 can happen if /Slides directory doesn't exist
@@ -31,7 +31,7 @@ def test_slides_list_endpoint(client):
 
     Note: Retourne liste vide si /Slides n'existe pas (normal en CI).
     """
-    response = client.get("/api/slides/")
+    response = client.get("/api/v1/slides/")
 
     assert response.status_code == 200
 
@@ -53,7 +53,7 @@ def test_browse_endpoint_with_valid_path(client):
     Ce test est skippé par défaut car il nécessite /Slides.
     Pour l'exécuter: pytest -m integration
     """
-    response = client.get("/api/slides/browse", params={"path": "/Slides"})
+    response = client.get("/api/v1/slides/browse", params={"path": "/Slides"})
 
     assert response.status_code == 200
 
@@ -75,7 +75,7 @@ def test_slide_info_endpoint(client):
     # Replace with actual slide ID from test fixtures
     slide_id = "test_slide_001"
 
-    response = client.get(f"/api/slides/{slide_id}/info")
+    response = client.get(f"/api/v1/slides/{slide_id}/info")
 
     assert response.status_code == 200
 
@@ -95,7 +95,7 @@ def test_slide_overview_endpoint(client):
     """
     slide_id = "test_slide_001"
 
-    response = client.get(f"/api/slides/{slide_id}/overview")
+    response = client.get(f"/api/v1/slides/{slide_id}/overview")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/jpeg"
@@ -108,7 +108,7 @@ def test_invalid_slide_id(client):
 
     Devrait retourner 404.
     """
-    response = client.get("/api/slides/nonexistent_slide_12345/info")
+    response = client.get("/api/v1/slides/nonexistent_slide_12345/info")
 
     assert response.status_code == 404
 

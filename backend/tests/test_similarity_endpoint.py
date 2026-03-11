@@ -73,7 +73,7 @@ class TestSimilarityEndpoint:
             {"slide_id": "slide-003", "score": 0.87},
         ]
 
-        response = client.post("/api/ml/similar/slide-001?top_k=5")
+        response = client.post("/api/v1/ml/similar/slide-001?top_k=5")
 
         assert response.status_code == 200
         data = response.json()
@@ -81,7 +81,7 @@ class TestSimilarityEndpoint:
         assert len(data["results"]) == 2
         assert data["results"][0]["slide_id"] == "slide-002"
         assert data["results"][0]["score"] == 0.94
-        assert data["results"][0]["overview_url"] == "/api/slides/slide-002/overview"
+        assert data["results"][0]["overview_url"] == "/api/v1/slides/slide-002/overview"
         assert data["index_size"] == 50
 
     def test_similar_no_embeddings_404(self, client, mock_deps):
@@ -91,7 +91,7 @@ class TestSimilarityEndpoint:
         # No embeddings in cache
         mock_disk_cache.load_embeddings.return_value = None
 
-        response = client.post("/api/ml/similar/nonexistent-slide")
+        response = client.post("/api/v1/ml/similar/nonexistent-slide")
 
         assert response.status_code == 404
         data = response.json()
@@ -109,7 +109,7 @@ class TestSimilarityEndpoint:
         mock_index.search.return_value = []
         mock_index.size.return_value = 0
 
-        response = client.post("/api/ml/similar/slide-001")
+        response = client.post("/api/v1/ml/similar/slide-001")
 
         assert response.status_code == 200
         data = response.json()

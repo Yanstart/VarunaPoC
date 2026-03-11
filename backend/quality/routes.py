@@ -35,7 +35,7 @@ from quality.services import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/quality", tags=["Quality Metrics"])
+router = APIRouter(prefix="/quality", tags=["Quality Metrics"])
 
 
 @router.get("/{slide_id}/annotators", response_model=list[AnnotatorInfo])

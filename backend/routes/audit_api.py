@@ -19,7 +19,7 @@ from auth.audit import GDPR_PROCESSING_REGISTER, search_audit_events
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/audit", tags=["Audit"])
+router = APIRouter(prefix="/audit", tags=["Audit"])
 
 
 # ---------------------------------------------------------------------------

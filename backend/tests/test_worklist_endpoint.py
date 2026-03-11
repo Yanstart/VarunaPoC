@@ -90,7 +90,7 @@ class TestWorklistEndpoint:
 
     def test_worklist_returns_items_and_counts(self, client):
         """GET /api/slides/worklist returns items list and counts dict."""
-        response = client.get("/api/slides/worklist")
+        response = client.get("/api/v1/slides/worklist")
         assert response.status_code == 200
         data = response.json()
         assert "items" in data
@@ -100,7 +100,7 @@ class TestWorklistEndpoint:
 
     def test_worklist_items_have_required_fields(self, client):
         """Each worklist item has all required fields."""
-        response = client.get("/api/slides/worklist")
+        response = client.get("/api/v1/slides/worklist")
         data = response.json()
         required_fields = {
             "slide_id",
@@ -116,14 +116,14 @@ class TestWorklistEndpoint:
     def test_worklist_status_values_are_valid(self, client):
         """Status values are one of pending, in_progress, completed."""
         valid_statuses = {"pending", "in_progress", "completed"}
-        response = client.get("/api/slides/worklist")
+        response = client.get("/api/v1/slides/worklist")
         data = response.json()
         for item in data["items"]:
             assert item["status"] in valid_statuses, f"Invalid status: {item['status']}"
 
     def test_worklist_counts_match_items(self, client):
         """Counts dict values match actual item counts per status."""
-        response = client.get("/api/slides/worklist")
+        response = client.get("/api/v1/slides/worklist")
         data = response.json()
         items = data["items"]
         counts = data["counts"]
@@ -136,7 +136,7 @@ class TestWorklistEndpoint:
 
     def test_worklist_assigned_date_is_valid_iso(self, client):
         """assigned_date is a valid ISO format datetime string."""
-        response = client.get("/api/slides/worklist")
+        response = client.get("/api/v1/slides/worklist")
         data = response.json()
         for item in data["items"]:
             # Should not raise ValueError
@@ -201,7 +201,7 @@ class TestHistoryEndpoint:
 
     def test_history_returns_items_and_total(self, client):
         """GET /api/slides/history returns items list and total count."""
-        response = client.get("/api/slides/history")
+        response = client.get("/api/v1/slides/history")
         assert response.status_code == 200
         data = response.json()
         assert "items" in data
@@ -211,7 +211,7 @@ class TestHistoryEndpoint:
 
     def test_history_respects_limit_param(self, client):
         """GET /api/slides/history?limit=1 returns at most 1 item."""
-        response = client.get("/api/slides/history?limit=1")
+        response = client.get("/api/v1/slides/history?limit=1")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) <= 1
@@ -220,7 +220,7 @@ class TestHistoryEndpoint:
 
     def test_history_items_have_required_fields(self, client):
         """Each history item has all required fields."""
-        response = client.get("/api/slides/history")
+        response = client.get("/api/v1/slides/history")
         data = response.json()
         required_fields = {"slide_id", "slide_name", "viewed_at", "view_count"}
         for item in data["items"]:

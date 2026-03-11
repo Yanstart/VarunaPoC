@@ -19,7 +19,7 @@ from services.dicom_export import DICOMExportService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/exports", tags=["exports"])
+router = APIRouter(prefix="/exports", tags=["exports"])
 
 # Singleton service instance
 _export_service: Optional[DICOMExportService] = None

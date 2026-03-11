@@ -24,7 +24,7 @@ from services.slide_scanner import get_slide_path_by_id
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/processing", tags=["processing"])
+router = APIRouter(prefix="/processing", tags=["processing"])
 
 
 # ============================================================================

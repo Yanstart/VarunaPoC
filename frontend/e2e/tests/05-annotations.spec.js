@@ -47,7 +47,7 @@ test.describe('Annotations', () => {
     test('annotation creation sends POST request', async ({ page, mockSlideData }) => {
         // Track API calls
         const postRequests = [];
-        await page.route('**/api/annotations/*', (route) => {
+        await page.route('**/api/v1/annotations/*', (route) => {
             if (route.request().method() === 'POST') {
                 postRequests.push(route.request().url());
                 return route.fulfill({
@@ -81,7 +81,7 @@ test.describe('Annotations', () => {
 
     test('annotation delete sends DELETE request', async ({ page, mockSlideData }) => {
         const deleteRequests = [];
-        await page.route('**/api/annotations/**', (route) => {
+        await page.route('**/api/v1/annotations/**', (route) => {
             if (route.request().method() === 'DELETE') {
                 deleteRequests.push(route.request().url());
                 return route.fulfill({ status: 204 });

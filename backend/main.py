@@ -28,7 +28,7 @@ from settings import get_settings
 
 settings = get_settings()
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
@@ -258,83 +258,95 @@ app.add_middleware(
 if MONITORING_ENABLED:
     app.middleware("http")(prometheus_middleware)
 
-# Routes
-app.include_router(slides.router)
-app.include_router(ml.router, prefix="/api")
-app.include_router(viewstate.router)
-app.include_router(capabilities.router)
-if ANNOTATIONS_ENABLED:
-    app.include_router(annotations.router)
-    app.include_router(annotations.label_router)
+# ===========================================================================
+# API v1 Router — all versioned endpoints under /api/v1/
+# ===========================================================================
+api_v1 = APIRouter(prefix="/api/v1")
 
-# Phase 3: Auth routes
+# Core routes
+api_v1.include_router(slides.router)
+api_v1.include_router(ml.router)
+api_v1.include_router(viewstate.router)
+api_v1.include_router(capabilities.router)
+if ANNOTATIONS_ENABLED:
+    api_v1.include_router(annotations.router)
+    api_v1.include_router(annotations.label_router)
+
+# Auth routes
 if auth_routes is not None:
-    app.include_router(auth_routes.router)
+    api_v1.include_router(auth_routes.router)
 
 # Break-glass emergency access routes (requires auth module)
 try:
     from routes import breakglass as breakglass_routes
 
-    app.include_router(breakglass_routes.router)
+    api_v1.include_router(breakglass_routes.router)
     print("[INFO] Break-glass routes loaded")
 except ImportError:
     print("[INFO] Break-glass routes disabled")
 
-# Phase 3: FHIR routes
+# FHIR routes
 if fhir_routes is not None and FHIR_ENABLED:
-    app.include_router(fhir_routes.router)
+    api_v1.include_router(fhir_routes.router)
 
-# Phase 4: Quality routes (requires annotations)
+# Quality routes (requires annotations)
 if quality_routes is not None and QUALITY_ENABLED and ANNOTATIONS_ENABLED:
-    app.include_router(quality_routes.router)
+    api_v1.include_router(quality_routes.router)
 
-# Legacy sweep: Processing pipeline (batch tiles, normalization, outliers)
+# Processing pipeline (batch tiles, normalization, outliers)
 PROCESSING_ENABLED = False
 try:
     from routes import processing
 
-    app.include_router(processing.router)
+    api_v1.include_router(processing.router)
     PROCESSING_ENABLED = True
 except ImportError:
     print("[INFO] Processing module disabled")
 
-# Legacy sweep: Collaboration (sharing, WebSocket, merge)
+# Sharing — collaboration links and merge
 COLLABORATION_ENABLED = False
 try:
-    from routes import sharing, ws
+    from routes import sharing
 
-    app.include_router(sharing.router)
+    api_v1.include_router(sharing.router)
+except ImportError:
+    print("[INFO] Sharing module disabled")
+
+# WebSocket (unversioned — mounted directly on app)
+try:
+    from routes import ws
+
     app.include_router(ws.router)
     COLLABORATION_ENABLED = True
 except ImportError:
-    print("[INFO] Collaboration modules disabled")
+    print("[INFO] WebSocket module disabled")
 
-# Legacy sweep: Embeddings (UNI, Phikon, Virchow, CTransPath)
+# Embeddings (UNI, Phikon, Virchow, CTransPath)
 EMBEDDINGS_ENABLED = False
 try:
     from routes import embeddings
 
-    app.include_router(embeddings.router)
+    api_v1.include_router(embeddings.router)
     EMBEDDINGS_ENABLED = True
 except ImportError:
     print("[INFO] Embeddings module disabled")
 
-# Legacy sweep: DICOM export
+# DICOM export
 DICOM_EXPORT_ENABLED = False
 try:
     from routes import exports
 
-    app.include_router(exports.router)
+    api_v1.include_router(exports.router)
     DICOM_EXPORT_ENABLED = True
 except ImportError:
     print("[INFO] DICOM export module disabled")
 
-# Legacy sweep: Plugin manager
+# Plugin manager
 PLUGINS_ENABLED = False
 try:
     from routes import plugins
 
-    app.include_router(plugins.router)
+    api_v1.include_router(plugins.router)
     PLUGINS_ENABLED = True
 except ImportError:
     print("[INFO] Plugin manager disabled")
@@ -344,7 +356,7 @@ DICOMWEB_ENABLED = False
 try:
     from routes import dicomweb
 
-    app.include_router(dicomweb.router)
+    api_v1.include_router(dicomweb.router)
     DICOMWEB_ENABLED = True
 except ImportError:
     print("[INFO] DICOMweb module disabled")
@@ -354,7 +366,7 @@ INTEGRATION_ENABLED = False
 try:
     from routes import integration
 
-    app.include_router(integration.router)
+    api_v1.include_router(integration.router)
     INTEGRATION_ENABLED = True
 except ImportError:
     print("[INFO] Integration module disabled")
@@ -364,7 +376,7 @@ TERMINOLOGY_ENABLED = False
 try:
     from routes import terminology
 
-    app.include_router(terminology.router)
+    api_v1.include_router(terminology.router)
     TERMINOLOGY_ENABLED = True
 except ImportError:
     print("[INFO] Terminology module disabled")
@@ -374,7 +386,7 @@ AUDIT_ENABLED = False
 try:
     from routes import audit_api
 
-    app.include_router(audit_api.router)
+    api_v1.include_router(audit_api.router)
     AUDIT_ENABLED = True
 except ImportError:
     print("[INFO] Audit API module disabled")
@@ -383,7 +395,7 @@ except ImportError:
 try:
     from routes import gdpr
 
-    app.include_router(gdpr.router)
+    api_v1.include_router(gdpr.router)
 except ImportError:
     print("[INFO] GDPR module disabled")
 
@@ -392,10 +404,13 @@ REGIONAL_ENABLED = False
 try:
     from routes import regional
 
-    app.include_router(regional.router)
+    api_v1.include_router(regional.router)
     REGIONAL_ENABLED = True
 except ImportError:
     print("[INFO] Regional module disabled")
+
+# Mount the versioned API
+app.include_router(api_v1)
 
 # ── Feature flag registry ──────────────────────────────────────────────
 # Register all feature flags so GET /api/capabilities can report them.
@@ -432,17 +447,18 @@ async def root():
         "service": "VarunaPoC Backend",
         "status": "running",
         "version": "1.7.0",
+        "api_version": "v1",
         "docs": "/docs",
         "endpoints": {
-            "navigation": "/api/slides/browse",
-            "list_all": "/api/slides/",
-            "slide_info": "/api/slides/{id}/info",
-            "slide_overview": "/api/slides/{id}/overview",
+            "navigation": "/api/v1/slides/browse",
+            "list_all": "/api/v1/slides/",
+            "slide_info": "/api/v1/slides/{id}/info",
+            "slide_overview": "/api/v1/slides/{id}/overview",
         },
     }
 
 
-@app.get("/api/health", tags=["health"])
+@app.get("/api/v1/health", tags=["health"])
 async def health():
     """
     API health check.

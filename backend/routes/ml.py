@@ -1427,7 +1427,7 @@ async def search_similar(
     # Enrich with slide names and overview URLs
     for r in results:
         r["name"] = r["slide_id"].split("/")[-1] if "/" in r["slide_id"] else r["slide_id"]
-        r["overview_url"] = f"/api/slides/{r['slide_id']}/overview"
+        r["overview_url"] = f"/api/v1/slides/{r['slide_id']}/overview"
 
     return SimilarityResponse(
         query_slide_id=slide_id,

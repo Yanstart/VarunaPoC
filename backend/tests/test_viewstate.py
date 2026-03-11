@@ -173,7 +173,7 @@ def test_ndviewstate_from_slide_metadata_defaults():
 @pytest.mark.unit
 def test_viewstate_endpoint(client):
     """GET /api/viewstate/{slide_id} returns default view state."""
-    response = client.get("/api/viewstate/test-slide-123")
+    response = client.get("/api/v1/viewstate/test-slide-123")
     assert response.status_code == 200
 
     data = response.json()

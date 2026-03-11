@@ -7,8 +7,8 @@ import { test, expect } from '../fixtures/base.js';
 import { mockHealthy, mockAuthAnonymous, mockSlidesApi } from '../helpers/api-mock.js';
 
 test.describe('Health Checks', () => {
-    test('backend /api/health returns healthy', async ({ page, apiUrl }) => {
-        const response = await page.request.get(`${apiUrl}/api/health`);
+    test('backend /api/v1/health returns healthy', async ({ page, apiUrl }) => {
+        const response = await page.request.get(`${apiUrl}/api/v1/health`);
         expect(response.ok()).toBeTruthy();
         const body = await response.json();
         expect(body).toHaveProperty('status', 'healthy');

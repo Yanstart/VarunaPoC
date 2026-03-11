@@ -87,10 +87,7 @@ class TestDICOMExportService:
 
     def test_sop_class_uid_is_wsi(self):
         """SOP Class UID is VL Whole Slide Microscopy Image."""
-        from services.dicom_export import (
-            VL_WHOLE_SLIDE_MICROSCOPY_IMAGE,
-            DICOMExportService,
-        )
+        from services.dicom_export import VL_WHOLE_SLIDE_MICROSCOPY_IMAGE, DICOMExportService
 
         svc = DICOMExportService()
         result = svc.export("slide_sop")
@@ -862,12 +859,12 @@ class TestDICOMwebRoutes:
         from routes.dicomweb import router
 
         app = FastAPI()
-        app.include_router(router)
+        app.include_router(router, prefix="/api/v1")
         self.client = TestClient(app)
 
     def test_wado_rs_metadata(self):
         """GET instance metadata returns 200 with DICOM JSON."""
-        resp = self.client.get("/api/dicomweb/studies/1.2.3/series/1.2.4/instances/1.2.5")
+        resp = self.client.get("/api/v1/dicomweb/studies/1.2.3/series/1.2.4/instances/1.2.5")
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)
@@ -876,7 +873,7 @@ class TestDICOMwebRoutes:
     def test_wado_rs_frame(self):
         """GET frame returns 200 with multipart content."""
         resp = self.client.get(
-            "/api/dicomweb/studies/1.2.3/series/1.2.4" "/instances/1.2.5/frames/1"
+            "/api/v1/dicomweb/studies/1.2.3/series/1.2.4" "/instances/1.2.5/frames/1"
         )
         assert resp.status_code == 200
         assert "multipart/related" in resp.headers["content-type"]
@@ -884,14 +881,14 @@ class TestDICOMwebRoutes:
     def test_wado_rs_frame_invalid_number(self):
         """GET frame with number < 1 returns 400."""
         resp = self.client.get(
-            "/api/dicomweb/studies/1.2.3/series/1.2.4" "/instances/1.2.5/frames/0"
+            "/api/v1/dicomweb/studies/1.2.3/series/1.2.4" "/instances/1.2.5/frames/0"
         )
         assert resp.status_code == 400
 
     def test_stow_rs_store(self):
         """POST store instances returns 200."""
         resp = self.client.post(
-            "/api/dicomweb/studies",
+            "/api/v1/dicomweb/studies",
             json={
                 "study_uid": "1.2.3.888",
                 "instances": [{"patient_name": "ROUTETEST"}],
@@ -904,14 +901,14 @@ class TestDICOMwebRoutes:
 
     def test_qido_rs_search_studies(self):
         """GET search studies returns 200 with DICOM JSON."""
-        resp = self.client.get("/api/dicomweb/studies")
+        resp = self.client.get("/api/v1/dicomweb/studies")
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)
 
     def test_qido_rs_search_series(self):
         """GET search series returns 200."""
-        resp = self.client.get("/api/dicomweb/studies/1.2.3.999/series")
+        resp = self.client.get("/api/v1/dicomweb/studies/1.2.3.999/series")
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)
@@ -919,7 +916,7 @@ class TestDICOMwebRoutes:
     def test_sr_creation_route(self):
         """POST SR creation returns 200 with TID 1500 structure."""
         resp = self.client.post(
-            "/api/dicomweb/sr/test_slide",
+            "/api/v1/dicomweb/sr/test_slide",
             json={
                 "detections": [
                     {
@@ -941,7 +938,7 @@ class TestDICOMwebRoutes:
     def test_annotation_conversion_route(self):
         """POST annotation conversion returns 200."""
         resp = self.client.post(
-            "/api/dicomweb/annotations/test_slide",
+            "/api/v1/dicomweb/annotations/test_slide",
             json={
                 "geojson": {
                     "type": "FeatureCollection",

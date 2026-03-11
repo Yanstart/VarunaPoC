@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/viewstate", tags=["viewstate"])
+router = APIRouter(prefix="/viewstate", tags=["viewstate"])
 
 
 class ViewStateResponse(BaseModel):

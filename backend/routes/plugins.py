@@ -22,7 +22,7 @@ from services.plugin_manager import PluginManager, PluginType
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/plugins", tags=["plugins"])
+router = APIRouter(prefix="/plugins", tags=["plugins"])
 
 # Singleton plugin manager instance
 _plugin_manager: Optional[PluginManager] = None

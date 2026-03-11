@@ -31,7 +31,7 @@ from rate_limiting import auth_rate, limit
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth", tags=["Auth"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.get("/me", response_model=AuthStatusResponse)
