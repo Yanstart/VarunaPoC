@@ -204,7 +204,15 @@ def _persist_to_json(event: dict) -> None:
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract client IP, respecting X-Forwarded-For for proxied requests."""
+    """Extract client IP using X-Real-IP (set by nginx to $remote_addr).
+
+    Nginx overrides X-Forwarded-For with $remote_addr and sets X-Real-IP,
+    preventing client-supplied header spoofing.  Prefer X-Real-IP (single
+    address), fall back to X-Forwarded-For first entry, then ASGI peer.
+    """
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         return forwarded.split(",")[0].strip()
