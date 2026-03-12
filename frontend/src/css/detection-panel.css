@@ -202,6 +202,15 @@
     opacity: 0.6;
 }
 
+.detection-item.is-highlighted {
+    background: rgba(255, 69, 0, 0.15);
+    border-left: 2px solid #FF4500;
+}
+
+.detection-item[data-detection-item-index] {
+    cursor: pointer;
+}
+
 .detection-item__info {
     display: flex;
     flex-direction: column;

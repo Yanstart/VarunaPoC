@@ -57,8 +57,26 @@ class DetectionPanel {
         /** @type {Array<Function>} Unsubscribe functions for event listeners */
         this._unsubscribers = [];
 
+        /** @type {number|null} Currently highlighted detection index */
+        this.highlightedIndex = null;
+
         this.element = null;
         this._create();
+        this._setupEventListeners();
+    }
+
+    /**
+     * Setup event listeners for bidirectional detection linking
+     * @private
+     */
+    _setupEventListeners() {
+        // Listen for clicks on detection previews (SVG on slide)
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_PREVIEW_CLICKED, ({ index }) => {
+                this._highlightDetectionItem(index);
+                this._scrollToDetectionItem(index);
+            }),
+        );
     }
 
     setSlide(slideId) {
@@ -329,6 +347,21 @@ class DetectionPanel {
             });
         });
 
+        // Detection item click for bidirectional linking
+        this.element.querySelectorAll('.detection-item').forEach((item) => {
+            item.addEventListener('click', (e) => {
+                // Don't trigger if clicking on action buttons
+                if (e.target.closest('.detection-item__actions') || e.target.closest('.detection-item__feedback')) {
+                    return;
+                }
+                const idx = parseInt(item.dataset.detectionItemIndex);
+                if (!isNaN(idx)) {
+                    this._highlightDetectionItem(idx);
+                    eventBus.emit(Events.DETECTION_ITEM_CLICKED, { index: idx });
+                }
+            });
+        });
+
         // Feedback buttons (confirm/reject ML prediction)
         this.element.querySelectorAll('.feedback-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -396,6 +429,7 @@ class DetectionPanel {
         const area = Math.round(feature.properties?.area_px || 0);
         const isAccepted = this.accepted.has(index);
         const isRejected = this.rejected.has(index);
+        const isHighlighted = this.highlightedIndex === index;
         const confLevel = feature.properties?.confidence >= 0.8 ? 'high'
             : feature.properties?.confidence >= 0.5 ? 'medium' : 'low';
 
@@ -405,7 +439,8 @@ class DetectionPanel {
             : '';
 
         return `
-            <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''}">
+            <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''} ${isHighlighted ? 'is-highlighted' : ''}"
+                 data-detection-item-index="${index}">
                 <div class="detection-item__info">
                     <span class="detection-item__label">R\u00e9gion ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}${dimensionHtml}</span>
                     <span class="detection-item__meta">
@@ -606,12 +641,46 @@ class DetectionPanel {
         this._renderPreview();
     }
 
+    /**
+     * Highlight a detection item in the panel
+     * @param {number} index - Detection index
+     * @private
+     */
+    _highlightDetectionItem(index) {
+        // Remove previous highlight
+        const prev = this.element.querySelector('.detection-item.is-highlighted');
+        if (prev) {
+            prev.classList.remove('is-highlighted');
+        }
+
+        this.highlightedIndex = index;
+
+        // Apply highlight
+        const item = this.element.querySelector(`[data-detection-item-index="${index}"]`);
+        if (item) {
+            item.classList.add('is-highlighted');
+        }
+    }
+
+    /**
+     * Scroll to a detection item in the panel results list
+     * @param {number} index - Detection index
+     * @private
+     */
+    _scrollToDetectionItem(index) {
+        const item = this.element.querySelector(`[data-detection-item-index="${index}"]`);
+        if (item) {
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
     _resetState() {
         this.detectionResult = null;
         this.measurementResult = null;
         this.feedbackStatus = new Map();
         this.accepted.clear();
         this.rejected.clear();
+        this.highlightedIndex = null;
         annotationStore.clearDetectionPreview();
     }
 

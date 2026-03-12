@@ -185,6 +185,7 @@ class CompareLayout {
         this.syncControls = new SyncControls(this.container, {
             onLayoutChange: (preset) => this.applyLayoutPreset(preset),
             onSyncToggle: (enabled) => this._handleSyncToggle(enabled),
+            onSyncModeChange: (mode) => this._handleSyncModeChange(mode),
         });
     }
 
@@ -263,6 +264,16 @@ class CompareLayout {
             viewerManager.disableSync();
             this.panels.forEach(p => p.setSynced(false));
         }
+    }
+
+    /**
+     * Handle sync mode change
+     * @param {string} mode - New sync mode (full, panOnly, zoomOnly)
+     * @private
+     */
+    _handleSyncModeChange(mode) {
+        viewerManager.setSyncMode(mode);
+        eventBus.emit(Events.SYNC_MODE_CHANGED, { mode });
     }
 
     // ==========================================
