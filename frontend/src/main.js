@@ -44,6 +44,9 @@ const appState = {
     /** ML Panel component (single viewer mode) */
     mlPanel: null,
 
+    /** ML Tabs container (single viewer mode) */
+    mlTabsContainer: null,
+
     /** Heatmap overlay component (single viewer mode) */
     heatmapOverlay: null,
 

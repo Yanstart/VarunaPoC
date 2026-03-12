@@ -19,11 +19,14 @@ import { HeatmapOverlay } from './HeatmapOverlay.js';
 import { AnnotationLayer } from './AnnotationLayer.js';
 import { DrawingTools } from './DrawingTools.js';
 import { DetectionPanel } from './DetectionPanel.js';
+import { CellCountingPanel } from './CellCountingPanel.js';
+import { ClusteringPanel } from './ClusteringPanel.js';
 import { LayerManager } from './LayerManager.js';
 import { CountingPanel } from './CountingPanel.js';
 import { QualityPanel } from './QualityPanel.js';
 import { FocusAssistPanel } from './FocusAssistPanel.js';
 import { SimilarityPanel } from './SimilarityPanel.js';
+import { MLTabsContainer } from './MLTabsContainer.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { apiService } from '../services/ApiService.js';
 
@@ -111,10 +114,28 @@ class ViewerPanel {
         this.isSynced = false;
 
         /**
+         * ML Tabs container component
+         * @type {MLTabsContainer|null}
+         */
+        this.mlTabsContainer = null;
+
+        /**
          * ML Panel component
          * @type {MLPanel|null}
          */
         this.mlPanel = null;
+
+        /**
+         * Cell counting panel component
+         * @type {CellCountingPanel|null}
+         */
+        this.cellCountingPanel = null;
+
+        /**
+         * Clustering panel component
+         * @type {ClusteringPanel|null}
+         */
+        this.clusteringPanel = null;
 
         /**
          * Heatmap overlay component
@@ -433,10 +454,46 @@ class ViewerPanel {
      * @private
      */
     _toggleMLPanel() {
-        // Create ML panel if not exists
-        if (!this.mlPanel) {
-            this.mlPanel = new MLPanel(this.viewerContainer, {
+        // Create tabs container if not exists
+        if (!this.mlTabsContainer) {
+            this.mlTabsContainer = new MLTabsContainer(this.viewerContainer);
+
+            // MLPanel + FocusAssistPanel in "analyse" tab
+            const analysePane = this.mlTabsContainer.getPane('analyse');
+            this.mlPanel = new MLPanel(analysePane, {
                 viewerId: this.viewer ? this.viewer.id : this.id,
+                viewerInstance: this.viewer,
+            });
+            const separator = document.createElement('div');
+            separator.className = 'ml-tabs__separator';
+            analysePane.appendChild(separator);
+            this.focusAssistPanel = new FocusAssistPanel(analysePane, {
+                slideId: this.slideId,
+            });
+
+            // DetectionPanel in "detection" tab
+            const detectionPane = this.mlTabsContainer.getPane('detection');
+            this.detectionPanel = new DetectionPanel(detectionPane, {
+                slideId: this.slideId,
+                viewerInstance: this.viewer,
+            });
+
+            // CellCountingPanel in "comptage" tab
+            const comptagePane = this.mlTabsContainer.getPane('comptage');
+            this.cellCountingPanel = new CellCountingPanel(comptagePane, {
+                slideId: this.slideId,
+                viewerInstance: this.viewer,
+            });
+
+            // ClusteringPanel in "clustering" tab
+            const clusteringPane = this.mlTabsContainer.getPane('clustering');
+            this.clusteringPanel = new ClusteringPanel(clusteringPane, {
+                slideId: this.slideId,
+            });
+
+            // SimilarityPanel in "analyse" tab (after focus assist)
+            this.similarityPanel = new SimilarityPanel(analysePane, {
+                slideId: this.slideId,
             });
 
             // Set current slide if loaded
@@ -445,43 +502,13 @@ class ViewerPanel {
             }
         }
 
-        // Create detection panel if not exists
-        if (!this.detectionPanel) {
-            this.detectionPanel = new DetectionPanel(this.viewerContainer, {
-                slideId: this.slideId,
-            });
-        }
-
-        // Create focus assist panel if not exists
-        if (!this.focusAssistPanel) {
-            this.focusAssistPanel = new FocusAssistPanel(this.viewerContainer, {
-                slideId: this.slideId,
-            });
-        }
-
-        // Create similarity panel if not exists
-        if (!this.similarityPanel) {
-            this.similarityPanel = new SimilarityPanel(this.viewerContainer, {
-                slideId: this.slideId,
-            });
-        }
-
-        // Toggle visibility (all ML panels share the same toggle)
-        this.mlPanel.element.classList.toggle('is-hidden');
-        if (this.detectionPanel.element) {
-            this.detectionPanel.element.classList.toggle('is-hidden');
-        }
-        if (this.focusAssistPanel.element) {
-            this.focusAssistPanel.element.classList.toggle('is-hidden');
-        }
-        if (this.similarityPanel.element) {
-            this.similarityPanel.element.classList.toggle('is-hidden');
-        }
+        // Toggle tabs container visibility
+        this.mlTabsContainer.element.classList.toggle('is-hidden');
 
         // Update button state
         const mlBtn = this.element.querySelector('.viewer-panel-action--ml');
         if (mlBtn) {
-            mlBtn.classList.toggle('is-active', !this.mlPanel.element.classList.contains('is-hidden'));
+            mlBtn.classList.toggle('is-active', !this.mlTabsContainer.element.classList.contains('is-hidden'));
         }
     }
 
@@ -572,6 +599,16 @@ class ViewerPanel {
         // Notify similarity panel if it exists
         if (this.similarityPanel) {
             this.similarityPanel.setSlide(slideId);
+        }
+
+        // Notify cell counting panel if it exists
+        if (this.cellCountingPanel) {
+            this.cellCountingPanel.setSlide(slideId);
+        }
+
+        // Notify clustering panel if it exists
+        if (this.clusteringPanel) {
+            this.clusteringPanel.setSlide(slideId);
         }
 
         // Notify quality panel if it exists
@@ -719,10 +756,22 @@ class ViewerPanel {
         this._unsubscribers.forEach(unsubscribe => unsubscribe());
         this._unsubscribers = [];
 
-        // Destroy ML panel
+        // Destroy ML panel and tabs container
         if (this.mlPanel) {
             this.mlPanel.destroy();
             this.mlPanel = null;
+        }
+        if (this.cellCountingPanel) {
+            this.cellCountingPanel.destroy();
+            this.cellCountingPanel = null;
+        }
+        if (this.clusteringPanel) {
+            this.clusteringPanel.destroy();
+            this.clusteringPanel = null;
+        }
+        if (this.mlTabsContainer) {
+            this.mlTabsContainer.destroy();
+            this.mlTabsContainer = null;
         }
 
         // Destroy heatmap overlay
