@@ -99,8 +99,8 @@ jobs:
       - name: Run Bandit (Python security linter)
         run: |
           cd backend
-          bandit -r . --exclude ./tests -f json -o bandit-report.json || true
-          bandit -r . --exclude ./tests -f screen || true
+          bandit -r . --exclude ./tests -f json -o bandit-report.json -ll || true
+          bandit -r . --exclude ./tests -f screen -ll
 
       - name: Run Safety (dependency vulnerability check)
         run: |
@@ -112,7 +112,7 @@ jobs:
         run: |
           cd backend
           pip-audit --requirement requirements.txt --format json --output pip-audit-report.json || true
-          pip-audit --requirement requirements.txt || true
+          pip-audit --requirement requirements.txt
 
       - name: Upload security reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -361,6 +361,73 @@ jobs:
           echo "No PHI logging detected"
 
   # ============================================
+  # Dependency Gate (CRITICAL - blocks PRs on CRITICAL/HIGH CVEs)
+  # ============================================
+  dependency-gate:
+    name: Dependency Gate
+    needs:
+      - dependency-scan
+      - python-security
+      - javascript-security
+      - docker-scan
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
+    if: always()
+    # No continue-on-error: CRITICAL/HIGH CVEs MUST block merges
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install scanning tools
+        run: |
+          pip install --upgrade pip
+          pip install bandit pip-audit
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Trivy gate - backend dependencies
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './backend'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          trivyignores: '.trivyignore'
+
+      - name: Trivy gate - frontend dependencies
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './frontend'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          trivyignores: '.trivyignore'
+
+      - name: Bandit gate - HIGH severity Python issues
+        run: |
+          cd backend
+          bandit -r . --exclude ./tests -f screen -ll
+
+      - name: pip-audit gate - known vulnerabilities
+        run: |
+          cd backend
+          pip install -r requirements.txt --quiet
+          pip-audit --requirement requirements.txt
+
+      - name: npm audit gate - HIGH severity JS vulnerabilities
+        run: |
+          cd frontend
+          npm ci --ignore-scripts
+          npm audit --audit-level=high
+
+  # ============================================
   # Security Summary
   # ============================================
   security-summary:
@@ -373,6 +440,7 @@ jobs:
       - codeql-analysis
       - secret-scan
       - compliance-check
+      - dependency-gate
     runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'ubuntu-latest' }}
     if: always()
     permissions:
@@ -380,21 +448,36 @@ jobs:
 
     steps:
       - name: Generate security summary
+        env:
+          DEP_SCAN: ${{ needs.dependency-scan.result }}
+          PY_SEC: ${{ needs.python-security.result }}
+          JS_SEC: ${{ needs.javascript-security.result }}
+          DOCKER_SCAN: ${{ needs.docker-scan.result }}
+          CODEQL: ${{ needs.codeql-analysis.result }}
+          SECRET: ${{ needs.secret-scan.result }}
+          COMPLIANCE: ${{ needs.compliance-check.result }}
+          DEP_GATE: ${{ needs.dependency-gate.result }}
         run: |
           cat >> $GITHUB_STEP_SUMMARY <<EOF
           # Security Scan Summary
 
-          ## Scan Results
+          ## Gate Status
+
+          | Gate | Status | Blocks Merge |
+          |------|--------|--------------|
+          | Dependency Gate (CRITICAL/HIGH CVEs) | $DEP_GATE | YES |
+          | Secret Scan | $SECRET | YES |
+          | HIPAA/GDPR Compliance | $COMPLIANCE | YES |
+
+          ## Informational Scans
 
           | Component | Status |
           |-----------|--------|
-          | Dependency Scan | ${{ needs.dependency-scan.result }} |
-          | Python Security | ${{ needs.python-security.result }} |
-          | JavaScript Security | ${{ needs.javascript-security.result }} |
-          | Docker Scan | ${{ needs.docker-scan.result }} |
-          | CodeQL Analysis | ${{ needs.codeql-analysis.result }} |
-          | Secret Scan | ${{ needs.secret-scan.result }} |
-          | HIPAA/GDPR Compliance | ${{ needs.compliance-check.result }} |
+          | Dependency Scan | $DEP_SCAN |
+          | Python Security | $PY_SEC |
+          | JavaScript Security | $JS_SEC |
+          | Docker Scan | $DOCKER_SCAN |
+          | CodeQL Analysis | $CODEQL |
 
           ## Security Resources
 
@@ -402,21 +485,37 @@ jobs:
           - [Dependabot Alerts](https://github.com/${{ github.repository }}/security/dependabot)
           - [Code Scanning Alerts](https://github.com/${{ github.repository }}/security/code-scanning)
 
+          ## Trivy Ignore List
+
+          To suppress a known CVE that cannot be fixed yet, add it to \`.trivyignore\`
+          with a justification comment and tracking issue. See the file header for the process.
+
           ## Medical Data Compliance
 
           This project handles sensitive medical imaging data (WSI files). All security findings should be reviewed with HIPAA/GDPR compliance in mind.
           EOF
 
       - name: Check for critical failures
-        if: |
-          needs.secret-scan.result == 'failure' ||
-          needs.compliance-check.result == 'failure'
+        env:
+          SECRET_RESULT: ${{ needs.secret-scan.result }}
+          COMPLIANCE_RESULT: ${{ needs.compliance-check.result }}
+          GATE_RESULT: ${{ needs.dependency-gate.result }}
         run: |
-          echo "::error::Critical security checks failed - review required before merging"
-          if [ "${{ needs.secret-scan.result }}" = "failure" ]; then
+          FAILED=0
+          if [ "$SECRET_RESULT" = "failure" ]; then
             echo "::error::Secret scanning found potential leaks - review immediately"
+            FAILED=1
           fi
-          if [ "${{ needs.compliance-check.result }}" = "failure" ]; then
+          if [ "$COMPLIANCE_RESULT" = "failure" ]; then
             echo "::error::HIPAA/GDPR compliance check failed - review immediately"
+            FAILED=1
           fi
-          exit 1
+          if [ "$GATE_RESULT" = "failure" ]; then
+            echo "::error::Dependency gate failed - CRITICAL/HIGH CVEs found. Fix vulnerabilities or add exceptions to .trivyignore"
+            FAILED=1
+          fi
+          if [ "$FAILED" = "1" ]; then
+            echo "::error::Critical security checks failed - review required before merging"
+            exit 1
+          fi
+          echo "All security gates passed"
