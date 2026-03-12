@@ -6,6 +6,7 @@ Endpoints:
 - POST /api/plugins/{name}/activate   - Activate a plugin
 - POST /api/plugins/{name}/deactivate - Deactivate a plugin
 - GET  /api/plugins/discover - Discover available plugins from directory
+- GET  /api/plugins/registry - Return plugins loaded by the application lifecycle
 
 References:
 - FastAPI: https://fastapi.tiangolo.com/
@@ -16,6 +17,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 
+from core.plugin_loader import get_plugin_registry
 from services.plugin_manager import PluginManager, PluginType
 
 logger = logging.getLogger(__name__)
@@ -129,7 +131,7 @@ async def deactivate_plugin(name: str):
 
 
 @router.get("/discover")
-async def discover_plugins():
+async def discover_plugins_endpoint():
     """Discover available plugins from the plugins directory.
 
     Scans the plugins directory for subdirectories containing
@@ -153,3 +155,57 @@ async def discover_plugins():
         ],
         "total": len(discovered),
     }
+
+
+@router.get("/registry", tags=["plugins"])
+async def list_registry():
+    """Return plugins loaded by the application lifecycle.
+
+    These are plugins discovered from the PLUGINS_DIR directory at startup
+    that implement the manifest.json + setup(app) convention (as opposed to
+    the legacy plugin.yaml + PluginBase convention).
+
+    Args:
+        None.
+
+    Returns:
+        Registry dict:
+        ```json
+        {
+            "plugins": {
+                "my_plugin": {
+                    "meta": {
+                        "name": "my_plugin",
+                        "version": "1.0.0",
+                        "description": "...",
+                        "author": "...",
+                        "type": "analysis"
+                    },
+                    "loaded": true
+                }
+            },
+            "total": 1
+        }
+        ```
+
+    Technical Notes:
+        - The registry is populated during application startup via
+          core.plugin_loader.discover_plugins() and load_plugin().
+        - Plugins that failed to load (missing setup(), import error, etc.)
+          are not included.
+        - This endpoint reflects the live state: if unload_plugins() was
+          called (e.g., during shutdown), the registry will be empty.
+
+    Examples:
+        ```
+        GET /api/plugins/registry
+
+        Response:
+        {
+            "plugins": {},
+            "total": 0
+        }
+        ```
+    """
+    registry = get_plugin_registry()
+    return {"plugins": registry, "total": len(registry)}
