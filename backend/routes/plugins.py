@@ -15,8 +15,10 @@ References:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from core.plugin_loader import get_plugin_registry
 from services.plugin_manager import PluginManager, PluginType
 
@@ -37,7 +39,10 @@ def get_plugin_manager() -> PluginManager:
 
 
 @router.get("/")
-async def list_plugins(plugin_type: Optional[str] = None):
+async def list_plugins(
+    plugin_type: Optional[str] = None,
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """List all registered plugins, optionally filtered by type.
 
     Args:
@@ -77,7 +82,10 @@ async def list_plugins(plugin_type: Optional[str] = None):
 
 
 @router.post("/{name}/activate")
-async def activate_plugin(name: str):
+async def activate_plugin(
+    name: str,
+    _current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
     """Activate a registered plugin by name.
 
     Args:
@@ -104,7 +112,10 @@ async def activate_plugin(name: str):
 
 
 @router.post("/{name}/deactivate")
-async def deactivate_plugin(name: str):
+async def deactivate_plugin(
+    name: str,
+    _current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
     """Deactivate a registered plugin by name.
 
     Args:
@@ -131,7 +142,9 @@ async def deactivate_plugin(name: str):
 
 
 @router.get("/discover")
-async def discover_plugins_endpoint():
+async def discover_plugins_endpoint(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Discover available plugins from the plugins directory.
 
     Scans the plugins directory for subdirectories containing
@@ -158,7 +171,9 @@ async def discover_plugins_endpoint():
 
 
 @router.get("/registry", tags=["plugins"])
-async def list_registry():
+async def list_registry(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Return plugins loaded by the application lifecycle.
 
     These are plugins discovered from the PLUGINS_DIR directory at startup

@@ -18,9 +18,11 @@ References:
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from services.apsr import APSRBuilder, APSRRequest, APSRResult
 from services.ehealth_be import (
     EhBoxMessage,
@@ -112,7 +114,10 @@ class RIZIVRequest(BaseModel):
 
 
 @router.post("/hl7v2/parse", response_model=HL7v2ParseResult)
-async def parse_hl7v2(request: HL7v2ParseRequest):
+async def parse_hl7v2(
+    request: HL7v2ParseRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Parser un message HL7 v2.5 (ORM/ORU).
 
     Analyse les segments MSH, PID, ORC, OBR, OBX, NTE et extrait
@@ -133,7 +138,10 @@ async def parse_hl7v2(request: HL7v2ParseRequest):
 
 
 @router.post("/ehealth/token", response_model=SAMLAssertion)
-async def request_ehealth_token(request: EHealthTokenRequest):
+async def request_ehealth_token(
+    request: EHealthTokenRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Demander un token SAML aupres du STS eHealth belge.
 
     En mode mock, retourne une assertion SAML deterministe.
@@ -151,7 +159,10 @@ async def request_ehealth_token(request: EHealthTokenRequest):
 
 
 @router.post("/ehealth/ehbox", response_model=EhBoxMessage)
-async def send_ehbox_message(request: EhBoxSendRequest):
+async def send_ehbox_message(
+    request: EhBoxSendRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Envoyer un message via ehBox (messagerie securisee eHealth).
 
     En mode mock, retourne un message deterministe sans envoi reel.
@@ -171,14 +182,19 @@ async def send_ehbox_message(request: EhBoxSendRequest):
 
 
 @router.get("/ehealth/status")
-async def ehealth_status():
+async def ehealth_status(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Statut du client eHealth STS."""
     client = _get_ehealth_client()
     return client.get_status()
 
 
 @router.post("/ehealth/validate/ssin", response_model=SSINValidation)
-async def validate_ssin_endpoint(request: SSINRequest):
+async def validate_ssin_endpoint(
+    request: SSINRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Valider un numero NISS/SSIN belge (11 chiffres).
 
     Verifie le format, la date de naissance et le checksum.
@@ -187,7 +203,10 @@ async def validate_ssin_endpoint(request: SSINRequest):
 
 
 @router.post("/ehealth/validate/riziv", response_model=RIZIVValidation)
-async def validate_riziv_endpoint(request: RIZIVRequest):
+async def validate_riziv_endpoint(
+    request: RIZIVRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Valider un numero RIZIV/INAMI (identification praticien belge).
 
     Verifie le format, le code de qualification et le checksum.
@@ -201,7 +220,11 @@ async def validate_riziv_endpoint(request: RIZIVRequest):
 
 
 @router.post("/apsr/{slide_id}", response_model=APSRResult)
-async def generate_apsr(slide_id: str, request: APSRRequest | None = None):
+async def generate_apsr(
+    slide_id: str,
+    request: APSRRequest | None = None,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Generer un rapport APSR (Anatomic Pathology Structured Report).
 
     Produit un document CDA R2 XML conforme au profil IHE PaLM APSR.

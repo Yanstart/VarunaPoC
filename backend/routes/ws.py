@@ -18,7 +18,10 @@ import logging
 import os
 import time
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+
+from auth.dependencies import get_current_user
+from auth.schemas import CurrentUser
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +222,6 @@ async def slide_websocket(websocket: WebSocket, slide_id: str):  # noqa: PLR0912
 
     Query params:
         token: JWT access token (required when AUTH_ENABLED=true)
-        username: Display name override (ignored when AUTH_ENABLED=true)
 
     Security:
         - Validates JWT on connect; closes with 4001 on auth failure.
@@ -370,7 +372,7 @@ async def slide_websocket(websocket: WebSocket, slide_id: str):  # noqa: PLR0912
 
 
 @router.get("/ws/slides/{slide_id}/presence")
-async def get_presence(slide_id: str):
+async def get_presence(slide_id: str, _current_user: CurrentUser = Depends(get_current_user)):
     """Get active users for a slide.
 
     Returns the count and list of users currently connected via WebSocket.

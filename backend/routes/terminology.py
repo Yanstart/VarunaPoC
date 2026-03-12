@@ -18,8 +18,10 @@ References:
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from auth.dependencies import get_current_user
+from auth.schemas import CurrentUser
 from services.terminology import (
     LabelMapping,
     LOINCLookupResult,
@@ -48,7 +50,10 @@ def _get_service() -> TerminologyService:
 
 
 @router.get("/snomed/{code}", response_model=SNOMEDLookupResult)
-async def lookup_snomed(code: str):
+async def lookup_snomed(
+    code: str,
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Rechercher un code SNOMED CT dans le referentiel VarunaPoC.
 
     Retourne le concept SNOMED CT et le label VarunaPoC correspondant.
@@ -64,7 +69,10 @@ async def lookup_snomed(code: str):
 
 
 @router.get("/loinc/{code}", response_model=LOINCLookupResult)
-async def lookup_loinc(code: str):
+async def lookup_loinc(
+    code: str,
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Rechercher un code LOINC dans le referentiel VarunaPoC.
 
     Retourne la procedure LOINC et ses details.
@@ -80,7 +88,9 @@ async def lookup_loinc(code: str):
 
 
 @router.get("/mappings", response_model=list[LabelMapping])
-async def get_all_mappings():
+async def get_all_mappings(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourner tous les mappings VarunaPoC label -> SNOMED CT.
 
     Liste la correspondance entre les labels internes (francais)
@@ -96,7 +106,9 @@ async def get_all_mappings():
 
 
 @router.get("/codesystem/snomed")
-async def get_snomed_codesystem():
+async def get_snomed_codesystem(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourner la ressource FHIR CodeSystem pour les codes SNOMED CT.
 
     Fragment du CodeSystem SNOMED CT utilise par VarunaPoC.
@@ -106,7 +118,9 @@ async def get_snomed_codesystem():
 
 
 @router.get("/codesystem/loinc")
-async def get_loinc_codesystem():
+async def get_loinc_codesystem(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourner la ressource FHIR CodeSystem pour les codes LOINC.
 
     Fragment du CodeSystem LOINC utilise par VarunaPoC.
@@ -116,7 +130,9 @@ async def get_loinc_codesystem():
 
 
 @router.get("/valueset/snomed")
-async def get_snomed_valueset():
+async def get_snomed_valueset(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourner la ressource FHIR ValueSet pour les codes SNOMED CT.
 
     ValueSet des codes SNOMED CT de pathologie utilises par VarunaPoC.
@@ -126,7 +142,9 @@ async def get_snomed_valueset():
 
 
 @router.get("/valueset/loinc")
-async def get_loinc_valueset():
+async def get_loinc_valueset(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourner la ressource FHIR ValueSet pour les codes LOINC.
 
     ValueSet des codes LOINC de pathologie utilises par VarunaPoC.

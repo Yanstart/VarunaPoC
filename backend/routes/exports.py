@@ -13,8 +13,10 @@ References:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from services.dicom_export import DICOMExportService
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,11 @@ def get_export_service() -> DICOMExportService:
 
 
 @router.post("/dicom/{slide_id}")
-async def export_dicom(slide_id: str, anonymize: bool = True):
+async def export_dicom(
+    slide_id: str,
+    anonymize: bool = True,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Export a slide to DICOM WSI format.
 
     Args:
@@ -66,7 +72,7 @@ async def export_dicom(slide_id: str, anonymize: bool = True):
 
 
 @router.get("/dicom/{slide_id}/status")
-async def export_status(slide_id: str):
+async def export_status(slide_id: str, _current_user: CurrentUser = Depends(get_current_user)):
     """Get the status of a DICOM export job.
 
     Args:

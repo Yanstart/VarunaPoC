@@ -22,9 +22,11 @@ API Design:
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from services.abdm import ABDMService
 from services.i18n import I18nService
 from services.ssmix2 import SSMIX2Service
@@ -131,7 +133,10 @@ class SSMIX2ExtractPathRequest(BaseModel):
 
 
 @router.post("/abdm/validate")
-async def validate_abha(request: ABHAValidationRequest):
+async def validate_abha(
+    request: ABHAValidationRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Valide un numéro ABHA (Ayushman Bharat Health Account).
 
     Vérifie le format à 14 chiffres et retourne les informations
@@ -142,7 +147,10 @@ async def validate_abha(request: ABHAValidationRequest):
 
 
 @router.post("/abdm/fhir-bundle")
-async def generate_fhir_bundle(request: FHIRBundleRequest):
+async def generate_fhir_bundle(
+    request: FHIRBundleRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Génère un bundle FHIR R4 conforme ABDM.
 
     Crée un document FHIR avec DiagnosticReport, Patient et ImagingStudy
@@ -161,7 +169,10 @@ async def generate_fhir_bundle(request: FHIRBundleRequest):
 
 
 @router.post("/abdm/consent")
-async def create_consent(request: ConsentRequest):
+async def create_consent(
+    request: ConsentRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Crée un artefact de consentement ABDM.
 
     Définit qui, quoi, pourquoi, quand et combien de temps
@@ -181,7 +192,10 @@ async def create_consent(request: ConsentRequest):
 
 
 @router.post("/abdm/consent/callback")
-async def consent_callback(request: ConsentCallbackRequest):
+async def consent_callback(
+    request: ConsentCallbackRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Traite le callback de consentement ABDM.
 
     Appelé par le gateway ABDM quand le patient accorde ou refuse
@@ -198,7 +212,10 @@ async def consent_callback(request: ConsentCallbackRequest):
 
 
 @router.post("/abdm/data-request")
-async def data_request(request: DataRequestBody):
+async def data_request(
+    request: DataRequestBody,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Traite une demande de données de santé via ABDM.
 
     Vérifie que le consentement est accordé et retourne
@@ -220,7 +237,10 @@ async def data_request(request: DataRequestBody):
 
 
 @router.post("/ssmix2/parse")
-async def parse_ssmix2_message(request: SSMIX2ParseRequest):
+async def parse_ssmix2_message(
+    request: SSMIX2ParseRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Parse un message HL7 v2.5 au format SS-MIX2.
 
     Extrait les données démographiques du patient et les informations
@@ -237,6 +257,7 @@ async def get_storage_path(
     order_date: str = Query(..., description="Date de commande (YYYYMMDD)"),
     data_type: str = Query(..., description="Type de données SS-MIX2"),
     message_id: str = Query(..., description="Identifiant du message"),
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Calcule le chemin de stockage SS-MIX2 standardisé.
 
@@ -256,7 +277,10 @@ async def get_storage_path(
 
 
 @router.post("/ssmix2/extract-path")
-async def extract_path_metadata(request: SSMIX2ExtractPathRequest):
+async def extract_path_metadata(
+    request: SSMIX2ExtractPathRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Extrait les métadonnées depuis un chemin de stockage SS-MIX2.
 
     Décompose le chemin pour récupérer PatientID, OrderDate,
@@ -271,7 +295,9 @@ async def extract_path_metadata(request: SSMIX2ExtractPathRequest):
 
 
 @router.get("/ssmix2/mock-data")
-async def get_mock_data():
+async def get_mock_data(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourne des données patient SS-MIX2 de test.
 
     Génère des messages ADT et OML mock avec des données
@@ -282,7 +308,9 @@ async def get_mock_data():
 
 
 @router.get("/ssmix2/data-types")
-async def get_data_types():
+async def get_data_types(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourne les types de données SS-MIX2 supportés.
 
     Liste les codes de type de données HL7 v2.5 reconnus
@@ -298,7 +326,9 @@ async def get_data_types():
 
 
 @router.get("/i18n/locales")
-async def get_supported_locales():
+async def get_supported_locales(
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourne la liste des locales supportées.
 
     Chaque locale inclut son code ISO et son nom dans sa propre langue.
@@ -308,7 +338,10 @@ async def get_supported_locales():
 
 
 @router.get("/i18n/{locale}")
-async def get_translations(locale: str):
+async def get_translations(
+    locale: str,
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Retourne toutes les traductions pour une locale.
 
     Fallback vers le français si la locale n'est pas supportée.

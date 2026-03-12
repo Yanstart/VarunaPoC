@@ -1,5 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
+from auth.dependencies import get_current_user
+from auth.schemas import CurrentUser
 
 router = APIRouter(prefix="/viewstate", tags=["viewstate"])
 
@@ -19,7 +22,7 @@ class ViewStateResponse(BaseModel):
 
 
 @router.get("/{slide_id}", response_model=ViewStateResponse)
-async def get_viewstate(slide_id: str):
+async def get_viewstate(slide_id: str, _current_user: CurrentUser = Depends(get_current_user)):
     """Get default N-dimensional view state for a slide."""
     # In future: read from slide metadata (OME-TIFF channels/Z/T)
     # For now: return default single-plane state

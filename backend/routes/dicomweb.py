@@ -33,10 +33,12 @@ References:
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from services.dicom_annotations import DICOMAnnotationService
 from services.dicom_sr import DICOMSRService
 from services.dicomweb import DICOMwebService
@@ -129,6 +131,7 @@ async def retrieve_instance_metadata(
     study_uid: str,
     series_uid: str,
     instance_uid: str,
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Récupérer les métadonnées DICOM JSON d'une instance (WADO-RS).
 
@@ -167,6 +170,7 @@ async def retrieve_frame(
     series_uid: str,
     instance_uid: str,
     frame_number: int,
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Récupérer un frame (tuile) en JPEG (WADO-RS).
 
@@ -219,7 +223,10 @@ async def retrieve_frame(
 
 
 @router.post("/studies")
-async def store_instances(request: StowRequest):
+async def store_instances(
+    request: StowRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Stocker des instances DICOM (STOW-RS).
 
     Accepte des instances DICOM et les enregistre dans le registre
@@ -274,6 +281,7 @@ async def search_studies(
     ),
     limit: int = Query(50, description="Nombre maximum de résultats"),
     offset: int = Query(0, description="Décalage pour pagination"),
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Rechercher des études DICOM (QIDO-RS).
 
@@ -319,6 +327,7 @@ async def search_series(
     modality: Optional[str] = Query(None, alias="Modality", description="Filtrer par modalité"),
     limit: int = Query(50, description="Nombre maximum de résultats"),
     offset: int = Query(0, description="Décalage pour pagination"),
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Rechercher des séries dans une étude DICOM (QIDO-RS).
 
@@ -358,7 +367,11 @@ async def search_series(
 
 
 @router.post("/sr/{slide_id}")
-async def create_structured_report(slide_id: str, request: SRRequest):
+async def create_structured_report(
+    slide_id: str,
+    request: SRRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Créer un rapport structuré DICOM SR depuis résultats ML.
 
     Encode les résultats de détection et classification ML dans
@@ -397,7 +410,11 @@ async def create_structured_report(slide_id: str, request: SRRequest):
 
 
 @router.post("/annotations/{slide_id}")
-async def convert_annotations(slide_id: str, request: AnnotationRequest):
+async def convert_annotations(
+    slide_id: str,
+    request: AnnotationRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Convertir des annotations GeoJSON en format DICOM Supplement 222/223.
 
     Prend une FeatureCollection GeoJSON et la convertit en structure

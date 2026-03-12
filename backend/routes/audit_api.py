@@ -13,9 +13,11 @@ References:
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from auth.audit import GDPR_PROCESSING_REGISTER, search_audit_events
+from auth.dependencies import require_role
+from auth.schemas import CurrentUser
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ async def get_audit_events(
     to_date: str | None = Query(None, alias="to", description="Date de fin ISO (inclusive)"),
     limit: int = Query(100, ge=1, le=1000, description="Nombre max de resultats"),
     offset: int = Query(0, ge=0, description="Nombre de resultats a sauter"),
+    _current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ) -> dict[str, Any]:
     """Rechercher les evenements d'audit.
 
@@ -72,7 +75,9 @@ async def get_audit_events(
 
 
 @router.get("/gdpr/register")
-async def get_gdpr_register() -> dict[str, Any]:
+async def get_gdpr_register(
+    _current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+) -> dict[str, Any]:
     """Registre des activites de traitement (RGPD Article 30).
 
     Retourne la liste des activites de traitement de donnees
