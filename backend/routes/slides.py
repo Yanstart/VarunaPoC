@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 import openslide
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -191,7 +191,12 @@ def rescan_slides(
 
 @router.get("/browse", tags=["navigation"])
 def browse_slides_directory(
-    path: str = Query("/", description="Chemin relatif depuis /Slides"),
+    path: str = Query(
+        "/",
+        description="Chemin relatif depuis /Slides",
+        max_length=1024,
+        pattern=r"^[a-zA-Z0-9/_. -]*$",
+    ),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """
@@ -494,7 +499,13 @@ def resolve_slide_by_name(
 
 @router.get("/{slide_id}/mpp", tags=["visualization"], response_model=MPPResponse)
 def get_slide_mpp(
-    slide_id: str,
+    slide_id: str = Path(
+        ...,
+        description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
+        min_length=12,
+        max_length=12,
+        pattern=r"^[0-9a-f]{12}$",
+    ),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """
@@ -569,8 +580,14 @@ def get_slide_mpp(
 
 @router.get("/{slide_id}/info", tags=["visualization"])
 def get_slide_info(
-    slide_id: str,
     background_tasks: BackgroundTasks,
+    slide_id: str = Path(
+        ...,
+        description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
+        min_length=12,
+        max_length=12,
+        pattern=r"^[0-9a-f]{12}$",
+    ),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """
@@ -623,7 +640,16 @@ def get_slide_info(
 
 
 @router.get("/{slide_id}/overview", tags=["visualization"])
-def get_overview(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
+def get_overview(
+    slide_id: str = Path(
+        ...,
+        description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
+        min_length=12,
+        max_length=12,
+        pattern=r"^[0-9a-f]{12}$",
+    ),
+    current_user: CurrentUser = Depends(get_current_user),
+):
     """
     Extrait image overview d'une lame.
 
@@ -659,7 +685,16 @@ def get_overview(slide_id: str, current_user: CurrentUser = Depends(get_current_
 
 
 @router.get("/{slide_id}/dzi.json", tags=["visualization"])
-def get_dzi_metadata(slide_id: str, current_user: CurrentUser = Depends(get_current_user)):
+def get_dzi_metadata(
+    slide_id: str = Path(
+        ...,
+        description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
+        min_length=12,
+        max_length=12,
+        pattern=r"^[0-9a-f]{12}$",
+    ),
+    current_user: CurrentUser = Depends(get_current_user),
+):
     """
     Récupère métadonnées DZI pour OpenSeadragon (streaming de tuiles).
 
@@ -710,10 +745,16 @@ def get_dzi_metadata(slide_id: str, current_user: CurrentUser = Depends(get_curr
 @limit(tile_rate)
 def get_tile(
     request: Request,
-    slide_id: str,
-    level: int,
-    col: int,
-    row: int,
+    slide_id: str = Path(
+        ...,
+        description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
+        min_length=12,
+        max_length=12,
+        pattern=r"^[0-9a-f]{12}$",
+    ),
+    level: int = Path(..., ge=0, description="Niveau pyramidal (0 = haute resolution)"),
+    col: int = Path(..., ge=0, description="Colonne de la tuile"),
+    row: int = Path(..., ge=0, description="Ligne de la tuile"),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """
