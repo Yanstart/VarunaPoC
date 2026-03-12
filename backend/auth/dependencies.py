@@ -1,9 +1,9 @@
 """
 Auth Dependencies - FastAPI Depends() for authentication and authorization.
 
-Key design: When AUTH_ENABLED=false (default), get_current_user() returns an
-anonymous user with ADMIN_TECHNIQUE role. All existing routes work unchanged.
-All 94 existing tests pass without modification.
+Key design: When AUTH_ENABLED=true (default), JWT tokens are validated.
+Set AUTH_ENABLED=false for dev/testing — returns anonymous user with
+ADMIN_TECHNIQUE role so all routes work without a real OIDC provider.
 """
 
 import logging

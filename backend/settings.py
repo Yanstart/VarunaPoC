@@ -48,7 +48,7 @@ class Settings(BaseSettings):
         ]
 
     # Auth
-    auth_enabled: bool = Field(False, alias="AUTH_ENABLED")
+    auth_enabled: bool = Field(True, alias="AUTH_ENABLED")
 
     # Feature flags
     ml_enabled: bool = Field(True, alias="ML_ENABLED")
