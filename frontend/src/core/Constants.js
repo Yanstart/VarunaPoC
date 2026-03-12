@@ -137,6 +137,9 @@ export const Events = Object.freeze({
     DRIFT_LOADING: 'drift:loading',
     DRIFT_READY: 'drift:ready',
     DRIFT_ERROR: 'drift:error',
+
+    // Theme events (Wave 6)
+    THEME_CHANGED: 'ui:themeChanged',
 });
 
 /**
@@ -285,6 +288,7 @@ export const StorageKeys = Object.freeze({
     SYNC_ENABLED: 'varuna_syncEnabled',
     DEBUG_MODE: 'varuna_debugMode',
     PENDING_SLIDE_NAME: 'varuna_pending_slide',
+    THEME: 'varuna_theme',
 });
 
 /**
