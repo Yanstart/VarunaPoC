@@ -18,7 +18,7 @@ from services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/embeddings", tags=["embeddings"])
+router = APIRouter(prefix="/embeddings", tags=["embeddings"])
 
 # Singleton service instance
 _embedding_service: Optional[EmbeddingService] = None

@@ -29,7 +29,7 @@ from services.terminology import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/terminology", tags=["Terminology"])
+router = APIRouter(prefix="/terminology", tags=["Terminology"])
 
 # Singleton service
 _service: TerminologyService | None = None

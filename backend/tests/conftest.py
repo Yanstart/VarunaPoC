@@ -78,7 +78,7 @@ def client():
 
     Usage:
         def test_endpoint(client):
-            response = client.get("/api/health")
+            response = client.get("/api/v1/health")
             assert response.status_code == 200
     """
     from main import app

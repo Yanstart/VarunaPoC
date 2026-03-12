@@ -6,11 +6,11 @@
  */
 
 /**
- * Mock /api/health endpoint
+ * Mock /api/v1/health endpoint
  * @param {import('@playwright/test').Page} page
  */
 export async function mockHealthy(page) {
-    await page.route('**/api/health', (route) =>
+    await page.route('**/api/v1/health', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -20,13 +20,13 @@ export async function mockHealthy(page) {
 }
 
 /**
- * Mock /api/slides/browse endpoint with provided data.
+ * Mock /api/v1/slides/browse endpoint with provided data.
  * Handles both root and subfolder requests.
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
  */
 export async function mockSlidesApi(page, mockData) {
-    await page.route('**/api/slides/browse**', (route) => {
+    await page.route('**/api/v1/slides/browse**', (route) => {
         const url = new URL(route.request().url());
         const path = url.searchParams.get('path') || '/';
 
@@ -48,8 +48,8 @@ export async function mockSlidesApi(page, mockData) {
         });
     });
 
-    // Also mock /api/slides (recursive list for slide picker)
-    await page.route('**/api/slides', (route) => {
+    // Also mock /api/v1/slides (recursive list for slide picker)
+    await page.route('**/api/v1/slides', (route) => {
         if (route.request().url().includes('/browse')) { return route.fallback(); }
         if (route.request().url().includes('/by-name')) { return route.fallback(); }
         if (route.request().url().match(/\/api\/slides\/[^/]+\//)) { return route.fallback(); }
@@ -66,12 +66,12 @@ export async function mockSlidesApi(page, mockData) {
 }
 
 /**
- * Mock /api/slides/{id}/info endpoint
+ * Mock /api/v1/slides/{id}/info endpoint
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
  */
 export async function mockSlideInfo(page, mockData) {
-    await page.route('**/api/slides/*/info', (route) =>
+    await page.route('**/api/v1/slides/*/info', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -81,11 +81,11 @@ export async function mockSlideInfo(page, mockData) {
 }
 
 /**
- * Mock /api/slides/{id}/overview with a small placeholder image
+ * Mock /api/v1/slides/{id}/overview with a small placeholder image
  * @param {import('@playwright/test').Page} page
  */
 export async function mockSlideOverview(page) {
-    await page.route('**/api/slides/*/overview', (route) =>
+    await page.route('**/api/v1/slides/*/overview', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'image/jpeg',
@@ -106,7 +106,7 @@ export async function mockSlideOverview(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockTiles(page) {
-    await page.route('**/api/slides/*/tiles/**', (route) =>
+    await page.route('**/api/v1/slides/*/tiles/**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'image/jpeg',
@@ -126,7 +126,7 @@ export async function mockTiles(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockDzi(page) {
-    await page.route('**/api/slides/*/dzi**', (route) =>
+    await page.route('**/api/v1/slides/*/dzi**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -150,11 +150,11 @@ export async function mockDzi(page) {
 }
 
 /**
- * Mock /api/auth/me for anonymous mode (AUTH_ENABLED=false)
+ * Mock /api/v1/auth/me for anonymous mode (AUTH_ENABLED=false)
  * @param {import('@playwright/test').Page} page
  */
 export async function mockAuthAnonymous(page) {
-    await page.route('**/api/auth/me', (route) =>
+    await page.route('**/api/v1/auth/me', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -171,11 +171,11 @@ export async function mockAuthAnonymous(page) {
 }
 
 /**
- * Mock /api/auth/me for authenticated mode (AUTH_ENABLED=true, no token)
+ * Mock /api/v1/auth/me for authenticated mode (AUTH_ENABLED=true, no token)
  * @param {import('@playwright/test').Page} page
  */
 export async function mockAuthRequired(page) {
-    await page.route('**/api/auth/me', (route) =>
+    await page.route('**/api/v1/auth/me', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -188,12 +188,12 @@ export async function mockAuthRequired(page) {
 }
 
 /**
- * Mock /api/auth/me for authenticated user
+ * Mock /api/v1/auth/me for authenticated user
  * @param {import('@playwright/test').Page} page
  * @param {string} [role='MEDECIN'] - User role
  */
 export async function mockAuthAuthenticated(page, role = 'MEDECIN') {
-    await page.route('**/api/auth/me', (route) =>
+    await page.route('**/api/v1/auth/me', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -211,13 +211,13 @@ export async function mockAuthAuthenticated(page, role = 'MEDECIN') {
 }
 
 /**
- * Mock /api/annotations/{slide_id} endpoints
+ * Mock /api/v1/annotations/{slide_id} endpoints
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
  */
 export async function mockAnnotations(page, mockData) {
     // GET annotations
-    await page.route('**/api/annotations/*', (route) => {
+    await page.route('**/api/v1/annotations/*', (route) => {
         if (route.request().method() === 'GET') {
             return route.fulfill({
                 status: 200,
@@ -251,7 +251,7 @@ export async function mockAnnotations(page, mockData) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLPredict(page) {
-    await page.route('**/api/ml/predict/*', (route) =>
+    await page.route('**/api/v1/ml/predict/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -270,7 +270,7 @@ export async function mockMLPredict(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLHeatmap(page) {
-    await page.route('**/api/ml/heatmap/*', (route) =>
+    await page.route('**/api/v1/ml/heatmap/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'image/png',
@@ -284,13 +284,13 @@ export async function mockMLHeatmap(page) {
 }
 
 /**
- * Mock /api/slides/by-name/{name} endpoint
+ * Mock /api/v1/slides/by-name/{name} endpoint
  * @param {import('@playwright/test').Page} page
  * @param {Object} mockData - mockSlideData from fixtures
  * @param {boolean} [found=true] - Whether slide should be found
  */
 export async function mockSlideByName(page, mockData, found = true) {
-    await page.route('**/api/slides/by-name/*', (route) => {
+    await page.route('**/api/v1/slides/by-name/*', (route) => {
         if (found) {
             return route.fulfill({
                 status: 200,
@@ -311,7 +311,7 @@ export async function mockSlideByName(page, mockData, found = true) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockQualityMetrics(page) {
-    await page.route('**/api/annotations/*/annotators', (route) =>
+    await page.route('**/api/v1/annotations/*/annotators', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -322,7 +322,7 @@ export async function mockQualityMetrics(page) {
         }),
     );
 
-    await page.route('**/api/annotations/*/quality/kappa**', (route) =>
+    await page.route('**/api/v1/annotations/*/quality/kappa**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -335,7 +335,7 @@ export async function mockQualityMetrics(page) {
         }),
     );
 
-    await page.route('**/api/annotations/*/quality/confusion**', (route) =>
+    await page.route('**/api/v1/annotations/*/quality/confusion**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -354,7 +354,7 @@ export async function mockQualityMetrics(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLFocusZones(page) {
-    await page.route('**/api/ml/focus/*', (route) =>
+    await page.route('**/api/v1/ml/focus/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -377,7 +377,7 @@ export async function mockMLFocusZones(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLMeasurement(page) {
-    await page.route('**/api/ml/measure/*', (route) =>
+    await page.route('**/api/v1/ml/measure/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -399,7 +399,7 @@ export async function mockMLMeasurement(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLFeedback(page) {
-    await page.route('**/api/ml/feedback/*', (route) =>
+    await page.route('**/api/v1/ml/feedback/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -417,7 +417,7 @@ export async function mockMLFeedback(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLTags(page) {
-    await page.route('**/api/ml/tags/*', (route) =>
+    await page.route('**/api/v1/ml/tags/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -435,7 +435,7 @@ export async function mockMLTags(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLModels(page) {
-    await page.route('**/api/ml/models', (route) =>
+    await page.route('**/api/v1/ml/models', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -454,15 +454,15 @@ export async function mockMLModels(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockMLSimilarity(page) {
-    await page.route('**/api/ml/similar/*', (route) =>
+    await page.route('**/api/v1/ml/similar/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({
                 query_slide_id: 'test-slide-001',
                 results: [
-                    { slide_id: 'slide-002', score: 0.94, name: 'Case_B_HE.svs', overview_url: '/api/slides/slide-002/overview' },
-                    { slide_id: 'slide-003', score: 0.87, name: 'Case_C_HE.svs', overview_url: '/api/slides/slide-003/overview' },
+                    { slide_id: 'slide-002', score: 0.94, name: 'Case_B_HE.svs', overview_url: '/api/v1/slides/slide-002/overview' },
+                    { slide_id: 'slide-003', score: 0.87, name: 'Case_C_HE.svs', overview_url: '/api/v1/slides/slide-003/overview' },
                 ],
                 index_size: 50,
             }),
@@ -475,7 +475,7 @@ export async function mockMLSimilarity(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockCellCounting(page) {
-    await page.route('**/api/ml/count/*', (route) =>
+    await page.route('**/api/v1/ml/count/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -496,7 +496,7 @@ export async function mockCellCounting(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockClustering(page) {
-    await page.route('**/api/ml/cluster/*', (route) =>
+    await page.route('**/api/v1/ml/cluster/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -525,7 +525,7 @@ export async function mockClustering(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockSlideQuality(page) {
-    await page.route('**/api/ml/quality/*', (route) =>
+    await page.route('**/api/v1/ml/quality/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -547,7 +547,7 @@ export async function mockSlideQuality(page) {
  * @param {import('@playwright/test').Page} page
  */
 export async function mockDriftReport(page) {
-    await page.route('**/api/ml/drift/*', (route) =>
+    await page.route('**/api/v1/ml/drift/*', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -565,8 +565,8 @@ export async function mockDriftReport(page) {
         }),
     );
 
-    await page.route('**/api/ml/drift', (route) => {
-        // Only match exact /api/ml/drift (not /api/ml/drift/xxx)
+    await page.route('**/api/v1/ml/drift', (route) => {
+        // Only match exact /api/v1/ml/drift (not /api/v1/ml/drift/xxx)
         const url = route.request().url();
         if (url.match(/\/api\/ml\/drift\/[^/]+/)) return route.fallback();
         return route.fulfill({
@@ -590,11 +590,11 @@ export async function mockDriftReport(page) {
 }
 
 /**
- * Mock /api/slides/worklist endpoint
+ * Mock /api/v1/slides/worklist endpoint
  * @param {import('@playwright/test').Page} page
  */
 export async function mockWorklist(page) {
-    await page.route('**/api/slides/worklist', (route) =>
+    await page.route('**/api/v1/slides/worklist', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -610,11 +610,11 @@ export async function mockWorklist(page) {
 }
 
 /**
- * Mock /api/slides/history endpoint
+ * Mock /api/v1/slides/history endpoint
  * @param {import('@playwright/test').Page} page
  */
 export async function mockHistory(page) {
-    await page.route('**/api/slides/history**', (route) =>
+    await page.route('**/api/v1/slides/history**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',

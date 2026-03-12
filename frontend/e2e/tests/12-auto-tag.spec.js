@@ -10,7 +10,7 @@ test.describe('Auto-tag Badge', () => {
         await setupFullMocks(page, mockSlideData);
 
         // Mock tags endpoint
-        await page.route('**/api/ml/tags/**', (route) =>
+        await page.route('**/api/v1/ml/tags/**', (route) =>
             route.fulfill({
                 status: 200,
                 contentType: 'application/json',

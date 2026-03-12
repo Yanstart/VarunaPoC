@@ -31,7 +31,7 @@ from services.ssmix2 import SSMIX2Service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/regional", tags=["regional"])
+router = APIRouter(prefix="/regional", tags=["regional"])
 
 # ==========================================
 # Singleton service instances

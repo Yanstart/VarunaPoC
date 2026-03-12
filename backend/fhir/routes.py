@@ -38,7 +38,7 @@ from fhir.smart import get_smart_configuration, handle_ehr_launch
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/fhir", tags=["FHIR"])
+router = APIRouter(prefix="/fhir", tags=["FHIR"])
 
 
 # ---------------------------------------------------------------------------

@@ -69,7 +69,7 @@ test.describe('Slide Viewer', () => {
         await expect(page.locator('#app.page-viewer')).toBeVisible({ timeout: 10_000 });
 
         // Mock the slides list for compare picker
-        await page.route('**/api/slides', (route) => {
+        await page.route('**/api/v1/slides', (route) => {
             if (route.request().url().includes('/browse')) { return route.fallback(); }
             if (route.request().url().includes('/by-name')) { return route.fallback(); }
             if (route.request().url().match(/\/api\/slides\/[^/]+\//)) { return route.fallback(); }

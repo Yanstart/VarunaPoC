@@ -6,10 +6,10 @@ Endpoints pour lister et charger les lames histologiques.
 API Design:
 - GET /api/slides → Liste toutes les lames (scan récursif complet)
 - GET /api/browse?path={path} → Navigation hiérarchique dans /Slides
-- GET /api/slides/{id}/info → Métadonnées d'une lame
-- GET /api/slides/{id}/overview → Image overview (JPEG)
-- GET /api/slides/worklist → Liste de travail (mes cas assignés)
-- GET /api/slides/history → Historique des lames consultées
+- GET /api/v1/slides/{id}/info → Métadonnées d'une lame
+- GET /api/v1/slides/{id}/overview → Image overview (JPEG)
+- GET /api/v1/slides/worklist → Liste de travail (mes cas assignés)
+- GET /api/v1/slides/history → Historique des lames consultées
 
 Worklist / History DB strategy:
     Primary:  PostgreSQL tables worklist_assignments + view_history (migration 006).
@@ -110,7 +110,7 @@ class MPPResponse(BaseModel):
     source: str = "openslide"
 
 
-router = APIRouter(prefix="/api/slides")
+router = APIRouter(prefix="/slides")
 
 
 @router.get("/", tags=["navigation"])
@@ -733,7 +733,7 @@ def get_tile(
         - Voir: tile_server.py pour logique d'extraction
 
     Examples:
-        GET /api/slides/a1b2c3d4e5f6/tiles/2/5_3.jpg
+        GET /api/v1/slides/a1b2c3d4e5f6/tiles/2/5_3.jpg
         → Tuile au niveau 2, colonne 5, ligne 3
     """
     slide_path = get_slide_path_by_id(slide_id)

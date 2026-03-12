@@ -364,7 +364,7 @@ async def slide_websocket(websocket: WebSocket, slide_id: str):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/ws/slides/{slide_id}/presence")
+@router.get("/ws/slides/{slide_id}/presence")
 async def get_presence(slide_id: str):
     """Get active users for a slide.
 

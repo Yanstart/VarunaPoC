@@ -17,7 +17,7 @@ from services.sharing import sharing_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/sharing", tags=["sharing"])
+router = APIRouter(prefix="/sharing", tags=["sharing"])
 
 
 # ============================================

@@ -32,7 +32,7 @@ class PathologistUser(HttpUser):
         """Harvest real slide IDs from the API, or fall back to synthetic IDs."""
         self.slide_ids = []
         try:
-            resp = self.client.get("/api/slides/", name="/api/slides/")
+            resp = self.client.get("/api/v1/slides/", name="/api/v1/slides/")
             if resp.status_code == 200:
                 data = resp.json()
                 # Handle both list-of-strings and list-of-dicts formats
@@ -63,20 +63,20 @@ class PathologistUser(HttpUser):
     @task(1)
     def health_check(self):
         """Background keep-alive / health poll."""
-        self.client.get("/api/health", name="/api/health")
+        self.client.get("/api/v1/health", name="/api/v1/health")
 
     @task(3)
     def browse_slides(self):
         """Browse the slide list (landing page)."""
-        self.client.get("/api/slides/", name="/api/slides/")
+        self.client.get("/api/v1/slides/", name="/api/v1/slides/")
 
     @task(5)
     def view_slide_info(self):
         """Open a specific slide to view metadata."""
         slide_id = self._random_slide()
         with self.client.get(
-            f"/api/slides/{slide_id}/info",
-            name="/api/slides/[id]/info",
+            f"/api/v1/slides/{slide_id}/info",
+            name="/api/v1/slides/[id]/info",
             catch_response=True,
         ) as resp:
             # 404 is expected with synthetic slide IDs in dev
@@ -94,8 +94,8 @@ class PathologistUser(HttpUser):
             col = random.randint(0, 50)
             row = random.randint(0, 50)
             with self.client.get(
-                f"/api/slides/{slide_id}/tiles/{level}/{col}_{row}.jpg",
-                name="/api/slides/[id]/tiles/[level]/[col]_[row].jpg",
+                f"/api/v1/slides/{slide_id}/tiles/{level}/{col}_{row}.jpg",
+                name="/api/v1/slides/[id]/tiles/[level]/[col]_[row].jpg",
                 catch_response=True,
             ) as resp:
                 # 404 is expected when slides don't exist in dev — don't count as failure
@@ -107,8 +107,8 @@ class PathologistUser(HttpUser):
         """Load annotation overlay for a slide."""
         slide_id = self._random_slide()
         self.client.get(
-            f"/api/annotations/{slide_id}",
-            name="/api/annotations/[slide_id]",
+            f"/api/v1/annotations/{slide_id}",
+            name="/api/v1/annotations/[slide_id]",
         )
 
     @task(2)
@@ -137,9 +137,9 @@ class PathologistUser(HttpUser):
         }
 
         with self.client.post(
-            f"/api/annotations/{slide_id}",
+            f"/api/v1/annotations/{slide_id}",
             json=annotation,
-            name="/api/annotations/[slide_id] POST",
+            name="/api/v1/annotations/[slide_id] POST",
             catch_response=True,
         ) as resp:
             if resp.status_code == 201:
@@ -156,8 +156,8 @@ class PathologistUser(HttpUser):
         """View annotation statistics panel."""
         slide_id = self._random_slide()
         self.client.get(
-            f"/api/annotations/{slide_id}/stats",
-            name="/api/annotations/[slide_id]/stats",
+            f"/api/v1/annotations/{slide_id}/stats",
+            name="/api/v1/annotations/[slide_id]/stats",
         )
 
     @task(1)
@@ -165,6 +165,6 @@ class PathologistUser(HttpUser):
         """Export annotations as GeoJSON."""
         slide_id = self._random_slide()
         self.client.get(
-            f"/api/annotations/{slide_id}/export",
-            name="/api/annotations/[slide_id]/export",
+            f"/api/v1/annotations/{slide_id}/export",
+            name="/api/v1/annotations/[slide_id]/export",
         )

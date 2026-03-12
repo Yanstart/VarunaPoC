@@ -145,14 +145,15 @@ export const Events = Object.freeze({
  */
 export const API = Object.freeze({
     BASE_URL: 'http://localhost:8000',
+    VERSION: 'v1',
     ENDPOINTS: {
-        HEALTH: '/api/health',
-        SLIDES: '/api/slides',
-        BROWSE: '/api/slides/browse',
-        SLIDE_INFO: (id) => `/api/slides/${id}/info`,
-        SLIDE_OVERVIEW: (id) => `/api/slides/${id}/overview`,
-        TILE: (id, level, x, y, w, h) => `/api/slides/${id}/tile/${level}/${x}/${y}/${w}/${h}`,
-        SLIDE_BY_NAME: (name) => `/api/slides/by-name/${encodeURIComponent(name)}`,
+        HEALTH: '/api/v1/health',
+        SLIDES: '/api/v1/slides',
+        BROWSE: '/api/v1/slides/browse',
+        SLIDE_INFO: (id) => `/api/v1/slides/${id}/info`,
+        SLIDE_OVERVIEW: (id) => `/api/v1/slides/${id}/overview`,
+        TILE: (id, level, x, y, w, h) => `/api/v1/slides/${id}/tile/${level}/${x}/${y}/${w}/${h}`,
+        SLIDE_BY_NAME: (name) => `/api/v1/slides/by-name/${encodeURIComponent(name)}`,
     },
 });
 

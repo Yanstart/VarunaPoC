@@ -31,7 +31,7 @@ from services import annotation_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/annotations", tags=["Annotations"])
+router = APIRouter(prefix="/annotations", tags=["Annotations"])
 
 
 # ============================================
@@ -205,7 +205,7 @@ async def batch_create_annotations(
 # Label Endpoints
 # ============================================
 
-label_router = APIRouter(prefix="/api/labels", tags=["Labels"])
+label_router = APIRouter(prefix="/labels", tags=["Labels"])
 
 
 @label_router.get("/", response_model=List[LabelResponse])

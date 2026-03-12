@@ -66,14 +66,14 @@ class TestByNameEndpoint:
     def test_by_name_not_found(self):
         """404 when no slide matches the given name."""
         with _patch_scanner():
-            resp = client.get("/api/slides/by-name/nonexistent")
+            resp = client.get("/api/v1/slides/by-name/nonexistent")
         assert resp.status_code == 404
         assert "nonexistent" in resp.json()["detail"]
 
     def test_by_name_found(self):
         """200 with full slide data when stem matches."""
         with _patch_scanner():
-            resp = client.get("/api/slides/by-name/AO.25B27859.2.1.3")
+            resp = client.get("/api/v1/slides/by-name/AO.25B27859.2.1.3")
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == "abc123"
@@ -88,14 +88,14 @@ class TestByNameEndpoint:
             {**MOCK_SLIDES[1], "id": "bbb", "name": "dup.svs"},
         ]
         with _patch_scanner(ambiguous):
-            resp = client.get("/api/slides/by-name/dup")
+            resp = client.get("/api/v1/slides/by-name/dup")
         assert resp.status_code == 409
         assert "Ambiguous" in resp.json()["detail"]
 
     def test_by_name_case_insensitive(self):
         """Match is case-insensitive."""
         with _patch_scanner():
-            resp = client.get("/api/slides/by-name/ao.25b27859.2.1.3")
+            resp = client.get("/api/v1/slides/by-name/ao.25b27859.2.1.3")
         assert resp.status_code == 200
         assert resp.json()["id"] == "abc123"
 
@@ -103,6 +103,6 @@ class TestByNameEndpoint:
         """Multi-dot names work via :path converter."""
         with _patch_scanner():
             # The name has 4 dots: AO.25B27859.2.1.3
-            resp = client.get("/api/slides/by-name/AO.25B27859.2.1.3")
+            resp = client.get("/api/v1/slides/by-name/AO.25B27859.2.1.3")
         assert resp.status_code == 200
         assert resp.json()["id"] == "abc123"

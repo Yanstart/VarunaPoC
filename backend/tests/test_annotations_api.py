@@ -136,7 +136,7 @@ class TestAnnotationsAPI:
     """
 
     def test_create_annotation(self, client, sample_polygon):
-        response = client.post("/api/annotations/test_slide_crud", json=sample_polygon)
+        response = client.post("/api/v1/annotations/test_slide_crud", json=sample_polygon)
         assert response.status_code == 201
         data = response.json()
         assert data["slide_id"] == "test_slide_crud"
@@ -145,55 +145,55 @@ class TestAnnotationsAPI:
         assert "id" in data
 
     def test_list_annotations(self, client, sample_polygon):
-        client.post("/api/annotations/test_slide_list", json=sample_polygon)
-        response = client.get("/api/annotations/test_slide_list")
+        client.post("/api/v1/annotations/test_slide_list", json=sample_polygon)
+        response = client.get("/api/v1/annotations/test_slide_list")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 1
 
     def test_get_annotation(self, client, sample_polygon):
-        create_resp = client.post("/api/annotations/test_slide_get", json=sample_polygon)
+        create_resp = client.post("/api/v1/annotations/test_slide_get", json=sample_polygon)
         anno_id = create_resp.json()["id"]
 
-        response = client.get(f"/api/annotations/test_slide_get/{anno_id}")
+        response = client.get(f"/api/v1/annotations/test_slide_get/{anno_id}")
         assert response.status_code == 200
         assert response.json()["id"] == anno_id
 
     def test_update_annotation(self, client, sample_polygon):
-        create_resp = client.post("/api/annotations/test_slide_upd", json=sample_polygon)
+        create_resp = client.post("/api/v1/annotations/test_slide_upd", json=sample_polygon)
         anno_id = create_resp.json()["id"]
 
         update_data = {"annotation_type": "auto_confirmed", "confidence": 0.95}
-        response = client.put(f"/api/annotations/test_slide_upd/{anno_id}", json=update_data)
+        response = client.put(f"/api/v1/annotations/test_slide_upd/{anno_id}", json=update_data)
         assert response.status_code == 200
         assert response.json()["annotation_type"] == "auto_confirmed"
 
     def test_delete_annotation(self, client, sample_polygon):
-        create_resp = client.post("/api/annotations/test_slide_del", json=sample_polygon)
+        create_resp = client.post("/api/v1/annotations/test_slide_del", json=sample_polygon)
         anno_id = create_resp.json()["id"]
 
-        response = client.delete(f"/api/annotations/test_slide_del/{anno_id}")
+        response = client.delete(f"/api/v1/annotations/test_slide_del/{anno_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_resp = client.get(f"/api/annotations/test_slide_del/{anno_id}")
+        get_resp = client.get(f"/api/v1/annotations/test_slide_del/{anno_id}")
         assert get_resp.status_code == 404
 
     def test_batch_create(self, client, sample_polygon, sample_auto_detection):
         batch = {"annotations": [sample_polygon, sample_auto_detection]}
-        response = client.post("/api/annotations/test_slide_batch/batch", json=batch)
+        response = client.post("/api/v1/annotations/test_slide_batch/batch", json=batch)
         assert response.status_code == 201
         data = response.json()
         assert len(data) == 2
 
     def test_spatial_query(self, client, sample_polygon, sample_point):
-        client.post("/api/annotations/test_slide_spatial", json=sample_polygon)
-        client.post("/api/annotations/test_slide_spatial", json=sample_point)
+        client.post("/api/v1/annotations/test_slide_spatial", json=sample_polygon)
+        client.post("/api/v1/annotations/test_slide_spatial", json=sample_point)
 
         # Query bbox that includes the rectangle but not the point
         response = client.get(
-            "/api/annotations/test_slide_spatial",
+            "/api/v1/annotations/test_slide_spatial",
             params={
                 "bbox_x1": 500,
                 "bbox_y1": 500,
@@ -207,20 +207,20 @@ class TestAnnotationsAPI:
         assert "rectangle" in types
 
     def test_export_geojson(self, client, sample_polygon):
-        client.post("/api/annotations/test_slide_export", json=sample_polygon)
+        client.post("/api/v1/annotations/test_slide_export", json=sample_polygon)
 
-        response = client.get("/api/annotations/test_slide_export/export")
+        response = client.get("/api/v1/annotations/test_slide_export/export")
         assert response.status_code == 200
         data = response.json()
         assert data["type"] == "FeatureCollection"
         assert len(data["features"]) >= 1
 
     def test_filter_by_type(self, client, sample_polygon, sample_auto_detection):
-        client.post("/api/annotations/test_slide_filter", json=sample_polygon)
-        client.post("/api/annotations/test_slide_filter", json=sample_auto_detection)
+        client.post("/api/v1/annotations/test_slide_filter", json=sample_polygon)
+        client.post("/api/v1/annotations/test_slide_filter", json=sample_auto_detection)
 
         response = client.get(
-            "/api/annotations/test_slide_filter", params={"annotation_type": "manual"}
+            "/api/v1/annotations/test_slide_filter", params={"annotation_type": "manual"}
         )
         data = response.json()
         assert all(d["annotation_type"] == "manual" for d in data)
@@ -236,7 +236,7 @@ class TestAnnotationStatsAPI:
 
     def test_stats_empty_slide(self, client):
         """Stats for a slide with no annotations should return zero counts."""
-        response = client.get("/api/annotations/test_slide_stats_empty/stats")
+        response = client.get("/api/v1/annotations/test_slide_stats_empty/stats")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 0
@@ -245,14 +245,14 @@ class TestAnnotationStatsAPI:
         """Stats should reflect created annotations by type."""
         slide = "test_slide_stats_count"
         # Create 2 manual + 1 auto_confirmed
-        client.post(f"/api/annotations/{slide}", json=_make_polygon(100, 100))
-        client.post(f"/api/annotations/{slide}", json=_make_polygon(200, 200))
+        client.post(f"/api/v1/annotations/{slide}", json=_make_polygon(100, 100))
+        client.post(f"/api/v1/annotations/{slide}", json=_make_polygon(200, 200))
         auto = _make_polygon(300, 300)
         auto["annotation_type"] = "auto_confirmed"
         auto["confidence"] = 0.9
-        client.post(f"/api/annotations/{slide}", json=auto)
+        client.post(f"/api/v1/annotations/{slide}", json=auto)
 
-        response = client.get(f"/api/annotations/{slide}/stats")
+        response = client.get(f"/api/v1/annotations/{slide}/stats")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 3
@@ -267,21 +267,21 @@ class TestAnnotationStatsAPI:
         high = _make_polygon(100, 100)
         high["annotation_type"] = "auto_confirmed"
         high["confidence"] = 0.95
-        client.post(f"/api/annotations/{slide}", json=high)
+        client.post(f"/api/v1/annotations/{slide}", json=high)
         # Medium confidence (0.5 <= x < 0.8)
         med = _make_polygon(200, 200)
         med["annotation_type"] = "auto_confirmed"
         med["confidence"] = 0.65
-        client.post(f"/api/annotations/{slide}", json=med)
+        client.post(f"/api/v1/annotations/{slide}", json=med)
         # Low confidence (< 0.5)
         low = _make_polygon(300, 300)
         low["annotation_type"] = "auto"
         low["confidence"] = 0.3
-        client.post(f"/api/annotations/{slide}", json=low)
+        client.post(f"/api/v1/annotations/{slide}", json=low)
         # Unscored (no confidence)
-        client.post(f"/api/annotations/{slide}", json=_make_polygon(400, 400))
+        client.post(f"/api/v1/annotations/{slide}", json=_make_polygon(400, 400))
 
-        response = client.get(f"/api/annotations/{slide}/stats")
+        response = client.get(f"/api/v1/annotations/{slide}/stats")
         data = response.json()
         dist = data["confidence_distribution"]
         assert dist["high"] >= 1
@@ -301,14 +301,14 @@ class TestAnnotationErrors:
     def test_get_nonexistent_annotation(self, client):
         """GET with a random UUID should return 404."""
         fake_id = str(uuid.uuid4())
-        response = client.get(f"/api/annotations/test_slide_err/{fake_id}")
+        response = client.get(f"/api/v1/annotations/test_slide_err/{fake_id}")
         assert response.status_code == 404
 
     def test_update_nonexistent_annotation(self, client):
         """PUT with a random UUID should return 404."""
         fake_id = str(uuid.uuid4())
         response = client.put(
-            f"/api/annotations/test_slide_err/{fake_id}",
+            f"/api/v1/annotations/test_slide_err/{fake_id}",
             json={"annotation_type": "manual"},
         )
         assert response.status_code == 404
@@ -316,27 +316,27 @@ class TestAnnotationErrors:
     def test_delete_nonexistent_annotation(self, client):
         """DELETE with a random UUID should return 404."""
         fake_id = str(uuid.uuid4())
-        response = client.delete(f"/api/annotations/test_slide_err/{fake_id}")
+        response = client.delete(f"/api/v1/annotations/test_slide_err/{fake_id}")
         assert response.status_code == 404
 
     def test_invalid_confidence_too_high(self, client):
         """Confidence > 1.0 should return 422."""
         anno = _make_polygon()
         anno["confidence"] = 1.5
-        response = client.post("/api/annotations/test_slide_err", json=anno)
+        response = client.post("/api/v1/annotations/test_slide_err", json=anno)
         assert response.status_code == 422
 
     def test_invalid_confidence_negative(self, client):
         """Negative confidence should return 422."""
         anno = _make_polygon()
         anno["confidence"] = -0.1
-        response = client.post("/api/annotations/test_slide_err", json=anno)
+        response = client.post("/api/v1/annotations/test_slide_err", json=anno)
         assert response.status_code == 422
 
     def test_missing_geometry(self, client):
         """Missing geometry field should return 422."""
         response = client.post(
-            "/api/annotations/test_slide_err",
+            "/api/v1/annotations/test_slide_err",
             json={"geometry_type": "polygon", "annotation_type": "manual"},
         )
         assert response.status_code == 422
@@ -344,19 +344,19 @@ class TestAnnotationErrors:
     def test_invalid_label_color(self, client):
         """Invalid hex color should return 422."""
         response = client.post(
-            "/api/labels/",
+            "/api/v1/labels/",
             json={"name": "test_bad_color", "color": "not-a-color"},
         )
         assert response.status_code == 422
 
     def test_empty_label_name(self, client):
         """Empty label name should return 422."""
-        response = client.post("/api/labels/", json={"name": ""})
+        response = client.post("/api/v1/labels/", json={"name": ""})
         assert response.status_code == 422
 
     def test_invalid_annotation_id_format(self, client):
         """Non-UUID annotation_id should return 422."""
-        response = client.get("/api/annotations/test_slide_err/not-a-uuid")
+        response = client.get("/api/v1/annotations/test_slide_err/not-a-uuid")
         assert response.status_code == 422
 
 
@@ -370,13 +370,13 @@ class TestAnnotationEdgeCases:
 
     def test_list_empty_slide(self, client):
         """Listing annotations for a slide with none should return empty list."""
-        response = client.get("/api/annotations/test_slide_empty_list")
+        response = client.get("/api/v1/annotations/test_slide_empty_list")
         assert response.status_code == 200
         assert response.json() == []
 
     def test_export_empty_slide(self, client):
         """Exporting a slide with no annotations should return empty FeatureCollection."""
-        response = client.get("/api/annotations/test_slide_empty_export/export")
+        response = client.get("/api/v1/annotations/test_slide_empty_export/export")
         assert response.status_code == 200
         data = response.json()
         assert data["type"] == "FeatureCollection"
@@ -385,13 +385,13 @@ class TestAnnotationEdgeCases:
     def test_batch_single_item(self, client):
         """Batch create with a single annotation should work."""
         batch = {"annotations": [_make_polygon(500, 500)]}
-        response = client.post("/api/annotations/test_slide_batch1/batch", json=batch)
+        response = client.post("/api/v1/annotations/test_slide_batch1/batch", json=batch)
         assert response.status_code == 201
         assert len(response.json()) == 1
 
     def test_point_annotation(self, client, sample_point):
         """Point geometry should round-trip correctly."""
-        response = client.post("/api/annotations/test_slide_point", json=sample_point)
+        response = client.post("/api/v1/annotations/test_slide_point", json=sample_point)
         assert response.status_code == 201
         data = response.json()
         assert data["geometry_type"] == "point"
@@ -404,14 +404,14 @@ class TestAnnotationEdgeCases:
         low = _make_polygon(100, 100)
         low["annotation_type"] = "auto"
         low["confidence"] = 0.3
-        client.post(f"/api/annotations/{slide}", json=low)
+        client.post(f"/api/v1/annotations/{slide}", json=low)
         # Create high-confidence
         high = _make_polygon(200, 200)
         high["annotation_type"] = "auto_confirmed"
         high["confidence"] = 0.9
-        client.post(f"/api/annotations/{slide}", json=high)
+        client.post(f"/api/v1/annotations/{slide}", json=high)
 
-        response = client.get(f"/api/annotations/{slide}", params={"min_confidence": 0.8})
+        response = client.get(f"/api/v1/annotations/{slide}", params={"min_confidence": 0.8})
         assert response.status_code == 200
         data = response.json()
         assert all(d.get("confidence", 0) >= 0.8 for d in data)
@@ -428,7 +428,7 @@ class TestLabelsAPI:
 
     def test_create_label(self, client):
         response = client.post(
-            "/api/labels/",
+            "/api/v1/labels/",
             json={
                 "name": "Test Tumor",
                 "color": "#FF0000",
@@ -439,32 +439,32 @@ class TestLabelsAPI:
         assert response.json()["name"] == "Test Tumor"
 
     def test_list_labels(self, client):
-        client.post("/api/labels/", json={"name": "Test Label List"})
-        response = client.get("/api/labels/")
+        client.post("/api/v1/labels/", json={"name": "Test Label List"})
+        response = client.get("/api/v1/labels/")
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
     def test_get_label(self, client):
         """GET a label by ID should return the label."""
         create_resp = client.post(
-            "/api/labels/",
+            "/api/v1/labels/",
             json={"name": "Test Get Label", "color": "#00FF00"},
         )
         label_id = create_resp.json()["id"]
-        response = client.get(f"/api/labels/{label_id}")
+        response = client.get(f"/api/v1/labels/{label_id}")
         assert response.status_code == 200
         assert response.json()["name"] == "Test Get Label"
 
     def test_update_label(self, client):
         """PUT should update label fields."""
         create_resp = client.post(
-            "/api/labels/",
+            "/api/v1/labels/",
             json={"name": "Test Update Label", "color": "#0000FF"},
         )
         label_id = create_resp.json()["id"]
 
         response = client.put(
-            f"/api/labels/{label_id}",
+            f"/api/v1/labels/{label_id}",
             json={"name": "Test Updated Label", "color": "#FF00FF"},
         )
         assert response.status_code == 200
@@ -474,32 +474,32 @@ class TestLabelsAPI:
     def test_delete_label(self, client):
         """DELETE should remove the label."""
         create_resp = client.post(
-            "/api/labels/",
+            "/api/v1/labels/",
             json={"name": "Test Delete Label"},
         )
         label_id = create_resp.json()["id"]
 
-        response = client.delete(f"/api/labels/{label_id}")
+        response = client.delete(f"/api/v1/labels/{label_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_resp = client.get(f"/api/labels/{label_id}")
+        get_resp = client.get(f"/api/v1/labels/{label_id}")
         assert get_resp.status_code == 404
 
     def test_get_nonexistent_label(self, client):
         """GET with a random label UUID should return 404."""
         fake_id = str(uuid.uuid4())
-        response = client.get(f"/api/labels/{fake_id}")
+        response = client.get(f"/api/v1/labels/{fake_id}")
         assert response.status_code == 404
 
     def test_update_nonexistent_label(self, client):
         """PUT with a random label UUID should return 404."""
         fake_id = str(uuid.uuid4())
-        response = client.put(f"/api/labels/{fake_id}", json={"name": "test_nope"})
+        response = client.put(f"/api/v1/labels/{fake_id}", json={"name": "test_nope"})
         assert response.status_code == 404
 
     def test_delete_nonexistent_label(self, client):
         """DELETE with a random label UUID should return 404."""
         fake_id = str(uuid.uuid4())
-        response = client.delete(f"/api/labels/{fake_id}")
+        response = client.delete(f"/api/v1/labels/{fake_id}")
         assert response.status_code == 404

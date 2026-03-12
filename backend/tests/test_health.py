@@ -36,7 +36,7 @@ def test_health_endpoint(client):
 
     Endpoint utilisé par Docker healthcheck et monitoring.
     """
-    response = client.get("/api/health")
+    response = client.get("/api/v1/health")
 
     assert response.status_code == 200
 
@@ -99,7 +99,7 @@ def test_cors_headers(client):
     Vérifie que CORS est correctement configuré pour frontend.
     """
     response = client.options(
-        "/api/health",
+        "/api/v1/health",
         headers={
             "Origin": "http://localhost:5173",
             "Access-Control-Request-Method": "GET",

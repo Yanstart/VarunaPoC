@@ -43,7 +43,7 @@ from services.dicomweb import DICOMwebService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/dicomweb", tags=["dicomweb"])
+router = APIRouter(prefix="/dicomweb", tags=["dicomweb"])
 
 # Singleton service instances
 _dicomweb_service: Optional[DICOMwebService] = None

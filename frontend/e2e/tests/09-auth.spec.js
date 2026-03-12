@@ -68,7 +68,7 @@ test.describe('Authentication', () => {
 
         // Mock the auth/me to return auth_enabled=true with valid user
         // The authService should detect we're authenticated
-        await page.route('**/api/auth/me', (route) =>
+        await page.route('**/api/v1/auth/me', (route) =>
             route.fulfill({
                 status: 200,
                 contentType: 'application/json',

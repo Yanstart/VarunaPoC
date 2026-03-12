@@ -64,7 +64,7 @@ test.describe('Folder Navigation', () => {
 
     test('empty folder shows message', async ({ page, mockSlideData }) => {
         // Override the browse mock to navigate to empty folder
-        await page.route('**/api/slides/browse**', (route) => {
+        await page.route('**/api/v1/slides/browse**', (route) => {
             const url = new URL(route.request().url());
             const path = url.searchParams.get('path') || '/';
             if (path === '/EmptyFolder') {
