@@ -29,7 +29,7 @@ class LayerManager {
         this.element.innerHTML = `
             <div class="layer-manager__header">
                 <h3>Couches</h3>
-                <button class="layer-manager__export" title="Exporter GeoJSON">
+                <button class="layer-manager__export" title="Exporter GeoJSON" aria-label="Exporter GeoJSON">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>

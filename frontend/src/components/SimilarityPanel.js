@@ -69,7 +69,16 @@ class SimilarityPanel {
 
         header.appendChild(titleSpan);
         header.appendChild(chevron);
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', String(!this.isCollapsed));
         header.addEventListener('click', () => this._toggleCollapse());
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this._toggleCollapse();
+            }
+        });
         this.element.appendChild(header);
 
         // Body container
@@ -91,11 +100,15 @@ class SimilarityPanel {
     _toggleCollapse() {
         this.isCollapsed = !this.isCollapsed;
         const chevron = this.element.querySelector('.similarity-panel__chevron');
+        const header = this.element.querySelector('.similarity-panel__header');
         if (this._body) {
             this._body.style.display = this.isCollapsed ? 'none' : 'block';
         }
         if (chevron) {
             chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
+        if (header) {
+            header.setAttribute('aria-expanded', String(!this.isCollapsed));
         }
     }
 

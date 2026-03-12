@@ -171,6 +171,12 @@ class ViewerInstance {
         // Bind event handlers
         this._bindEventHandlers();
 
+        // Accessibility: label the navigator mini-map
+        if (this._osdViewer.navigator && this._osdViewer.navigator.element) {
+            this._osdViewer.navigator.element.setAttribute('aria-label', 'Mini-carte de navigation');
+            this._osdViewer.navigator.element.setAttribute('role', 'img');
+        }
+
         // Emit creation event
         this._emitGlobal(Events.VIEWER_CREATED, { viewerId: this.id });
 

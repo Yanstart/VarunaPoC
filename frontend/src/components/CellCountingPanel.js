@@ -73,7 +73,16 @@ class CellCountingPanel {
 
         header.appendChild(titleSpan);
         header.appendChild(chevron);
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', String(!this.isCollapsed));
         header.addEventListener('click', () => this._toggleCollapse());
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this._toggleCollapse();
+            }
+        });
         this.element.appendChild(header);
 
         // Body container
@@ -365,11 +374,15 @@ class CellCountingPanel {
         this.isCollapsed = !this.isCollapsed;
         const body = this.element.querySelector('.cell-counting-panel__body');
         const chevron = this.element.querySelector('.cell-counting-panel__chevron');
+        const header = this.element.querySelector('.cell-counting-panel__header');
         if (body) {
             body.style.display = this.isCollapsed ? 'none' : 'block';
         }
         if (chevron) {
             chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
+        if (header) {
+            header.setAttribute('aria-expanded', String(!this.isCollapsed));
         }
         try { localStorage.setItem('varuna_panel_cellcounting_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }

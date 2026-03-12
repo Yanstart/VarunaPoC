@@ -991,6 +991,9 @@ export class Router {
     _showSlidePicker() {
         const modal = document.createElement('div');
         modal.className = 'slide-picker-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'S\u00e9lectionner une lame');
 
         const content = document.createElement('div');
         content.className = 'slide-picker-content';
@@ -1004,12 +1007,14 @@ export class Router {
         const closeBtn = document.createElement('button');
         closeBtn.className = 'slide-picker-close';
         closeBtn.textContent = '\u00d7';
+        closeBtn.setAttribute('aria-label', 'Fermer');
         header.appendChild(closeBtn);
 
         const body = document.createElement('div');
         body.className = 'slide-picker-body';
         const loading = document.createElement('div');
         loading.className = 'loading';
+        loading.setAttribute('role', 'status');
         loading.textContent = 'Loading...';
         body.appendChild(loading);
 
@@ -1018,17 +1023,56 @@ export class Router {
         modal.appendChild(content);
         document.body.appendChild(modal);
 
-        closeBtn.addEventListener('click', () => {
+        // Store previously focused element and move focus into modal
+        const previouslyFocused = document.activeElement;
+        closeBtn.focus();
+
+        // Close handlers
+        const closeModal = () => {
             modal.remove();
             this._state.pendingSlideForPanel = null;
-        });
+            if (previouslyFocused && previouslyFocused.focus) {
+                previouslyFocused.focus();
+            }
+        };
+
+        closeBtn.addEventListener('click', closeModal);
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                modal.remove();
-                this._state.pendingSlideForPanel = null;
+                closeModal();
             }
         });
+
+        // Escape key closes modal
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', onKeyDown);
+                return;
+            }
+            // Focus trap: Tab cycles within modal content
+            if (e.key === 'Tab') {
+                const focusable = content.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+                );
+                if (focusable.length === 0) {return;}
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey) {
+                    if (document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else {
+                    if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
 
         this._loadSlidesInPicker(body);
     }

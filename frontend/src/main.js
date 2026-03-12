@@ -357,11 +357,43 @@ additionalStyles.textContent = `
 `;
 document.head.appendChild(additionalStyles);
 
-// ==========================================
 // THEME INITIALIZATION
 // ==========================================
 
 themeService.init();
+
+// ==========================================
+// ACCESSIBILITY: ARIA LIVE ANNOUNCEMENTS
+// ==========================================
+
+/**
+ * Announce a message to screen readers via the aria-live region.
+ * @param {string} message
+ */
+function announceToScreenReader(message) {
+    const region = document.getElementById('aria-live-region');
+    if (region) {
+        region.textContent = message;
+    }
+}
+
+// Announce key ML/analysis status changes
+eventBus.on('ml:workerBusy', (data) => {
+    announceToScreenReader(data.label ? `${data.label} en cours` : 'Analyse en cours');
+});
+eventBus.on('ml:workerFree', () => {
+    announceToScreenReader('Analyse terminee');
+});
+eventBus.on('ml:predictionComplete', () => {
+    announceToScreenReader('Prediction IA terminee');
+});
+eventBus.on('detection:complete', (data) => {
+    const n = data.numRegions || 0;
+    announceToScreenReader(`Detection terminee : ${n} regions detectees`);
+});
+eventBus.on('cellCounting:complete', () => {
+    announceToScreenReader('Comptage cellulaire termine');
+});
 
 // ==========================================
 // START APPLICATION
