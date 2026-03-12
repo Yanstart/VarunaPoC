@@ -14,6 +14,7 @@
  */
 
 import { CSSClasses, SyncConfig } from '../core/Constants.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * SyncControls class - Sync and layout control bar
@@ -109,7 +110,7 @@ class SyncControls {
         const status = document.createElement('div');
         status.className = 'sync-status';
         status.id = 'sync-status';
-        status.textContent = 'Sync : On';
+        status.textContent = i18nService.t('sync.on');
 
         this.element.appendChild(layoutSelector);
         this.element.appendChild(syncSection);
@@ -137,9 +138,9 @@ class SyncControls {
 
         // Layout options to show
         const layouts = [
-            { preset: 'SINGLE', cols: 1, rows: 1, title: 'Vue unique' },
-            { preset: 'SIDE_BY_SIDE', cols: 2, rows: 1, title: 'C\u00f4te \u00e0 c\u00f4te' },
-            { preset: 'GRID_2X2', cols: 2, rows: 2, title: 'Grille 2\u00d72' },
+            { preset: 'SINGLE', cols: 1, rows: 1, title: i18nService.t('layout.single') },
+            { preset: 'SIDE_BY_SIDE', cols: 2, rows: 1, title: i18nService.t('layout.sideBySide') },
+            { preset: 'GRID_2X2', cols: 2, rows: 2, title: i18nService.t('layout.grid2x2') },
         ];
 
         layouts.forEach(layout => {
@@ -192,12 +193,12 @@ class SyncControls {
         // Label
         const label = document.createElement('span');
         label.className = 'sync-label';
-        label.textContent = 'Synchroniser';
+        label.textContent = i18nService.t('sync.label');
 
         // Button
         this.syncButton = document.createElement('button');
         this.syncButton.className = CSSClasses.SYNC_BUTTON;
-        this.syncButton.title = 'Activer/d\u00e9sactiver la synchronisation';
+        this.syncButton.title = i18nService.t('sync.toggle');
         this.syncButton.innerHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -224,9 +225,9 @@ class SyncControls {
         section.className = 'sync-mode-selector';
 
         const modes = [
-            { mode: SyncConfig.MODES.FULL, label: 'Complet', title: 'Synchronisation complete (S)' },
-            { mode: SyncConfig.MODES.PAN_ONLY, label: 'Pan', title: 'Pan seulement (S)' },
-            { mode: SyncConfig.MODES.ZOOM_ONLY, label: 'Zoom', title: 'Zoom seulement (S)' },
+            { mode: SyncConfig.MODES.FULL, label: i18nService.t('sync.modeFull'), title: i18nService.t('sync.cycleModes') },
+            { mode: SyncConfig.MODES.PAN_ONLY, label: i18nService.t('sync.modePan'), title: i18nService.t('sync.modePan') },
+            { mode: SyncConfig.MODES.ZOOM_ONLY, label: i18nService.t('sync.modeZoom'), title: i18nService.t('sync.modeZoom') },
         ];
 
         modes.forEach(({ mode, label, title }) => {
@@ -277,7 +278,6 @@ class SyncControls {
             this.options.onSyncModeChange(mode);
         }
 
-        console.warn(`[SyncControls] Sync mode selected: ${mode}`);
     }
 
     /**
@@ -335,7 +335,6 @@ class SyncControls {
             this.options.onLayoutChange(preset);
         }
 
-        console.warn(`[SyncControls] Layout selected: ${preset}`);
     }
 
     /**
@@ -350,7 +349,6 @@ class SyncControls {
             this.options.onSyncToggle(this.syncEnabled);
         }
 
-        console.warn(`[SyncControls] Sync toggled: ${this.syncEnabled}`);
     }
 
     /**
@@ -359,18 +357,18 @@ class SyncControls {
      */
     _updateSyncUI() {
         const modeLabels = {
-            [SyncConfig.MODES.FULL]: 'Complet',
-            [SyncConfig.MODES.PAN_ONLY]: 'Pan',
-            [SyncConfig.MODES.ZOOM_ONLY]: 'Zoom',
+            [SyncConfig.MODES.FULL]: i18nService.t('sync.modeFull'),
+            [SyncConfig.MODES.PAN_ONLY]: i18nService.t('sync.modePan'),
+            [SyncConfig.MODES.ZOOM_ONLY]: i18nService.t('sync.modeZoom'),
         };
 
         if (this.syncEnabled) {
             this.syncButton.classList.add(CSSClasses.ACTIVE);
             const modeLabel = modeLabels[this.syncMode] || this.syncMode;
-            this.element.querySelector('#sync-status').textContent = `Sync : ${modeLabel}`;
+            this.element.querySelector('#sync-status').textContent = `${i18nService.t('sync.on').split(':')[0]}: ${modeLabel}`;
         } else {
             this.syncButton.classList.remove(CSSClasses.ACTIVE);
-            this.element.querySelector('#sync-status').textContent = 'Sync : Off';
+            this.element.querySelector('#sync-status').textContent = i18nService.t('sync.off');
         }
 
         // Show/hide mode selector based on sync state

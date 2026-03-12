@@ -407,9 +407,15 @@ async def get_history(
         rows = result.scalars().all()
 
         # Count total rows for this user (without the LIMIT)
-        count_stmt = select(ViewHistory).where(ViewHistory.user_sub == current_user.sub)
+        from sqlalchemy import func
+
+        count_stmt = (
+            select(func.count())
+            .select_from(ViewHistory)
+            .where(ViewHistory.user_sub == current_user.sub)
+        )
         count_result = await db.execute(count_stmt)
-        total = len(count_result.scalars().all())
+        total = count_result.scalar_one()
 
         items = []
         for row in rows:

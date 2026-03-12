@@ -123,9 +123,11 @@ docker compose -f "${COMPOSE_FILE}" exec -T db \
 
 echo "Restoring from backup..."
 if ! docker compose -f "${COMPOSE_FILE}" exec -T db \
-    pg_restore -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" --no-owner --no-privileges \
+    pg_restore -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" --no-owner --no-privileges --exit-on-error \
     < "${BACKUP_FILE}"; then
-    echo "WARNING: pg_restore completed with warnings (this is often normal)" >&2
+    echo "ERROR: pg_restore failed. Database may be in an inconsistent state." >&2
+    echo "Review the output above for details." >&2
+    exit 1
 fi
 
 # --------------------------------------------------------------------------

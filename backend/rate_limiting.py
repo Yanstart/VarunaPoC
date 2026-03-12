@@ -14,10 +14,11 @@ Environment variables:
 
 import os
 
+from starlette.requests import Request
+
 # Rate limiting (requires slowapi)
 try:
     from slowapi import Limiter
-    from slowapi.util import get_remote_address
 
     RATE_LIMITING_ENABLED = True
 except ImportError:
@@ -30,9 +31,30 @@ ml_rate = os.getenv("RATE_LIMIT_ML", "30/minute")
 auth_rate = os.getenv("RATE_LIMIT_AUTH", "10/minute")
 annotation_write_rate = os.getenv("RATE_LIMIT_ANNOTATION_WRITE", "60/minute")
 
+
+def _get_real_client_ip(request: Request) -> str:
+    """Extract client IP using X-Real-IP (set by nginx to $remote_addr).
+
+    Nginx is the trust boundary: it sets X-Real-IP to the actual TCP peer
+    address and overrides X-Forwarded-For with $remote_addr, preventing
+    client-supplied header spoofing.  We prefer X-Real-IP because it is
+    always a single address, then fall back to X-Forwarded-For (first
+    entry) and finally to the ASGI transport peer.
+    """
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "127.0.0.1"
+
+
 if RATE_LIMITING_ENABLED:
     limiter = Limiter(
-        key_func=get_remote_address,
+        key_func=_get_real_client_ip,
         default_limits=[default_rate],
         headers_enabled=True,  # Add X-RateLimit-* headers
     )

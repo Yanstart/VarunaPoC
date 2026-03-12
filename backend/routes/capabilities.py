@@ -15,7 +15,7 @@ from fastapi import APIRouter
 
 from core.feature_flags import feature_registry
 
-router = APIRouter(prefix="/api", tags=["capabilities"])
+router = APIRouter(prefix="", tags=["capabilities"])
 
 
 @router.get("/capabilities")

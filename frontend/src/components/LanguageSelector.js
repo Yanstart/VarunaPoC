@@ -61,8 +61,13 @@ export class LanguageSelector {
 
         select.addEventListener('change', async (e) => {
             const newLocale = e.target.value;
-            await i18nService.setLocale(newLocale);
-            eventBus.emit(Events.LOCALE_CHANGED, { locale: newLocale });
+            try {
+                await i18nService.setLocale(newLocale);
+                eventBus.emit(Events.LOCALE_CHANGED, { locale: newLocale });
+            } catch (err) {
+                console.error('[LanguageSelector] Failed to set locale:', err);
+                select.value = i18nService.getLocale();
+            }
         });
 
         this.element.appendChild(select);

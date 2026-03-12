@@ -115,8 +115,13 @@ services:
     image: ${BACKEND_IMAGE:-ghcr.io/yanstart/varunapoc/backend}:${BACKEND_IMAGE_TAG:-main}
     <<: *logging-oneshot
     command: python -m alembic upgrade head
+    secrets:
+      - db_password
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-varuna}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-varuna}
+      # Password is NOT embedded here. core/secrets.py reads /run/secrets/db_password
+      # and the backend constructs the full DATABASE_URL at startup.
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-varuna}@db:5432/${POSTGRES_DB:-varuna}"
+      DATABASE_PASSWORD_FILE: /run/secrets/db_password
     depends_on:
       db:
         condition: service_healthy
@@ -135,9 +140,13 @@ services:
   redis:
     image: redis@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065 # redis:7-alpine
     <<: *logging-default
+    # NOTE: Redis does not natively support Docker Secrets file-based passwords.
+    # REDIS_PASSWORD must be set in .env.production until a custom entrypoint is added
+    # that reads /run/secrets/redis_password and passes it to redis-server at startup.
+    # The redis_password secret is declared at the top of this file for future use.
     command: >
       redis-server
-      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.production}
       --maxmemory ${REDIS_MAX_MEMORY:-4gb}
       --maxmemory-policy allkeys-lru
       --save ""
@@ -171,13 +180,18 @@ services:
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/yanstart/varunapoc/backend}:${BACKEND_IMAGE_TAG:-main}
     <<: *logging-high-volume
+    secrets:
+      - db_password
     expose:
       - "8000"
     volumes:
       - ${SLIDES_HOST_PATH:-/mnt/chu-slides}:/slides:ro
       - backend-logs:/app/logs
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-varuna}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-varuna}
+      # Password is NOT embedded here. core/secrets.py reads /run/secrets/db_password
+      # and the backend constructs the full DATABASE_URL at startup.
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-varuna}@db:5432/${POSTGRES_DB:-varuna}"
+      DATABASE_PASSWORD_FILE: /run/secrets/db_password
       REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
       SLIDES_REPOSITORY_PATH: /slides
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -334,7 +348,7 @@ services:
       KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-keycloak}
       KC_HOSTNAME_STRICT_HTTPS: "true"
     ports:
-      - "8180:8080"
+      - "127.0.0.1:8180:8080"
     volumes:
       - ./backend/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     depends_on:
@@ -370,13 +384,13 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
-      - '--web.enable-lifecycle'
+      # --web.enable-lifecycle removed: exposes unauthenticated /-/reload and /-/quit
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     networks:
       - varuna-production-network
     restart: unless-stopped
@@ -412,7 +426,7 @@ services:
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
     networks:
@@ -463,6 +477,7 @@ services:
   # ALERTMANAGER (monitoring profile)
   # ============================================================================
   alertmanager:
+    # TODO: pin to SHA digest once confirmed in your registry: docker pull prom/alertmanager:v0.26.0 && docker inspect --format='{{index .RepoDigests 0}}' prom/alertmanager:v0.26.0
     image: prom/alertmanager:v0.26.0
     profiles: ["monitoring"]
     command:
@@ -472,7 +487,7 @@ services:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     networks:
       - varuna-production-network
     restart: unless-stopped
@@ -520,7 +535,8 @@ services:
   # NODE EXPORTER (monitoring profile)
   # ============================================================================
   node-exporter:
-    image: prom/node-exporter:latest
+    # TODO: pin to SHA digest: docker pull prom/node-exporter:v1.7.0 && docker inspect --format='{{index .RepoDigests 0}}' prom/node-exporter:v1.7.0
+    image: prom/node-exporter:v1.7.0
     profiles: ["monitoring"]
     command:
       - '--path.procfs=/host/proc'
@@ -546,7 +562,8 @@ services:
   # CADVISOR (monitoring profile)
   # ============================================================================
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    # TODO: pin to SHA digest: docker pull gcr.io/cadvisor/cadvisor:v0.47.0 && docker inspect --format='{{index .RepoDigests 0}}' gcr.io/cadvisor/cadvisor:v0.47.0
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
     profiles: ["monitoring"]
     volumes:
       - /:/rootfs:ro

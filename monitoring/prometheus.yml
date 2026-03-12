@@ -4,7 +4,7 @@
 global:
   scrape_interval: 15s # Scrape targets every 15 seconds
   evaluation_interval: 15s # Evaluate rules every 15 seconds
-  scrape_timeout: 60s # Timeout after 10 seconds
+  scrape_timeout: 10s # Must be less than scrape_interval (15s)
 
   # External labels attached to all time series
   external_labels:
@@ -57,7 +57,7 @@ scrape_configs:
           tier: "monitoring"
 
     scrape_interval: 30s
-    scrape_timeout: 60s
+    scrape_timeout: 10s # Must be less than scrape_interval (30s)
 
   # ============================================================================
   # Node Exporter - System Metrics

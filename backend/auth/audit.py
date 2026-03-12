@@ -189,6 +189,7 @@ async def _persist_to_db(event: dict) -> None:
                 user_agent=event["user_agent"],
             )
             db.add(audit)
+            await db.commit()
     except Exception as e:
         logger.warning(f"Failed to persist audit event to DB: {e}")
 

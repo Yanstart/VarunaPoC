@@ -11,8 +11,8 @@
 
 .ml-tabs {
     width: 280px;
-    background: rgba(26, 26, 26, 0.95);
-    border: 1px solid #333;
+    background: color-mix(in srgb, var(--color-bg-elevated, #1a1a1a) 95%, transparent);
+    border: 1px solid var(--color-border, #333);
     border-radius: 8px;
     backdrop-filter: blur(8px);
     overflow: hidden;
@@ -31,8 +31,8 @@
 
 .ml-tabs__bar {
     display: flex;
-    background: #1a1a1a;
-    border-bottom: 1px solid #333;
+    background: var(--color-bg-elevated, #1a1a1a);
+    border-bottom: 1px solid var(--color-border, #333);
     flex-shrink: 0;
 }
 
@@ -46,7 +46,7 @@
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: #888;
+    color: var(--color-text-secondary, #888);
     cursor: pointer;
     transition: all 0.15s ease;
     position: relative;
@@ -55,18 +55,18 @@
 }
 
 .ml-tabs__tab:hover {
-    color: #ccc;
-    background: rgba(255, 255, 255, 0.03);
+    color: var(--color-text-primary, #e0e0e0);
+    background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
 }
 
 .ml-tabs__tab--active {
-    color: #4a9eff;
-    border-bottom-color: #4a9eff;
-    background: rgba(74, 158, 255, 0.05);
+    color: var(--color-primary, #4a9eff);
+    border-bottom-color: var(--color-primary, #4a9eff);
+    background: var(--color-primary-alpha-10, rgba(74, 158, 255, 0.05));
 }
 
 .ml-tabs__tab--active:hover {
-    color: #4a9eff;
+    color: var(--color-primary, #4a9eff);
 }
 
 /* Tab icon */
@@ -103,7 +103,7 @@
     height: 7px;
     background: #ff6b6b;
     border-radius: 50%;
-    border: 1px solid #1a1a1a;
+    border: 1px solid var(--color-bg-elevated, #1a1a1a);
 }
 
 /* ============================================
@@ -211,7 +211,7 @@
 /* Separator between MLPanel and FocusAssistPanel in Analyse tab */
 .ml-tabs__pane .ml-tabs__separator {
     height: 1px;
-    background: #333;
+    background: var(--color-border, #333);
     margin: 8px 12px;
 }
 

@@ -584,19 +584,29 @@ class DetectionPanel {
     }
 
     _renderError(message) {
-        this._body.innerHTML = `
-            <div class="detection-panel__section">
-                <h4>Détection automatique</h4>
-                <div class="detection-panel__error">
-                    <p>Erreur lors de la détection : ${message}</p>
-                    <button class="detection-panel__btn detection-panel__btn--secondary">Réessayer</button>
-                </div>
-            </div>
-        `;
+        this._body.textContent = '';
+        const section = document.createElement('div');
+        section.className = 'detection-panel__section';
 
-        this.element.querySelector('.detection-panel__btn--secondary').addEventListener('click', () => {
-            this._renderIdle();
-        });
+        const h4 = document.createElement('h4');
+        h4.textContent = 'Détection automatique';
+        section.appendChild(h4);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'detection-panel__error';
+
+        const p = document.createElement('p');
+        p.textContent = `Erreur lors de la détection : ${message}`;
+
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'detection-panel__btn detection-panel__btn--secondary';
+        retryBtn.textContent = 'Réessayer';
+        retryBtn.addEventListener('click', () => this._renderIdle());
+
+        wrapper.appendChild(p);
+        wrapper.appendChild(retryBtn);
+        section.appendChild(wrapper);
+        this._body.appendChild(section);
     }
 
     /**

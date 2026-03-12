@@ -225,6 +225,10 @@
     --color-border: #cccccc;
     --color-border-light: #dddddd;
 
+    --color-error: #d32f2f;
+    --color-warning: #e65100;
+    --color-success: #2e7d32;
+
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.15);
     --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.2);
