@@ -86,6 +86,15 @@ except ImportError:
     MONITORING_ENABLED = False
     print("[INFO] Monitoring disabled (prometheus_client not installed)")
 
+# OpenTelemetry tracing (optional: OTEL_ENABLED=true)
+try:
+    from core.tracing import setup_tracing
+
+    _TRACING_DEFERRED = True  # will be called after app is created
+except ImportError:
+    _TRACING_DEFERRED = False
+    print("[INFO] OpenTelemetry disabled")
+
 # Rate limiting optionnel (requires slowapi)
 try:
     from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -175,6 +184,10 @@ Voir `/docs/Manuel/` pour le guide utilisateur complet.
         {"name": "visualization", "description": "Chargement et affichage des lames"},
     ],
 )
+
+# OpenTelemetry instrumentation (deferred until app object is created)
+if _TRACING_DEFERRED:
+    setup_tracing(app)
 
 # Rate limiting middleware (optional - requires slowapi)
 if RATE_LIMITING_ENABLED:
