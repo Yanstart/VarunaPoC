@@ -1,3 +1,12 @@
+# ==============================================================================
+# VarunaPoC - Development Compose
+# ==============================================================================
+# Local development support services only (DB + Keycloak).
+# Backend and frontend run locally via `uvicorn` and `npm run dev`.
+# Auth is disabled by default: set AUTH_ENABLED=true in backend env to test OIDC.
+# Production deployment: use docker-compose.production.yml with .env.production
+# ==============================================================================
+
 services:
   db:
     image: postgis/postgis:16-3.4
