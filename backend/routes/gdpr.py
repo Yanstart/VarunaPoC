@@ -20,9 +20,11 @@ from auth.schemas import CurrentUser
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/gdpr", tags=["gdpr"])
+router = APIRouter(prefix="/gdpr", tags=["gdpr"])
 
-# In-memory erasure task tracking (production: use DB)
+# In-memory erasure task tracking.
+# WARNING: This is process-local — tasks are lost on restart and not shared
+# across workers. In production, replace with Redis or a database table.
 _erasure_tasks: dict[str, dict] = {}
 
 

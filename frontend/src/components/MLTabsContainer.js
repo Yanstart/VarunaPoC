@@ -21,33 +21,34 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
+import { i18nService } from '../services/I18nService.js';
 
 /** @type {string} localStorage key for active tab */
 const STORAGE_KEY = 'varuna_ml_active_tab';
 
 /**
- * Tab definitions with labels and icons (static SVG, no user data)
- * @type {Array<{id: string, label: string, icon: string}>}
+ * Tab definitions with i18n keys and icons (static SVG, no user data)
+ * @type {Array<{id: string, i18nKey: string, icon: string}>}
  */
 const TAB_DEFS = [
     {
         id: 'analyse',
-        label: 'Analyse',
+        i18nKey: 'tabs.analyse',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
     },
     {
         id: 'detection',
-        label: 'Detection',
+        i18nKey: 'tabs.detection',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     },
     {
         id: 'comptage',
-        label: 'Comptage',
+        i18nKey: 'tabs.counting',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/></svg>',
     },
     {
         id: 'clustering',
-        label: 'Clustering',
+        i18nKey: 'tabs.clustering',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></svg>',
     },
 ];
@@ -95,12 +96,18 @@ class MLTabsContainer {
         // Tab bar
         this._tabBar = document.createElement('div');
         this._tabBar.className = 'ml-tabs__bar';
+        this._tabBar.setAttribute('role', 'tablist');
 
         for (const def of TAB_DEFS) {
             const btn = document.createElement('button');
             btn.className = 'ml-tabs__tab';
             btn.dataset.tabId = def.id;
-            btn.title = def.label;
+            const label = i18nService.t(def.i18nKey);
+            btn.title = label;
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-selected', def.id === this._activeTab ? 'true' : 'false');
+            btn.setAttribute('aria-controls', `ml-tabpanel-${def.id}`);
+            btn.id = `ml-tab-${def.id}`;
 
             // Icon (static SVG, safe)
             const iconSpan = document.createElement('span');
@@ -110,7 +117,7 @@ class MLTabsContainer {
             // Label
             const labelSpan = document.createElement('span');
             labelSpan.className = 'ml-tabs__tab-label';
-            labelSpan.textContent = def.label;
+            labelSpan.textContent = label;
 
             // Badge
             const badgeSpan = document.createElement('span');
@@ -136,6 +143,9 @@ class MLTabsContainer {
             const pane = document.createElement('div');
             pane.className = 'ml-tabs__pane';
             pane.dataset.tabId = def.id;
+            pane.setAttribute('role', 'tabpanel');
+            pane.id = `ml-tabpanel-${def.id}`;
+            pane.setAttribute('aria-labelledby', `ml-tab-${def.id}`);
             paneWrapper.appendChild(pane);
             this._panes.set(def.id, pane);
         }
@@ -202,6 +212,7 @@ class MLTabsContainer {
         // Update tab buttons
         for (const [id, btn] of this._tabButtons) {
             btn.classList.toggle('ml-tabs__tab--active', id === tabId);
+            btn.setAttribute('aria-selected', id === tabId ? 'true' : 'false');
         }
 
         // Update panes

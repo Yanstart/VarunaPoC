@@ -813,7 +813,7 @@ export class Router {
         });
 
         // Also update if theme changes externally (e.g., system preference)
-        eventBus.on(Events.THEME_CHANGED, () => updateIcon());
+        this._themeUnsub = eventBus.on(Events.THEME_CHANGED, () => updateIcon());
 
         return btn;
     }
@@ -1190,6 +1190,11 @@ export class Router {
     // ==========================================
 
     _cleanup() {
+        if (this._themeUnsub) {
+            this._themeUnsub();
+            this._themeUnsub = null;
+        }
+
         const destroyKeys = [
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'clusteringOverlay',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',

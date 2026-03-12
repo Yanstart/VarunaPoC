@@ -136,5 +136,20 @@
   "viewer.loadingMeta": "Chargement des metadonnees...",
   "viewer.loadingTiles": "Chargement des tuiles (flux DZI)...",
   "viewer.errorOpening": "Erreur ouverture lame",
-  "viewer.unsupportedSlide": "Lame non supportee"
+  "viewer.unsupportedSlide": "Lame non supportee",
+  "tabs.analyse": "Analyse",
+  "tabs.detection": "Détection",
+  "tabs.counting": "Comptage",
+  "tabs.clustering": "Clustering",
+  "sync.label": "Synchroniser",
+  "sync.on": "Sync : On",
+  "sync.off": "Sync : Off",
+  "sync.toggle": "Activer/désactiver la synchronisation",
+  "sync.cycleModes": "Changer le mode de sync (S)",
+  "sync.modeFull": "Complet",
+  "sync.modePan": "Pan",
+  "sync.modeZoom": "Zoom",
+  "layout.single": "Vue unique",
+  "layout.sideBySide": "Côte à côte",
+  "layout.grid2x2": "Grille 2×2"
 }

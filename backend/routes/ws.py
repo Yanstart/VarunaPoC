@@ -214,7 +214,7 @@ manager = ConnectionManager()
 
 
 @router.websocket("/ws/slides/{slide_id}")
-async def slide_websocket(websocket: WebSocket, slide_id: str):
+async def slide_websocket(websocket: WebSocket, slide_id: str):  # noqa: PLR0912
     """WebSocket endpoint for real-time collaboration on a slide.
 
     Query params:
@@ -255,7 +255,12 @@ async def slide_websocket(websocket: WebSocket, slide_id: str):
         while True:
             # Read raw bytes first so we can enforce the size limit before
             # attempting JSON parsing (avoids allocating a huge string).
-            raw = await websocket.receive_bytes()
+            # receive() handles both binary and text frames from browsers.
+            message = await websocket.receive()
+            msg_type_ws = message.get("type", "")
+            if msg_type_ws == "websocket.disconnect":
+                break
+            raw = message.get("bytes") or (message.get("text", "").encode("utf-8"))
 
             if len(raw) > WS_MAX_MESSAGE_SIZE:
                 logger.warning(

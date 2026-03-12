@@ -136,5 +136,20 @@
   "viewer.loadingMeta": "Loading metadata...",
   "viewer.loadingTiles": "Loading tiles (DZI stream)...",
   "viewer.errorOpening": "Error opening slide",
-  "viewer.unsupportedSlide": "Unsupported slide"
+  "viewer.unsupportedSlide": "Unsupported slide",
+  "tabs.analyse": "Analysis",
+  "tabs.detection": "Detection",
+  "tabs.counting": "Counting",
+  "tabs.clustering": "Clustering",
+  "sync.label": "Synchronize",
+  "sync.on": "Sync: On",
+  "sync.off": "Sync: Off",
+  "sync.toggle": "Toggle synchronization",
+  "sync.cycleModes": "Cycle sync mode (S)",
+  "sync.modeFull": "Full",
+  "sync.modePan": "Pan",
+  "sync.modeZoom": "Zoom",
+  "layout.single": "Single view",
+  "layout.sideBySide": "Side by side",
+  "layout.grid2x2": "Grid 2×2"
 }

@@ -371,21 +371,24 @@ class DrawingTools {
     }
 
     _setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Only handle if viewer page is active
-            if (!this.element || !this.element.parentNode) {return;}
+        this._boundKeyHandler = (e) => this._handleKeyDown(e);
+        document.addEventListener('keydown', this._boundKeyHandler);
+    }
 
-            switch (e.key) {
-                case 'v': case 'V': this._setTool('select'); break;
-                case 'r': case 'R': this._setTool('rectangle'); break;
-                case 'p': case 'P': this._setTool('polygon'); break;
-                case 'm': case 'M': this._setTool('point'); break;
-                case 'f': case 'F': this._setTool('freehand'); break;
-                case 'c': case 'C': this._setTool('circle'); break;
-                case 'Delete': this._deleteSelected(); break;
-                case 'Escape': this._cancelDrawing(); break;
-            }
-        });
+    _handleKeyDown(e) {
+        // Only handle if viewer page is active
+        if (!this.element || !this.element.parentNode) {return;}
+
+        switch (e.key) {
+            case 'v': case 'V': this._setTool('select'); break;
+            case 'r': case 'R': this._setTool('rectangle'); break;
+            case 'p': case 'P': this._setTool('polygon'); break;
+            case 'm': case 'M': this._setTool('point'); break;
+            case 'f': case 'F': this._setTool('freehand'); break;
+            case 'c': case 'C': this._setTool('circle'); break;
+            case 'Delete': this._deleteSelected(); break;
+            case 'Escape': this._cancelDrawing(); break;
+        }
     }
 
     _getSlideCoords(e) {
@@ -818,6 +821,11 @@ class DrawingTools {
         // Properly unsubscribe from all event listeners
         this._unsubscribers.forEach(unsubscribe => unsubscribe());
         this._unsubscribers = [];
+
+        if (this._boundKeyHandler) {
+            document.removeEventListener('keydown', this._boundKeyHandler);
+            this._boundKeyHandler = null;
+        }
 
         // Re-enable OSD navigation
         if (this.viewer) {

@@ -42,7 +42,7 @@ from auth.schemas import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth/breakglass", tags=["Break-Glass"])
+router = APIRouter(prefix="/auth/breakglass", tags=["Break-Glass"])
 
 # Max duration for break-glass tokens (hard limit)
 MAX_DURATION_MINUTES = 60
@@ -55,12 +55,13 @@ def _generate_breakglass_token(
     issued_by: str,
 ) -> str:
     """
-    Generate a self-contained break-glass token.
+    Generate a break-glass session reference token.
 
-    This is a simple signed token for emergency use. In production with
-    Keycloak available, this would be exchanged for a proper JWT via the
-    token exchange grant. When Keycloak is down (the primary break-glass
-    scenario), this locally-generated token is verified by the backend.
+    NOTE: This token is informational only — it serves as a session
+    reference for audit trail purposes. Access control is enforced via
+    the in-memory session store (is_break_glass_active), not by
+    validating this token. A production implementation should HMAC-sign
+    the token and verify it on each request.
 
     Format: bg_<session_id>_<random>_<expiry_ts>
     """
@@ -87,13 +88,11 @@ async def issue_breakglass_token(
     # Enforce hard max duration
     duration = min(data.duration_minutes, MAX_DURATION_MINUTES)
 
-    # Get client IP
-    ip_address = ""
-    if request.client:
+    # Get client IP — trust X-Real-IP (set by nginx to $remote_addr)
+    # and never trust X-Forwarded-For for audit purposes (client-spoofable).
+    ip_address = request.headers.get("X-Real-IP", "")
+    if not ip_address and request.client:
         ip_address = request.client.host
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        ip_address = forwarded.split(",")[0].strip()
 
     # Activate break-glass session
     session = activate_break_glass(

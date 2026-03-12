@@ -390,15 +390,16 @@ class ViewerPanel {
         });
 
         // Listen for sync events
-        eventBus.on(Events.SYNC_ENABLED, ({ viewerIds }) => {
-            if (this.viewer && viewerIds.includes(this.viewer.id)) {
-                this.setSynced(true);
-            }
-        });
-
-        eventBus.on(Events.SYNC_DISABLED, () => {
-            this.setSynced(false);
-        });
+        this._unsubscribers.push(
+            eventBus.on(Events.SYNC_ENABLED, ({ viewerIds }) => {
+                if (this.viewer && viewerIds.includes(this.viewer.id)) {
+                    this.setSynced(true);
+                }
+            }),
+            eventBus.on(Events.SYNC_DISABLED, () => {
+                this.setSynced(false);
+            }),
+        );
 
         // Magnification bar updates on viewport change
         this._unsubscribers.push(

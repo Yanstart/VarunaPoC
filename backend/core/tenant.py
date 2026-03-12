@@ -12,8 +12,11 @@ Usage:
 """
 
 import logging
+import os
 
 from fastapi import Request
+
+_TENANT_HEADER_SECRET = os.getenv("TENANT_HEADER_SECRET", "")
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +58,12 @@ async def get_current_tenant(request: Request) -> str:
         # Auth module not available or token invalid - continue to fallback
         pass
 
-    # 2. Try X-Tenant-ID header
+    # 2. Try X-Tenant-ID header (only trusted when shared secret is configured)
     header_tenant = request.headers.get("X-Tenant-ID")
-    if header_tenant:
-        return header_tenant.strip()
+    if header_tenant and _TENANT_HEADER_SECRET:
+        header_secret = request.headers.get("X-Tenant-Secret", "")
+        if header_secret == _TENANT_HEADER_SECRET:
+            return header_tenant.strip()
 
     # 3. Default tenant
     return DEFAULT_TENANT
