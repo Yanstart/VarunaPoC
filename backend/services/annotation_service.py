@@ -68,13 +68,14 @@ async def _row_to_response(row: Annotation, db: AsyncSession) -> Dict[str, Any]:
 
 
 async def create_annotation(
-    db: AsyncSession, slide_id: str, data: AnnotationCreate
+    db: AsyncSession, slide_id: str, data: AnnotationCreate, tenant_id: str = "default"
 ) -> Dict[str, Any]:
     """Create a single annotation."""
     geojson_str = _geojson_to_wkb(data.geometry)
 
     annotation = Annotation(
         id=uuid.uuid4(),
+        tenant_id=tenant_id,
         slide_id=slide_id,
         geometry=ST_GeomFromGeoJSON(geojson_str),
         geometry_type=data.geometry_type,
@@ -93,7 +94,10 @@ async def create_annotation(
 
 
 async def batch_create_annotations(
-    db: AsyncSession, slide_id: str, annotations_data: List[AnnotationCreate]
+    db: AsyncSession,
+    slide_id: str,
+    annotations_data: List[AnnotationCreate],
+    tenant_id: str = "default",
 ) -> List[Dict[str, Any]]:
     """Create multiple annotations in a single transaction."""
     results = []
@@ -101,6 +105,7 @@ async def batch_create_annotations(
         geojson_str = _geojson_to_wkb(data.geometry)
         annotation = Annotation(
             id=uuid.uuid4(),
+            tenant_id=tenant_id,
             slide_id=slide_id,
             geometry=ST_GeomFromGeoJSON(geojson_str),
             geometry_type=data.geometry_type,
@@ -129,14 +134,19 @@ async def get_annotations(
     label_id: Optional[uuid.UUID] = None,
     min_confidence: Optional[float] = None,
     bbox: Optional[List[float]] = None,
+    tenant_id: str = "default",
 ) -> List[Dict[str, Any]]:
     """
     List annotations for a slide with optional filters.
 
     Args:
         bbox: [x1, y1, x2, y2] spatial bounding box filter
+        tenant_id: Tenant identifier for data isolation
     """
-    stmt = select(Annotation).where(Annotation.slide_id == slide_id)
+    stmt = select(Annotation).where(
+        Annotation.tenant_id == tenant_id,
+        Annotation.slide_id == slide_id,
+    )
 
     if annotation_type:
         stmt = stmt.where(Annotation.annotation_type == annotation_type)
@@ -157,10 +167,14 @@ async def get_annotations(
 
 
 async def get_annotation(
-    db: AsyncSession, slide_id: str, annotation_id: uuid.UUID
+    db: AsyncSession, slide_id: str, annotation_id: uuid.UUID, tenant_id: str = "default"
 ) -> Optional[Dict[str, Any]]:
     """Get a single annotation by ID."""
-    stmt = select(Annotation).where(Annotation.id == annotation_id, Annotation.slide_id == slide_id)
+    stmt = select(Annotation).where(
+        Annotation.tenant_id == tenant_id,
+        Annotation.id == annotation_id,
+        Annotation.slide_id == slide_id,
+    )
     result = await db.execute(stmt)
     row = result.scalar_one_or_none()
     if not row:
@@ -173,9 +187,14 @@ async def update_annotation(
     slide_id: str,
     annotation_id: uuid.UUID,
     data: AnnotationUpdate,
+    tenant_id: str = "default",
 ) -> Optional[Dict[str, Any]]:
     """Update an annotation."""
-    stmt = select(Annotation).where(Annotation.id == annotation_id, Annotation.slide_id == slide_id)
+    stmt = select(Annotation).where(
+        Annotation.tenant_id == tenant_id,
+        Annotation.id == annotation_id,
+        Annotation.slide_id == slide_id,
+    )
     result = await db.execute(stmt)
     annotation = result.scalar_one_or_none()
     if not annotation:
@@ -189,7 +208,11 @@ async def update_annotation(
         update_data["geometry"] = ST_GeomFromGeoJSON(geojson_str)
 
     if update_data:
-        stmt = update(Annotation).where(Annotation.id == annotation_id).values(**update_data)
+        stmt = (
+            update(Annotation)
+            .where(Annotation.tenant_id == tenant_id, Annotation.id == annotation_id)
+            .values(**update_data)
+        )
         await db.execute(stmt)
         await db.flush()
 
@@ -197,16 +220,24 @@ async def update_annotation(
     return await _row_to_response(annotation, db)
 
 
-async def delete_annotation(db: AsyncSession, slide_id: str, annotation_id: uuid.UUID) -> bool:
+async def delete_annotation(
+    db: AsyncSession, slide_id: str, annotation_id: uuid.UUID, tenant_id: str = "default"
+) -> bool:
     """Delete an annotation. Returns True if deleted."""
-    stmt = delete(Annotation).where(Annotation.id == annotation_id, Annotation.slide_id == slide_id)
+    stmt = delete(Annotation).where(
+        Annotation.tenant_id == tenant_id,
+        Annotation.id == annotation_id,
+        Annotation.slide_id == slide_id,
+    )
     result = await db.execute(stmt)
     return result.rowcount > 0
 
 
-async def export_annotations_geojson(db: AsyncSession, slide_id: str) -> GeoJSONFeatureCollection:
+async def export_annotations_geojson(
+    db: AsyncSession, slide_id: str, tenant_id: str = "default"
+) -> GeoJSONFeatureCollection:
     """Export all annotations for a slide as GeoJSON FeatureCollection."""
-    annotations = await get_annotations(db, slide_id)
+    annotations = await get_annotations(db, slide_id, tenant_id=tenant_id)
 
     features = []
     for anno in annotations:
@@ -239,21 +270,25 @@ async def export_annotations_geojson(db: AsyncSession, slide_id: str) -> GeoJSON
 # ============================================
 
 
-async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any]:
+async def get_annotation_stats(
+    db: AsyncSession, slide_id: str, tenant_id: str = "default"
+) -> Dict[str, Any]:
     """
     Get annotation statistics for a slide: total count, counts by label, counts by type,
     and confidence distribution.
     """
     # Total count
     total_result = await db.execute(
-        select(func.count(Annotation.id)).where(Annotation.slide_id == slide_id)
+        select(func.count(Annotation.id)).where(
+            Annotation.tenant_id == tenant_id, Annotation.slide_id == slide_id
+        )
     )
     total = total_result.scalar_one()
 
     # Count by annotation_type
     type_result = await db.execute(
         select(Annotation.annotation_type, func.count(Annotation.id))
-        .where(Annotation.slide_id == slide_id)
+        .where(Annotation.tenant_id == tenant_id, Annotation.slide_id == slide_id)
         .group_by(Annotation.annotation_type)
     )
     by_type = [{"type": row[0], "count": row[1]} for row in type_result.all()]
@@ -267,7 +302,7 @@ async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any
             func.count(Annotation.id),
         )
         .join(AnnotationLabel, Annotation.label_id == AnnotationLabel.id)
-        .where(Annotation.slide_id == slide_id)
+        .where(Annotation.tenant_id == tenant_id, Annotation.slide_id == slide_id)
         .group_by(AnnotationLabel.id, AnnotationLabel.name, AnnotationLabel.color)
     )
     by_label = [
@@ -278,7 +313,9 @@ async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any
     # Count unlabeled
     unlabeled_result = await db.execute(
         select(func.count(Annotation.id)).where(
-            Annotation.slide_id == slide_id, Annotation.label_id.is_(None)
+            Annotation.tenant_id == tenant_id,
+            Annotation.slide_id == slide_id,
+            Annotation.label_id.is_(None),
         )
     )
     unlabeled = unlabeled_result.scalar_one()
@@ -286,11 +323,14 @@ async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any
     # Confidence distribution (buckets: high>=0.8, medium 0.5-0.8, low <0.5, unscored=null)
     conf_high = await db.execute(
         select(func.count(Annotation.id)).where(
-            Annotation.slide_id == slide_id, Annotation.confidence >= 0.8
+            Annotation.tenant_id == tenant_id,
+            Annotation.slide_id == slide_id,
+            Annotation.confidence >= 0.8,
         )
     )
     conf_med = await db.execute(
         select(func.count(Annotation.id)).where(
+            Annotation.tenant_id == tenant_id,
             Annotation.slide_id == slide_id,
             Annotation.confidence >= 0.5,
             Annotation.confidence < 0.8,
@@ -298,6 +338,7 @@ async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any
     )
     conf_low = await db.execute(
         select(func.count(Annotation.id)).where(
+            Annotation.tenant_id == tenant_id,
             Annotation.slide_id == slide_id,
             Annotation.confidence.isnot(None),
             Annotation.confidence < 0.5,
@@ -305,7 +346,9 @@ async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any
     )
     conf_none = await db.execute(
         select(func.count(Annotation.id)).where(
-            Annotation.slide_id == slide_id, Annotation.confidence.is_(None)
+            Annotation.tenant_id == tenant_id,
+            Annotation.slide_id == slide_id,
+            Annotation.confidence.is_(None),
         )
     )
 
@@ -330,31 +373,40 @@ async def get_annotation_stats(db: AsyncSession, slide_id: str) -> Dict[str, Any
 
 
 async def create_label(
-    db: AsyncSession, name: str, color: str = "#FF0000", **kwargs
+    db: AsyncSession, name: str, color: str = "#FF0000", tenant_id: str = "default", **kwargs
 ) -> AnnotationLabel:
-    label = AnnotationLabel(id=uuid.uuid4(), name=name, color=color, **kwargs)
+    label = AnnotationLabel(id=uuid.uuid4(), tenant_id=tenant_id, name=name, color=color, **kwargs)
     db.add(label)
     await db.flush()
     await db.refresh(label)
     return label
 
 
-async def get_labels(db: AsyncSession) -> List[AnnotationLabel]:
+async def get_labels(db: AsyncSession, tenant_id: str = "default") -> List[AnnotationLabel]:
     result = await db.execute(
-        select(AnnotationLabel).order_by(AnnotationLabel.sort_order, AnnotationLabel.name)
+        select(AnnotationLabel)
+        .where(AnnotationLabel.tenant_id == tenant_id)
+        .order_by(AnnotationLabel.sort_order, AnnotationLabel.name)
     )
     return list(result.scalars().all())
 
 
-async def get_label(db: AsyncSession, label_id: uuid.UUID) -> Optional[AnnotationLabel]:
-    result = await db.execute(select(AnnotationLabel).where(AnnotationLabel.id == label_id))
+async def get_label(
+    db: AsyncSession, label_id: uuid.UUID, tenant_id: str = "default"
+) -> Optional[AnnotationLabel]:
+    result = await db.execute(
+        select(AnnotationLabel).where(
+            AnnotationLabel.tenant_id == tenant_id,
+            AnnotationLabel.id == label_id,
+        )
+    )
     return result.scalar_one_or_none()
 
 
 async def update_label(
-    db: AsyncSession, label_id: uuid.UUID, **kwargs
+    db: AsyncSession, label_id: uuid.UUID, tenant_id: str = "default", **kwargs
 ) -> Optional[AnnotationLabel]:
-    label = await get_label(db, label_id)
+    label = await get_label(db, label_id, tenant_id=tenant_id)
     if not label:
         return None
     for key, value in kwargs.items():
@@ -365,6 +417,11 @@ async def update_label(
     return label
 
 
-async def delete_label(db: AsyncSession, label_id: uuid.UUID) -> bool:
-    result = await db.execute(delete(AnnotationLabel).where(AnnotationLabel.id == label_id))
+async def delete_label(db: AsyncSession, label_id: uuid.UUID, tenant_id: str = "default") -> bool:
+    result = await db.execute(
+        delete(AnnotationLabel).where(
+            AnnotationLabel.tenant_id == tenant_id,
+            AnnotationLabel.id == label_id,
+        )
+    )
     return result.rowcount > 0
