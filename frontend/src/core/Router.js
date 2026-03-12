@@ -45,6 +45,7 @@ import { createRecentCases } from '../components/RecentCases.js';
 import { FocusAssistPanel } from '../components/FocusAssistPanel.js';
 import { AutoTagBadge } from '../components/AutoTagBadge.js';
 import { MagnificationBar } from '../components/MagnificationBar.js';
+import { MLTabsContainer } from '../components/MLTabsContainer.js';
 
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
 
@@ -331,8 +332,10 @@ export class Router {
         const viewerInstance = getLegacyViewer();
         const viewerId = viewerInstance ? viewerInstance.id : 'legacy-viewer';
 
-        // ML Panel (hidden by default)
-        this._state.mlPanel = new MLPanel(mlPanelContainer, { viewerId, viewerInstance });
+        // ML Tabs container (hidden by default)
+        this._state.mlTabsContainer = new MLTabsContainer(mlPanelContainer);
+        const analysePane = this._state.mlTabsContainer.getPane('analyse');
+        this._state.mlPanel = new MLPanel(analysePane, { viewerId, viewerInstance });
         this._state.mlPanel.setSlide(slide.id);
         mlPanelContainer.classList.add('is-hidden');
 
@@ -342,7 +345,7 @@ export class Router {
             this._state.drawingTools = new DrawingTools(viewerInstance, this._state.annotationLayer);
             viewerArea.appendChild(this._state.drawingTools.element);
 
-            this._initMLSubPanels(mlPanelContainer, slide, viewerInstance);
+            this._initMLSubPanels(this._state.mlTabsContainer, slide, viewerInstance);
         }
 
         // Clustering Overlay (canvas on OSD viewer)
@@ -938,21 +941,25 @@ export class Router {
         return header;
     }
 
-    _initMLSubPanels(mlContainer, slide, viewerInstance) {
-        const panels = [
-            { id: 'detection-panel-container', Component: DetectionPanel, opts: { slideId: slide.id, viewerInstance }, key: 'detectionPanel' },
-            { id: 'cell-counting-panel-container', Component: CellCountingPanel, opts: { slideId: slide.id, viewerInstance }, key: 'cellCountingPanel' },
-            { id: 'clustering-panel-container', Component: ClusteringPanel, opts: { slideId: slide.id }, key: 'clusteringPanel' },
-            { id: 'focus-assist-panel-container', Component: FocusAssistPanel, opts: { slideId: slide.id }, key: 'focusAssistPanel' },
-        ];
+    _initMLSubPanels(tabsContainer, slide, viewerInstance) {
+        // FocusAssistPanel goes in the "analyse" tab alongside MLPanel
+        const analysePane = tabsContainer.getPane('analyse');
+        const separator = document.createElement('div');
+        separator.className = 'ml-tabs__separator';
+        analysePane.appendChild(separator);
+        this._state.focusAssistPanel = new FocusAssistPanel(analysePane, { slideId: slide.id });
 
-        for (const { id, Component, opts, key } of panels) {
-            const container = document.createElement('div');
-            container.id = id;
-            container.style.marginTop = '8px';
-            mlContainer.appendChild(container);
-            this._state[key] = new Component(container, opts);
-        }
+        // DetectionPanel in "detection" tab
+        const detectionPane = tabsContainer.getPane('detection');
+        this._state.detectionPanel = new DetectionPanel(detectionPane, { slideId: slide.id, viewerInstance });
+
+        // CellCountingPanel in "comptage" tab
+        const comptagePane = tabsContainer.getPane('comptage');
+        this._state.cellCountingPanel = new CellCountingPanel(comptagePane, { slideId: slide.id, viewerInstance });
+
+        // ClusteringPanel in "clustering" tab
+        const clusteringPane = tabsContainer.getPane('clustering');
+        this._state.clusteringPanel = new ClusteringPanel(clusteringPane, { slideId: slide.id });
     }
 
     _initInfoPanelWidgets(infoPanel) {
@@ -1187,8 +1194,8 @@ export class Router {
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'clusteringOverlay',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
-            'magnificationBar', 'heatmapOverlay', 'mlPanel', 'compareLayout', 'caseSidebar',
-            'userMenu', 'loginPage',
+            'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
+            'compareLayout', 'caseSidebar', 'userMenu', 'loginPage',
         ];
 
         for (const key of destroyKeys) {
