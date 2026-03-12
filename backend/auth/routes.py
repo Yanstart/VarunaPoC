@@ -68,10 +68,15 @@ async def activate_break_glass_endpoint(
     Grants temporary ADMIN_TECHNIQUE privileges for the specified duration.
     Logged as CRITICAL audit event. Must be reviewed by admin.
     """
-    expires_at = activate_break_glass(
-        user_sub=current_user.sub,
+    session = activate_break_glass(
+        target_user=current_user.sub,
+        issued_by=current_user.sub,
+        issued_by_username=current_user.username,
+        reason=data.reason,
         duration_minutes=data.duration_minutes,
+        ip_address=request.client.host if request.client else "",
     )
+    expires_at = session.expires_at
 
     # Persist to DB
     try:

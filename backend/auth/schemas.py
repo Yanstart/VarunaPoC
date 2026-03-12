@@ -63,6 +63,82 @@ class BreakGlassResponse(BaseModel):
     audit_id: str | None = None
 
 
+class BreakGlassIssueRequest(BaseModel):
+    """Request to issue a break-glass emergency token for a target user (admin only)."""
+
+    target_user: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Subject identifier of the user receiving emergency access",
+    )
+    reason: str = Field(
+        ...,
+        min_length=10,
+        max_length=500,
+        description="Medical/operational justification for emergency access",
+    )
+    duration_minutes: int = Field(
+        30,
+        ge=5,
+        le=60,
+        description="Duration of emergency access in minutes (max 60)",
+    )
+
+
+class BreakGlassIssueResponse(BaseModel):
+    """Response after issuing a break-glass emergency token."""
+
+    session_id: str
+    target_user: str
+    issued_by: str
+    reason: str
+    duration_minutes: int
+    activated_at: datetime
+    expires_at: datetime
+    token: str = Field(..., description="Temporary JWT for emergency access")
+
+
+class BreakGlassSessionResponse(BaseModel):
+    """A break-glass session in list responses."""
+
+    id: str
+    target_user: str
+    issued_by: str
+    issued_by_username: str
+    reason: str
+    activated_at: datetime
+    expires_at: datetime
+    duration_minutes: int
+    status: str
+    revoked: bool
+    revoked_by: str | None = None
+    revoked_at: datetime | None = None
+    reviewed: bool
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    review_notes: str | None = None
+
+
+class BreakGlassSessionListResponse(BaseModel):
+    """List of break-glass sessions."""
+
+    sessions: list[BreakGlassSessionResponse]
+    total: int
+    active_count: int
+    pending_review_count: int
+
+
+class BreakGlassReviewRequest(BaseModel):
+    """Request to mark a break-glass session as reviewed."""
+
+    notes: str = Field(
+        "",
+        max_length=1000,
+        description="Review notes or justification acceptance",
+    )
+
+
 class SessionStateData(BaseModel):
     """User session state for cross-workstation roaming."""
 
