@@ -213,6 +213,11 @@ if RATE_LIMITING_ENABLED:
 
 # CORS configuration
 allow_origins = settings.cors_origin_list
+if "*" in allow_origins and settings.auth_enabled:
+    logger.warning(
+        "CORS_ORIGINS contains wildcard in production mode. "
+        "This is a security risk -- set explicit origins."
+    )
 
 app.add_middleware(
     CORSMiddleware,
