@@ -3,8 +3,8 @@ Auth Module - OIDC + RBAC + Audit for Hospital-Grade Security
 
 Phase 3.1: Authentication, authorization, and audit trail.
 
-When AUTH_ENABLED=false (default), all routes work as before with an anonymous
-admin user. When AUTH_ENABLED=true, JWT tokens from the OIDC provider are required.
+When AUTH_ENABLED=true (default), JWT tokens from the OIDC provider are required.
+Set AUTH_ENABLED=false explicitly to disable auth (dev/testing only).
 
 Usage in main.py:
     try:
@@ -16,6 +16,6 @@ Usage in main.py:
 
 import os
 
-AUTH_ENABLED = os.getenv("AUTH_ENABLED", "false").lower() == "true"
+AUTH_ENABLED = os.getenv("AUTH_ENABLED", "true").lower() == "true"
 
 __all__ = ["AUTH_ENABLED"]
