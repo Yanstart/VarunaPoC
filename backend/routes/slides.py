@@ -47,6 +47,7 @@ from services.slide_scanner import (
     rescan,
     scan_slides_directory,
 )
+from services.tile_audit import schedule_tile_audit
 from services.tile_server import tile_server
 
 logger = logging.getLogger(__name__)
@@ -747,11 +748,24 @@ def get_tile(
         raise HTTPException(404, f"Slide {slide_id} not found")
 
     try:
+        # Detect whether the slide is already in the open-slide cache before
+        # extraction so we can include the cache_hit flag in the audit event.
+        slide_cache_hit = slide_path in tile_server._slide_cache
+
         tile_bytes = tile_server.get_tile(slide_path, level, col, row, tile_size=256)
 
         if tile_bytes is None:
             # Tuile hors limites (pas d'erreur, juste pas de contenu)
             raise HTTPException(404, "Tile out of bounds")
+
+        # Emit SLIDE_VIEWED audit event (first access per user/slide/day only).
+        # Fire-and-forget: must not block or fail tile serving.
+        schedule_tile_audit(
+            user_sub=current_user.sub,
+            slide_id=slide_id,
+            zoom_level=level,
+            cache_hit=slide_cache_hit,
+        )
 
         return Response(content=tile_bytes, media_type="image/jpeg")
 

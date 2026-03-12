@@ -308,7 +308,7 @@ services:
     volumes:
       - keycloak-db-data:/var/lib/postgresql/data
     networks:
-      - keycloak-internal
+      - varuna-auth-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
@@ -356,7 +356,7 @@ services:
         condition: service_healthy
     networks:
       - varuna-production-network
-      - keycloak-internal
+      - varuna-auth-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/tcp/localhost/8080' 2>/dev/null || exit 1"]
@@ -393,6 +393,7 @@ services:
       - "127.0.0.1:9090:9090"
     networks:
       - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
@@ -431,6 +432,7 @@ services:
       - prometheus
     networks:
       - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
@@ -463,6 +465,7 @@ services:
         condition: service_healthy
     networks:
       - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     deploy:
       resources:
@@ -489,7 +492,7 @@ services:
     ports:
       - "127.0.0.1:9093:9093"
     networks:
-      - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
@@ -521,6 +524,7 @@ services:
         condition: service_healthy
     networks:
       - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     deploy:
       resources:
@@ -547,7 +551,7 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     networks:
-      - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     deploy:
       resources:
@@ -571,7 +575,7 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
     networks:
-      - varuna-production-network
+      - varuna-monitoring-network
     restart: unless-stopped
     deploy:
       resources:
@@ -588,9 +592,15 @@ services:
 networks:
   varuna-production-network:
     driver: bridge
-  keycloak-internal:
+    name: varuna-production-network
+  varuna-auth-network:
     driver: bridge
     internal: true
+    name: varuna-auth-network
+  varuna-monitoring-network:
+    driver: bridge
+    internal: true
+    name: varuna-monitoring-network
 
 # ==============================================================================
 # VOLUMES
