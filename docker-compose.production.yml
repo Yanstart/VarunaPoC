@@ -197,7 +197,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
-      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://keycloak:8080/realms/varuna}
       ML_ENABLED: ${ML_ENABLED:-true}
       ML_PROVIDER: ${ML_PROVIDER:-slideflow}
@@ -211,7 +211,7 @@ services:
       - varuna-production-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 10s
       timeout: 5s
       retries: 3

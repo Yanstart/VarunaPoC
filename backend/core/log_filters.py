@@ -15,8 +15,9 @@ _MASK_PII = os.getenv("LOG_MASK_PII", "true").lower() == "true"
 # Match standard email addresses
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 
-# Match file system paths with at least 3 components (avoids masking short paths like /api/v1)
-_PATH_RE = re.compile(r"(/[a-zA-Z0-9._-]+){3,}")
+# Match filesystem paths: must start with a known prefix to avoid masking API routes
+_FS_PREFIXES = r"(?:/data|/home|/tmp|/var|/opt|/etc|/Slides|/slides|/mnt|/srv)"
+_PATH_RE = re.compile(_FS_PREFIXES + r"(/[a-zA-Z0-9._-]+){2,}")
 
 
 class PIIMaskingFilter(logging.Filter):
@@ -29,9 +30,15 @@ class PIIMaskingFilter(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if _MASK_PII and isinstance(record.msg, str):
-            record.msg = _EMAIL_RE.sub("[EMAIL]", record.msg)
-            record.msg = _PATH_RE.sub(lambda m: _truncate_path(m.group()), record.msg)
+        if _MASK_PII:
+            # Operate on the fully formatted message (format string + args)
+            # to catch PII passed via log arguments like logger.info("User %s", email)
+            formatted = record.getMessage()
+            masked = _EMAIL_RE.sub("[EMAIL]", formatted)
+            masked = _PATH_RE.sub(lambda m: _truncate_path(m.group()), masked)
+            if masked != formatted:
+                record.msg = masked
+                record.args = None
         return True
 
 

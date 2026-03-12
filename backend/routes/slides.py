@@ -195,7 +195,7 @@ def browse_slides_directory(
         "/",
         description="Chemin relatif depuis /Slides",
         max_length=1024,
-        pattern=r"^[a-zA-Z0-9/_. -]*$",
+        pattern=r"^[a-zA-Z0-9/_.àâäéèêëïîôùûüÿçæœÀÂÄÉÈÊËÏÎÔÙÛÜŸÇÆŒ -]*$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
 ):
