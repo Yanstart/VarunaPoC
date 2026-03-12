@@ -1,0 +1,94 @@
+# VarunaPoC - Alertmanager Configuration
+# Routes alerts from Prometheus to email receivers
+#
+# Required environment variables (set in .env.production):
+#   SMTP_HOST       - SMTP server address (e.g., smtp.chu-ucl.be:587)
+#   SMTP_FROM       - Sender email (e.g., varuna-alerts@chu-ucl.be)
+#   ALERT_EMAIL_TO  - Recipient email (e.g., anapath-it@chu-ucl.be)
+
+global:
+  # SMTP configuration - update these values for your environment
+  smtp_smarthost: 'smtp.chu-ucl.be:587'
+  smtp_from: 'varuna-alerts@chu-ucl.be'
+  smtp_require_tls: true
+
+  # Resolve timeout: how long to wait before declaring an alert resolved
+  resolve_timeout: 5m
+
+# Notification templates
+templates: []
+
+# Routing tree
+route:
+  # Default receiver
+  receiver: 'email-default'
+
+  # Group alerts by alertname to avoid duplicate notifications
+  group_by: ['alertname']
+
+  # Wait before sending the first notification for a new group
+  group_wait: 30s
+
+  # Wait before sending notifications about new alerts added to a group
+  group_interval: 5m
+
+  # Default repeat interval
+  repeat_interval: 12h
+
+  # Child routes for severity-based routing
+  routes:
+    # Critical alerts: shorter repeat interval, dedicated receiver
+    - match:
+        severity: critical
+      receiver: 'email-critical'
+      repeat_interval: 4h
+      continue: false
+
+    # Warning alerts: standard repeat interval
+    - match:
+        severity: warning
+      receiver: 'email-warning'
+      repeat_interval: 12h
+      continue: false
+
+# Receivers
+receivers:
+  # Default receiver (catch-all)
+  - name: 'email-default'
+    email_configs:
+      - to: 'anapath-it@chu-ucl.be'
+        send_resolved: true
+        headers:
+          Subject: '[VarunaPoC] {{ .Status | toUpper }} - {{ .CommonLabels.alertname }}'
+
+  # Critical alerts receiver
+  - name: 'email-critical'
+    email_configs:
+      - to: 'anapath-it@chu-ucl.be'
+        send_resolved: true
+        headers:
+          Subject: '[VarunaPoC] CRITICAL - {{ .CommonLabels.alertname }}'
+
+  # Warning alerts receiver
+  - name: 'email-warning'
+    email_configs:
+      - to: 'anapath-it@chu-ucl.be'
+        send_resolved: true
+        headers:
+          Subject: '[VarunaPoC] WARNING - {{ .CommonLabels.alertname }}'
+
+# Inhibition rules - suppress less severe alerts when critical ones are firing
+inhibit_rules:
+  # If CompleteOutage is firing, suppress BackendDown
+  - source_match:
+      alertname: 'CompleteOutage'
+    target_match:
+      alertname: 'BackendDown'
+    equal: ['component']
+
+  # If a critical alert is firing, suppress info alerts for the same component
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'info'
+    equal: ['component']

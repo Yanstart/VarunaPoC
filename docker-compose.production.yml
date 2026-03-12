@@ -8,7 +8,7 @@
 #   # With authentication (Keycloak)
 #   docker compose -f docker-compose.production.yml --env-file .env.production --profile auth up -d
 #
-#   # With monitoring (Prometheus + Grafana)
+#   # With monitoring (Prometheus + Grafana + Alertmanager)
 #   docker compose -f docker-compose.production.yml --env-file .env.production --profile monitoring up -d
 #
 #   # Full stack
@@ -460,6 +460,37 @@ services:
           memory: 32M
 
   # ============================================================================
+  # ALERTMANAGER (monitoring profile)
+  # ============================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    profiles: ["monitoring"]
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - varuna-production-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # ============================================================================
   # NGINX EXPORTER (monitoring profile)
   # ============================================================================
   nginx-exporter:
@@ -561,4 +592,6 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  alertmanager-data:
     driver: local
