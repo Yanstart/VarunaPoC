@@ -96,6 +96,9 @@ export const Events = Object.freeze({
     LAYER_VISIBILITY_CHANGED: 'layer:visibilityChanged',
     LAYER_OPACITY_CHANGED: 'layer:opacityChanged',
 
+    // Sync mode events
+    SYNC_MODE_CHANGED: 'sync:modeChanged',
+
     // Detection events
     DETECTION_START: 'detection:start',
     DETECTION_COMPLETE: 'detection:complete',
@@ -103,6 +106,9 @@ export const Events = Object.freeze({
     DETECTION_PREVIEW: 'detection:preview',
     DETECTION_CONFIRM: 'detection:confirm',
     DETECTION_REJECT: 'detection:reject',
+    DETECTION_PREVIEW_CLICKED: 'detection:previewClicked',
+    DETECTION_ITEM_CLICKED: 'detection:itemClicked',
+    DETECTION_HIGHLIGHT: 'detection:highlight',
 
     // Cell counting events (Wave 4)
     CELL_COUNTING_START: 'cellCounting:start',

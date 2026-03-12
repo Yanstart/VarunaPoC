@@ -438,6 +438,17 @@ class ViewerManager {
     }
 
     /**
+     * Set sync mode
+     * @param {string} mode - Sync mode (full, panOnly, zoomOnly)
+     */
+    setSyncMode(mode) {
+        if (this._syncController) {
+            this._syncController.setMode(mode);
+        }
+        console.warn(`[ViewerManager] Sync mode set to: ${mode}`);
+    }
+
+    /**
      * Get synced viewer IDs
      * @returns {string[]} Array of synced viewer IDs
      */

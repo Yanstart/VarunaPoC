@@ -228,6 +228,7 @@ class SyncController {
     setMode(mode) {
         if (Object.values(SyncConfig.MODES).includes(mode)) {
             this.mode = mode;
+            eventBus.emit(Events.SYNC_MODE_CHANGED, { mode });
             console.warn(`[SyncController] Mode set to: ${mode}`);
         } else {
             console.warn(`[SyncController] Unknown mode: ${mode}`);

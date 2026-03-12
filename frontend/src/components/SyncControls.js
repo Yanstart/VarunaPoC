@@ -13,7 +13,7 @@
  * });
  */
 
-import { CSSClasses } from '../core/Constants.js';
+import { CSSClasses, SyncConfig } from '../core/Constants.js';
 
 /**
  * SyncControls class - Sync and layout control bar
@@ -34,6 +34,7 @@ class SyncControls {
         this.options = {
             onSyncToggle: null,
             onLayoutChange: null,
+            onSyncModeChange: null,
             ...options,
         };
 
@@ -56,16 +57,32 @@ class SyncControls {
         this.syncButton = null;
 
         /**
+         * Sync mode selector element
+         * @type {HTMLElement}
+         */
+        this.syncModeSelector = null;
+
+        /**
          * Current sync state
          * @type {boolean}
          */
         this.syncEnabled = true;
 
         /**
+         * Current sync mode
+         * @type {string}
+         */
+        this.syncMode = SyncConfig.MODES.FULL;
+
+        /**
          * Current layout
          * @type {{ columns: number, rows: number }}
          */
         this.currentLayout = { columns: 1, rows: 1 };
+
+        // Keyboard shortcut handler reference
+        this._boundKeyHandler = this._handleKeyDown.bind(this);
+        document.addEventListener('keydown', this._boundKeyHandler);
 
         // Build the controls
         this._build();
@@ -85,6 +102,9 @@ class SyncControls {
         // Sync button
         const syncSection = this._buildSyncSection();
 
+        // Sync mode selector
+        const syncModeSection = this._buildSyncModeSelector();
+
         // Status text
         const status = document.createElement('div');
         status.className = 'sync-status';
@@ -93,6 +113,7 @@ class SyncControls {
 
         this.element.appendChild(layoutSelector);
         this.element.appendChild(syncSection);
+        this.element.appendChild(syncModeSection);
         this.element.appendChild(status);
 
         // Add to container
@@ -194,6 +215,102 @@ class SyncControls {
     }
 
     /**
+     * Build sync mode selector with toggle buttons
+     * @returns {HTMLElement} Sync mode selector element
+     * @private
+     */
+    _buildSyncModeSelector() {
+        const section = document.createElement('div');
+        section.className = 'sync-mode-selector';
+
+        const modes = [
+            { mode: SyncConfig.MODES.FULL, label: 'Complet', title: 'Synchronisation complete (S)' },
+            { mode: SyncConfig.MODES.PAN_ONLY, label: 'Pan', title: 'Pan seulement (S)' },
+            { mode: SyncConfig.MODES.ZOOM_ONLY, label: 'Zoom', title: 'Zoom seulement (S)' },
+        ];
+
+        modes.forEach(({ mode, label, title }) => {
+            const btn = document.createElement('button');
+            btn.className = 'sync-mode-btn';
+            btn.dataset.syncMode = mode;
+            btn.title = title;
+            btn.textContent = label;
+
+            if (mode === this.syncMode) {
+                btn.classList.add(CSSClasses.ACTIVE);
+            }
+
+            btn.addEventListener('click', () => {
+                this._selectSyncMode(mode);
+            });
+
+            section.appendChild(btn);
+        });
+
+        this.syncModeSelector = section;
+        return section;
+    }
+
+    /**
+     * Select a sync mode
+     * @param {string} mode - Sync mode
+     * @private
+     */
+    _selectSyncMode(mode) {
+        if (!Object.values(SyncConfig.MODES).includes(mode)) {
+            return;
+        }
+
+        this.syncMode = mode;
+
+        // Update button active states
+        const buttons = this.syncModeSelector.querySelectorAll('.sync-mode-btn');
+        buttons.forEach(btn => {
+            btn.classList.toggle(CSSClasses.ACTIVE, btn.dataset.syncMode === mode);
+        });
+
+        // Update status text
+        this._updateSyncUI();
+
+        // Callback
+        if (this.options.onSyncModeChange) {
+            this.options.onSyncModeChange(mode);
+        }
+
+        console.warn(`[SyncControls] Sync mode selected: ${mode}`);
+    }
+
+    /**
+     * Cycle through sync modes via keyboard shortcut
+     * @private
+     */
+    _cycleSyncMode() {
+        const modeValues = Object.values(SyncConfig.MODES);
+        const currentIndex = modeValues.indexOf(this.syncMode);
+        const nextIndex = (currentIndex + 1) % modeValues.length;
+        this._selectSyncMode(modeValues[nextIndex]);
+    }
+
+    /**
+     * Handle keyboard shortcuts
+     * @param {KeyboardEvent} e
+     * @private
+     */
+    _handleKeyDown(e) {
+        // 'S' key to cycle sync modes (when not typing in an input)
+        if (e.key === 's' || e.key === 'S') {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+                return;
+            }
+            if (this.syncEnabled) {
+                e.preventDefault();
+                this._cycleSyncMode();
+            }
+        }
+    }
+
+    /**
      * Select a layout
      * @param {string} preset - Layout preset name
      * @param {number} cols - Columns
@@ -241,12 +358,24 @@ class SyncControls {
      * @private
      */
     _updateSyncUI() {
+        const modeLabels = {
+            [SyncConfig.MODES.FULL]: 'Complet',
+            [SyncConfig.MODES.PAN_ONLY]: 'Pan',
+            [SyncConfig.MODES.ZOOM_ONLY]: 'Zoom',
+        };
+
         if (this.syncEnabled) {
             this.syncButton.classList.add(CSSClasses.ACTIVE);
-            this.element.querySelector('#sync-status').textContent = 'Sync : On';
+            const modeLabel = modeLabels[this.syncMode] || this.syncMode;
+            this.element.querySelector('#sync-status').textContent = `Sync : ${modeLabel}`;
         } else {
             this.syncButton.classList.remove(CSSClasses.ACTIVE);
             this.element.querySelector('#sync-status').textContent = 'Sync : Off';
+        }
+
+        // Show/hide mode selector based on sync state
+        if (this.syncModeSelector) {
+            this.syncModeSelector.style.display = this.syncEnabled ? 'flex' : 'none';
         }
     }
 
@@ -269,6 +398,22 @@ class SyncControls {
      */
     getSyncState() {
         return this.syncEnabled;
+    }
+
+    /**
+     * Get current sync mode
+     * @returns {string} Current sync mode
+     */
+    getSyncMode() {
+        return this.syncMode;
+    }
+
+    /**
+     * Set sync mode
+     * @param {string} mode - Sync mode
+     */
+    setSyncMode(mode) {
+        this._selectSyncMode(mode);
     }
 
     /**
@@ -305,12 +450,15 @@ class SyncControls {
      * Destroy controls
      */
     destroy() {
+        document.removeEventListener('keydown', this._boundKeyHandler);
+
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);
         }
 
         this.element = null;
         this.syncButton = null;
+        this.syncModeSelector = null;
         this.container = null;
     }
 }

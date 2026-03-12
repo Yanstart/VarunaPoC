@@ -121,6 +121,11 @@ class AnnotationLayer {
             }),
         );
         this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_ITEM_CLICKED, ({ index }) => {
+                this._highlightDetectionPreview(index);
+            }),
+        );
+        this._unsubscribers.push(
             eventBus.on(Events.QUALITY_DISAGREEMENT_TOGGLE, ({ visible, features }) => {
                 this._renderDisagreements(visible ? features : []);
             }),
@@ -336,7 +341,39 @@ class AnnotationLayer {
             polygon.style.pointerEvents = 'visiblePainted';
             polygon.style.cursor = 'pointer';
 
+            // Click handler: emit event for bidirectional linking
+            polygon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._highlightDetectionPreview(i);
+                eventBus.emit(Events.DETECTION_PREVIEW_CLICKED, { index: i });
+            });
+
             this.previewGroup.appendChild(polygon);
+        }
+    }
+
+    /**
+     * Highlight a specific detection preview on the slide
+     * @param {number} index - Detection index to highlight
+     * @private
+     */
+    _highlightDetectionPreview(index) {
+        // Remove previous highlight
+        const prev = this.previewGroup.querySelector('.detection-preview--active');
+        if (prev) {
+            prev.classList.remove('detection-preview--active');
+            prev.setAttribute('stroke', '#FFA500');
+            prev.setAttribute('stroke-width', this._getStrokeWidth());
+        }
+
+        // Apply highlight to target
+        const target = this.previewGroup.querySelector(`[data-detection-index="${index}"]`);
+        if (target) {
+            target.classList.add('detection-preview--active');
+            target.setAttribute('stroke', '#FF4500');
+            target.setAttribute('stroke-width', this._getStrokeWidth() * 2.5);
+
+            eventBus.emit(Events.DETECTION_HIGHLIGHT, { index });
         }
     }
 
