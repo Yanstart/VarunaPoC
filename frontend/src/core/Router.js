@@ -15,9 +15,11 @@ import { Events, Pages, StorageKeys } from './Constants.js';
 import { apiService } from '../services/ApiService.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { authService } from '../services/AuthService.js';
+import { i18nService } from '../services/I18nService.js';
 
 import { LoginPage } from '../components/LoginPage.js';
 import { UserMenu } from '../components/UserMenu.js';
+import { LanguageSelector } from '../components/LanguageSelector.js';
 
 import { viewerManager } from '../viewers/ViewerManager.js';
 
@@ -55,6 +57,18 @@ export class Router {
      */
     constructor(appState) {
         this._state = appState;
+        /** @type {LanguageSelector|null} */
+        this._langSelector = null;
+    }
+
+    /**
+     * Shorthand for i18nService.t()
+     * @param {string} key
+     * @param {Object} [params]
+     * @returns {string}
+     */
+    _t(key, params) {
+        return i18nService.t(key, params);
     }
 
     /**
@@ -121,6 +135,19 @@ export class Router {
             }
             this._state.currentPage = page;
         });
+
+        // Re-render current page when locale changes
+        eventBus.on(Events.LOCALE_CHANGED, () => {
+            const page = this._state.currentPage;
+            if (page === Pages.HOME) {
+                this.showHomePage();
+            } else if (page === Pages.COMPARE) {
+                // Compare page: just update the title text
+                const title = document.querySelector('.compare-title');
+                if (title) { title.textContent = this._t('compare.title'); }
+            }
+            // Viewer page: labels will update when components re-render or on next navigation
+        });
     }
 
     // ==========================================
@@ -175,8 +202,8 @@ export class Router {
         if (viewPref !== 'worklist') {
             const worklistBtn = document.createElement('button');
             worklistBtn.className = 'worklist-shortcut-button';
-            worklistBtn.textContent = 'Mes cas';
-            worklistBtn.title = 'Ouvrir la liste de travail';
+            worklistBtn.textContent = this._t('nav.myCases');
+            worklistBtn.title = this._t('worklist.title');
             worklistBtn.addEventListener('click', () => {
                 localStorage.setItem('varuna_home_view', 'worklist');
                 this.showHomePage();
@@ -189,8 +216,8 @@ export class Router {
 
         const compareBtn = document.createElement('button');
         compareBtn.className = 'compare-mode-button';
-        compareBtn.textContent = 'Mode comparaison';
-        compareBtn.title = 'Ouvrir le mode comparaison';
+        compareBtn.textContent = this._t('nav.compareMode');
+        compareBtn.title = this._t('nav.compareMode');
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '20');
@@ -213,6 +240,12 @@ export class Router {
 
         compareBtn.addEventListener('click', () => this.showComparePage());
         app.appendChild(compareBtn);
+
+        // Language selector (home page, top-right)
+        const langContainer = document.createElement('div');
+        langContainer.className = 'home-lang-selector';
+        this._langSelector = new LanguageSelector(langContainer);
+        app.appendChild(langContainer);
 
         eventBus.emit(Events.PAGE_CHANGED, { page: Pages.HOME });
     }
@@ -331,6 +364,12 @@ export class Router {
         // Load annotations for this slide
         annotationStore.setSlide(slide.id);
 
+        // Language selector (viewer header)
+        const langSlot = header.querySelector('#lang-selector-slot');
+        if (langSlot) {
+            this._langSelector = new LanguageSelector(langSlot);
+        }
+
         // User menu
         const userMenuSlot = header.querySelector('#user-menu-slot');
         if (userMenuSlot && authService.authEnabled) {
@@ -361,7 +400,7 @@ export class Router {
 
         const title = document.createElement('h1');
         title.className = 'compare-title';
-        title.textContent = 'Mode comparaison';
+        title.textContent = this._t('compare.title');
         header.appendChild(title);
 
         // Theme toggle in compare header
@@ -416,7 +455,7 @@ export class Router {
         box.className = 'error';
 
         const h2 = document.createElement('h2');
-        h2.textContent = 'Connection Error';
+        h2.textContent = this._t('error.connection');
         box.appendChild(h2);
 
         const p = document.createElement('p');
@@ -425,7 +464,7 @@ export class Router {
 
         const note = document.createElement('p');
         note.className = 'note';
-        note.textContent = 'Is the backend running?';
+        note.textContent = this._t('error.backendHint');
         box.appendChild(note);
 
         const code = document.createElement('code');
@@ -433,7 +472,7 @@ export class Router {
         box.appendChild(code);
 
         const btn = document.createElement('button');
-        btn.textContent = 'Retry';
+        btn.textContent = this._t('btn.retry');
         btn.addEventListener('click', () => location.reload());
         box.appendChild(btn);
 
@@ -465,7 +504,7 @@ export class Router {
         content.appendChild(spinner);
 
         const msg = document.createElement('p');
-        msg.textContent = 'Opening slide...';
+        msg.textContent = this._t('slide.openingSlide');
         content.appendChild(msg);
 
         const nameDisplay = document.createElement('p');
@@ -489,8 +528,8 @@ export class Router {
     _showSlideNotFoundError(slideName, err) {
         window.history.replaceState(null, '', '/');
         const statusHint = err.status === 409
-            ? 'Multiple slides match this name. Contact your administrator.'
-            : 'The slide may not be scanned yet, or the name may be incorrect.';
+            ? this._t('slide.multipleMatch')
+            : this._t('slide.notScannedHint');
 
         const app = document.querySelector('#app');
         app.textContent = '';
@@ -502,7 +541,7 @@ export class Router {
         box.className = 'error';
 
         const h2 = document.createElement('h2');
-        h2.textContent = 'Slide Not Found';
+        h2.textContent = this._t('slide.slideNotFound');
         box.appendChild(h2);
 
         const nameDisplay = document.createElement('p');
@@ -520,7 +559,7 @@ export class Router {
         box.appendChild(note);
 
         const btn = document.createElement('button');
-        btn.textContent = 'Go to Home';
+        btn.textContent = this._t('btn.goHome');
         btn.addEventListener('click', () => { location.href = '/'; });
         box.appendChild(btn);
 
@@ -555,9 +594,7 @@ export class Router {
         console.warn('[App] Rapid slide switch to:', newSlide.name);
 
         if (isMLWorkerBusy()) {
-            const confirmed = confirm(
-                'Une analyse IA est en cours. Voulez-vous l\'annuler et changer de lame ?',
-            );
+            const confirmed = confirm(this._t('ml.cancelConfirm'));
             if (!confirmed) { return; }
             try {
                 await apiService.cancelML();
@@ -615,7 +652,7 @@ export class Router {
             infoPanel.textContent = '';
             const loadingMeta = document.createElement('div');
             loadingMeta.className = 'loading';
-            loadingMeta.textContent = 'Chargement des m\u00e9tadonn\u00e9es...';
+            loadingMeta.textContent = this._t('viewer.loadingMeta');
             infoPanel.appendChild(loadingMeta);
 
             const metadata = await apiService.getSlideInfo(slide.id);
@@ -623,7 +660,7 @@ export class Router {
             infoPanel.textContent = '';
             const loadingTiles = document.createElement('div');
             loadingTiles.className = 'loading';
-            loadingTiles.textContent = 'Chargement des tuiles (flux DZI)...';
+            loadingTiles.textContent = this._t('viewer.loadingTiles');
             infoPanel.appendChild(loadingTiles);
 
             await loadSlideWithTiles(this._state.viewer, slide.id);
@@ -631,34 +668,34 @@ export class Router {
             // Build metadata display via DOM
             infoPanel.textContent = '';
             const h3 = document.createElement('h3');
-            h3.textContent = 'Information';
+            h3.textContent = this._t('slide.info');
             infoPanel.appendChild(h3);
 
             const [w, h] = metadata.dimensions;
             const dl = document.createElement('dl');
-            this._addDefinition(dl, 'Format', slide.format);
-            this._addDefinition(dl, 'Dimensions', `${w.toLocaleString()} x ${h.toLocaleString()} px`);
-            this._addDefinition(dl, 'Niveaux', `${metadata.level_count} niveaux de pyramide`);
-            this._addDefinition(dl, 'Structure', slide.structure_type);
+            this._addDefinition(dl, this._t('slide.format'), slide.format);
+            this._addDefinition(dl, this._t('slide.dimensions'), `${w.toLocaleString()} x ${h.toLocaleString()} px`);
+            this._addDefinition(dl, this._t('slide.levels'), `${metadata.level_count} ${this._t('slide.levels')}`);
+            this._addDefinition(dl, this._t('slide.structure'), slide.structure_type);
             if (slide.has_joint_files) {
-                this._addDefinition(dl, 'Fichiers joints', String(slide.joint_files_count));
+                this._addDefinition(dl, this._t('slide.jointFiles'), String(slide.joint_files_count));
             }
             if (slide.has_companion_dirs) {
-                this._addDefinition(dl, 'Dossiers compagnons', String(slide.companion_dirs_count));
+                this._addDefinition(dl, this._t('slide.companionDirs'), String(slide.companion_dirs_count));
             }
             infoPanel.appendChild(dl);
 
             const note = document.createElement('p');
             note.className = 'note';
             const strong = document.createElement('strong');
-            strong.textContent = 'Flux de tuiles actif';
+            strong.textContent = this._t('slide.tileStreamActive');
             note.appendChild(strong);
             note.appendChild(document.createElement('br'));
-            note.appendChild(document.createTextNode('Tuiles 256x256 charg\u00e9es \u00e0 la demande'));
+            note.appendChild(document.createTextNode(this._t('slide.tileDesc')));
             note.appendChild(document.createElement('br'));
-            note.appendChild(document.createTextNode(`${metadata.level_count} niveaux de zoom disponibles`));
+            note.appendChild(document.createTextNode(this._t('slide.zoomLevels', { count: metadata.level_count })));
             note.appendChild(document.createElement('br'));
-            note.appendChild(document.createTextNode('La mini-carte montre la position actuelle'));
+            note.appendChild(document.createTextNode(this._t('slide.minimapHint')));
             infoPanel.appendChild(note);
 
         } catch (err) {
@@ -669,7 +706,7 @@ export class Router {
             errorDiv.className = 'error';
 
             const errH3 = document.createElement('h3');
-            errH3.textContent = 'Error opening slide';
+            errH3.textContent = this._t('viewer.errorOpening');
             errorDiv.appendChild(errH3);
 
             const errP = document.createElement('p');
@@ -680,10 +717,10 @@ export class Router {
                 const errNote = document.createElement('p');
                 errNote.className = 'note';
                 const errStrong = document.createElement('strong');
-                errStrong.textContent = 'Unsupported slide';
+                errStrong.textContent = this._t('viewer.unsupportedSlide');
                 errNote.appendChild(errStrong);
                 errNote.appendChild(document.createElement('br'));
-                errNote.appendChild(document.createTextNode(slide.notes || 'This format is not supported'));
+                errNote.appendChild(document.createTextNode(slide.notes || this._t('slide.error')));
                 errorDiv.appendChild(errNote);
             }
 
@@ -802,7 +839,7 @@ export class Router {
         path.setAttribute('d', 'M19 12H5M12 19l-7-7 7-7');
         svg.appendChild(path);
         btn.appendChild(svg);
-        btn.appendChild(document.createTextNode(' Retour'));
+        btn.appendChild(document.createTextNode(' ' + this._t('nav.back')));
         return btn;
     }
 
@@ -828,7 +865,7 @@ export class Router {
             slideInfoP.textContent += ' | ';
             const warn = document.createElement('span');
             warn.className = 'warning';
-            warn.textContent = 'Non support\u00e9';
+            warn.textContent = this._t('slide.unsupported');
             slideInfoP.appendChild(warn);
         }
         titleDiv.appendChild(slideInfoP);
@@ -863,7 +900,7 @@ export class Router {
         const mlBtn = document.createElement('button');
         mlBtn.id = 'ml-btn';
         mlBtn.className = 'header-button header-button--ml';
-        mlBtn.title = 'Analyse IA';
+        mlBtn.title = this._t('panel.ml');
         const mlSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         mlSvg.setAttribute('width', '16');
         mlSvg.setAttribute('height', '16');
@@ -885,6 +922,12 @@ export class Router {
 
         // Theme toggle button
         header.appendChild(this._createThemeToggle());
+
+        // Language selector slot (viewer header)
+        const langSlot = document.createElement('div');
+        langSlot.id = 'lang-selector-slot';
+        langSlot.className = 'header-lang-selector';
+        header.appendChild(langSlot);
 
         // User menu slot
         const userSlot = document.createElement('div');
@@ -1001,7 +1044,7 @@ export class Router {
         const header = document.createElement('header');
         header.className = 'slide-picker-header';
         const h2 = document.createElement('h2');
-        h2.textContent = 'S\u00e9lectionner une lame';
+        h2.textContent = this._t('compare.selectSlide');
         header.appendChild(h2);
 
         const closeBtn = document.createElement('button');
@@ -1085,7 +1128,7 @@ export class Router {
                 container.textContent = '';
                 const empty = document.createElement('p');
                 empty.className = 'empty';
-                empty.textContent = 'Aucune lame trouv\u00e9e';
+                empty.textContent = this._t('compare.noSlides');
                 container.appendChild(empty);
                 return;
             }
@@ -1153,6 +1196,11 @@ export class Router {
                 this._state[key].destroy();
                 this._state[key] = null;
             }
+        }
+
+        if (this._langSelector) {
+            this._langSelector.destroy();
+            this._langSelector = null;
         }
 
         viewerManager.destroyAll();

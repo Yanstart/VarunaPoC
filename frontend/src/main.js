@@ -15,6 +15,7 @@ import { Router } from './core/Router.js';
 import { apiService } from './services/ApiService.js';
 import { viewerManager } from './viewers/ViewerManager.js';
 import { themeService } from './services/ThemeService.js';
+import { i18nService } from './services/I18nService.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -399,6 +400,9 @@ eventBus.on('cellCounting:complete', () => {
 // START APPLICATION
 // ==========================================
 
+// Initialize i18n before starting the router so translations are available
+await i18nService.init();
+
 const router = new Router(appState);
 router.start();
 
@@ -410,4 +414,5 @@ window.__VarunaApp = {
     apiService,
     router,
     themeService,
+    i18nService,
 };

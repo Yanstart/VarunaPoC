@@ -10,6 +10,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { annotationStore } from '../services/AnnotationStore.js';
+import { i18nService } from '../services/I18nService.js';
 
 class LayerManager {
     /**
@@ -26,21 +27,25 @@ class LayerManager {
     _create() {
         this.element = document.createElement('div');
         this.element.className = 'layer-manager';
-        this.element.innerHTML = `
-            <div class="layer-manager__header">
-                <h3>Couches</h3>
-                <button class="layer-manager__export" title="Exporter GeoJSON" aria-label="Exporter GeoJSON">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="layer-manager__list"></div>
-        `;
 
-        this.element.querySelector('.layer-manager__export').addEventListener('click', () => {
+        const header = document.createElement('div');
+        header.className = 'layer-manager__header';
+        const h3 = document.createElement('h3');
+        h3.textContent = i18nService.t('layers.title');
+        header.appendChild(h3);
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'layer-manager__export';
+        exportBtn.title = i18nService.t('layers.exportGeoJSON');
+        // Static SVG icon - not user input
+        exportBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+        header.appendChild(exportBtn);
+        this.element.appendChild(header);
+
+        const list = document.createElement('div');
+        list.className = 'layer-manager__list';
+        this.element.appendChild(list);
+
+        exportBtn.addEventListener('click', () => {
             this._exportGeoJSON();
         });
 
@@ -63,7 +68,10 @@ class LayerManager {
 
         const annotations = annotationStore.getAll();
         if (annotations.length === 0) {
-            list.innerHTML = '<div class="layer-manager__empty">Aucune annotation</div>';
+            const empty = document.createElement('div');
+            empty.className = 'layer-manager__empty';
+            empty.textContent = i18nService.t('layers.noAnnotations');
+            list.appendChild(empty);
             return;
         }
 
@@ -97,8 +105,9 @@ class LayerManager {
 
         const item = document.createElement('div');
         item.className = 'layer-item';
+        const toggleTitle = i18nService.t('layers.toggleVisibility');
         item.innerHTML = `
-            <button class="layer-item__visibility ${isVisible ? 'is-visible' : ''}" title="Afficher/masquer">
+            <button class="layer-item__visibility ${isVisible ? 'is-visible' : ''}" title="${toggleTitle}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     ${isVisible ? eyeOpen : eyeClosed}
                 </svg>
@@ -111,7 +120,7 @@ class LayerManager {
                 class="layer-item__opacity"
                 min="0" max="1" step="0.05"
                 value="${opacity}"
-                title="Opacité : ${Math.round(opacity * 100)}%"
+                title="${Math.round(opacity * 100)}%"
             >
         `;
 

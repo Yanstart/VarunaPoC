@@ -17,6 +17,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { annotationStore } from '../services/AnnotationStore.js';
+import { i18nService } from '../services/I18nService.js';
 
 const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle'];
 
@@ -32,14 +33,27 @@ const TOOL_ICONS = {
     circle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
 };
 
-const TOOL_LABELS = {
-    select: 'S\u00e9lection (V)',
-    rectangle: 'Rectangle (R)',
-    polygon: 'Polygone (P)',
-    point: 'Point (M)',
-    freehand: 'Main lev\u00e9e (F)',
-    circle: 'Cercle (C)',
+/** i18n keys for tool labels */
+const TOOL_LABEL_KEYS = {
+    select: 'tools.select',
+    rectangle: 'tools.rectangle',
+    polygon: 'tools.polygon',
+    point: 'tools.point',
+    freehand: 'tools.freehand',
+    circle: 'tools.circle',
 };
+
+/**
+ * Get translated tool labels
+ * @returns {Object<string, string>}
+ */
+function getToolLabels() {
+    const labels = {};
+    for (const [tool, key] of Object.entries(TOOL_LABEL_KEYS)) {
+        labels[tool] = i18nService.t(key);
+    }
+    return labels;
+}
 
 /**
  * Predefined pathology annotation labels with colors
@@ -121,11 +135,11 @@ class DrawingTools {
             const btn = document.createElement('button');
             btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
             btn.dataset.tool = tool;
-            btn.title = TOOL_LABELS[tool];
-            btn.setAttribute('aria-label', TOOL_LABELS[tool]);
+            btn.title = getToolLabels()[tool];
+            btn.setAttribute('aria-label', getToolLabels()[tool]);
             btn.setAttribute('aria-pressed', String(tool === this.activeTool));
             // TOOL_ICONS is a static constant defined in this module, not user input — safe static SVG
-            btn.innerHTML = TOOL_ICONS[tool];
+            btn.innerHTML = TOOL_ICONS[tool]; // eslint-disable-line -- static SVG constant, not user input
             btn.addEventListener('click', () => this._setTool(tool));
             this.element.appendChild(btn);
         }
@@ -133,8 +147,8 @@ class DrawingTools {
         // "More" button (+ overflow)
         const moreBtn = document.createElement('button');
         moreBtn.className = 'drawing-tools__btn drawing-tools__btn--more';
-        moreBtn.title = 'Plus d\'outils';
-        moreBtn.setAttribute('aria-label', 'Plus d\'outils');
+        moreBtn.title = i18nService.t('btn.moreTools');
+        moreBtn.setAttribute('aria-label', i18nService.t('btn.moreTools'));
         moreBtn.setAttribute('aria-expanded', String(this.overflowOpen));
         moreBtn.textContent = '+';
         moreBtn.addEventListener('click', () => this._toggleOverflow());
@@ -150,8 +164,8 @@ class DrawingTools {
             const btn = document.createElement('button');
             btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
             btn.dataset.tool = tool;
-            btn.title = TOOL_LABELS[tool];
-            btn.setAttribute('aria-label', TOOL_LABELS[tool]);
+            btn.title = getToolLabels()[tool];
+            btn.setAttribute('aria-label', getToolLabels()[tool]);
             btn.setAttribute('aria-pressed', String(tool === this.activeTool));
             // TOOL_ICONS is a static constant defined in this module, not user input — safe static SVG
             btn.innerHTML = TOOL_ICONS[tool];
@@ -164,8 +178,8 @@ class DrawingTools {
         // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'drawing-tools__btn drawing-tools__btn--danger';
-        deleteBtn.title = 'Supprimer la s\u00e9lection (Del)';
-        deleteBtn.setAttribute('aria-label', 'Supprimer la s\u00e9lection');
+        deleteBtn.title = i18nService.t('tools.deleteSelection');
+        deleteBtn.setAttribute('aria-label', i18nService.t('tools.deleteSelection'));
         // Static SVG icon, not user input — safe constant, no user data
         deleteBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg>';
         deleteBtn.addEventListener('click', () => this._deleteSelected());
@@ -194,7 +208,7 @@ class DrawingTools {
         const noneBtn = document.createElement('button');
         noneBtn.className = 'drawing-tools__label-btn is-active';
         noneBtn.dataset.labelId = '';
-        noneBtn.title = 'Sans \u00e9tiquette';
+        noneBtn.title = i18nService.t('tools.noLabel');
         noneBtn.textContent = '\u2013';
         noneBtn.style.borderColor = '#666';
         noneBtn.addEventListener('click', () => this._selectLabel(null));
@@ -221,7 +235,7 @@ class DrawingTools {
         const customInput = document.createElement('input');
         customInput.className = 'drawing-tools__custom-input';
         customInput.type = 'text';
-        customInput.placeholder = '\u00c9tiquette personnalis\u00e9e...';
+        customInput.placeholder = i18nService.t('tools.customLabel');
         customInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && customInput.value.trim()) {
                 const customLabel = {

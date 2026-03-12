@@ -129,6 +129,9 @@ export const Events = Object.freeze({
     AUTH_ERROR: 'auth:error',
     AUTH_ROLE_CHANGED: 'auth:roleChanged',
 
+    // I18n events (Wave 6)
+    LOCALE_CHANGED: 'i18n:localeChanged',
+
     // Case navigation events (Wave 3)
     CASE_SELECTED: 'ui:caseSelected',
     CASE_SLIDE_SWITCH: 'case:slideSwitch',
