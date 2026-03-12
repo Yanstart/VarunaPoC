@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from auth.audit import AuditEvents, log_audit_event
 from auth.dependencies import require_role
 from auth.schemas import CurrentUser
+from rate_limiting import admin_rate, limit
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,7 @@ async def get_subject_data(
     "/subjects/{patient_hash}",
     response_model=ErasureTaskResponse,
 )
+@limit(admin_rate)
 async def request_erasure(
     patient_hash: str,
     request: Request,

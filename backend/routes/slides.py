@@ -37,7 +37,7 @@ from auth.schemas import CurrentUser
 from core.database import get_db
 from models.view_history import ViewHistory
 from models.worklist import WorklistAssignment
-from rate_limiting import limit, tile_rate
+from rate_limiting import admin_rate, limit, tile_rate
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.slide_scanner import (
@@ -152,7 +152,9 @@ def list_slides(current_user: CurrentUser = Depends(get_current_user)):
 
 
 @router.post("/rescan", tags=["navigation"])
+@limit(admin_rate)
 def rescan_slides(
+    request: Request,
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ):
     """

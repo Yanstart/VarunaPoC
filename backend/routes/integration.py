@@ -18,11 +18,12 @@ References:
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
+from rate_limiting import default_rate, limit
 from services.apsr import APSRBuilder, APSRRequest, APSRResult
 from services.ehealth_be import (
     EhBoxMessage,
@@ -114,8 +115,10 @@ class RIZIVRequest(BaseModel):
 
 
 @router.post("/hl7v2/parse", response_model=HL7v2ParseResult)
+@limit(default_rate)
 async def parse_hl7v2(
-    request: HL7v2ParseRequest,
+    request: Request,
+    body: HL7v2ParseRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Parser un message HL7 v2.5 (ORM/ORU).
@@ -125,7 +128,7 @@ async def parse_hl7v2(
     """
     parser = _get_hl7_parser()
     try:
-        result = parser.parse(request.message)
+        result = parser.parse(body.message)
     except Exception as e:
         logger.error("HL7 v2 parse error: %s", e)
         raise HTTPException(status_code=400, detail=f"HL7 v2 parse error: {e!s}")
@@ -138,8 +141,10 @@ async def parse_hl7v2(
 
 
 @router.post("/ehealth/token", response_model=SAMLAssertion)
+@limit(default_rate)
 async def request_ehealth_token(
-    request: EHealthTokenRequest,
+    request: Request,
+    body: EHealthTokenRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Demander un token SAML aupres du STS eHealth belge.
@@ -149,8 +154,8 @@ async def request_ehealth_token(
     client = _get_ehealth_client()
     try:
         result = await client.request_saml_token(
-            ssin=request.ssin,
-            purpose=request.purpose,
+            ssin=body.ssin,
+            purpose=body.purpose,
         )
     except Exception as e:
         logger.error("eHealth STS error: %s", e)
@@ -159,8 +164,10 @@ async def request_ehealth_token(
 
 
 @router.post("/ehealth/ehbox", response_model=EhBoxMessage)
+@limit(default_rate)
 async def send_ehbox_message(
-    request: EhBoxSendRequest,
+    request: Request,
+    body: EhBoxSendRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Envoyer un message via ehBox (messagerie securisee eHealth).
@@ -170,10 +177,10 @@ async def send_ehbox_message(
     client = _get_ehealth_client()
     try:
         result = await client.send_ehbox_message(
-            sender_ssin=request.sender_ssin,
-            recipient_ssin=request.recipient_ssin,
-            subject=request.subject,
-            content=request.content,
+            sender_ssin=body.sender_ssin,
+            recipient_ssin=body.recipient_ssin,
+            subject=body.subject,
+            content=body.content,
         )
     except Exception as e:
         logger.error("ehBox error: %s", e)
@@ -191,27 +198,31 @@ async def ehealth_status(
 
 
 @router.post("/ehealth/validate/ssin", response_model=SSINValidation)
+@limit(default_rate)
 async def validate_ssin_endpoint(
-    request: SSINRequest,
+    request: Request,
+    body: SSINRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Valider un numero NISS/SSIN belge (11 chiffres).
 
     Verifie le format, la date de naissance et le checksum.
     """
-    return validate_ssin(request.ssin)
+    return validate_ssin(body.ssin)
 
 
 @router.post("/ehealth/validate/riziv", response_model=RIZIVValidation)
+@limit(default_rate)
 async def validate_riziv_endpoint(
-    request: RIZIVRequest,
+    request: Request,
+    body: RIZIVRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Valider un numero RIZIV/INAMI (identification praticien belge).
 
     Verifie le format, le code de qualification et le checksum.
     """
-    return validate_riziv(request.number)
+    return validate_riziv(body.number)
 
 
 # ---------------------------------------------------------------------------
@@ -220,9 +231,11 @@ async def validate_riziv_endpoint(
 
 
 @router.post("/apsr/{slide_id}", response_model=APSRResult)
+@limit(default_rate)
 async def generate_apsr(
+    request: Request,
     slide_id: str,
-    request: APSRRequest | None = None,
+    body: APSRRequest | None = None,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Generer un rapport APSR (Anatomic Pathology Structured Report).
@@ -232,7 +245,7 @@ async def generate_apsr(
     """
     builder = _get_apsr_builder()
     try:
-        result = builder.build(slide_id=slide_id, request=request)
+        result = builder.build(slide_id=slide_id, request=body)
     except Exception as e:
         logger.error("APSR build error for %s: %s", slide_id, e)
         raise HTTPException(status_code=500, detail=f"APSR build error: {e!s}")

@@ -9,11 +9,12 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
+from rate_limiting import default_rate, limit
 from services.annotation_merge import MergeStrategy, merge_service
 from services.sharing import sharing_service
 
@@ -69,15 +70,17 @@ class MergeResponse(BaseModel):
 
 
 @router.post("/", response_model=ShareResponse, status_code=201)
+@limit(default_rate)
 async def create_share(
-    request: CreateShareRequest,
+    request: Request,
+    body: CreateShareRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Create a share link for a slide."""
     link = sharing_service.create_share(
-        slide_id=request.slide_id,
-        permission=request.permission,
-        expires_hours=request.expires_hours,
+        slide_id=body.slide_id,
+        permission=body.permission,
+        expires_hours=body.expires_hours,
     )
     return ShareResponse(
         token=link.token,
@@ -126,7 +129,9 @@ async def validate_share(
 
 
 @router.delete("/{token}", status_code=204)
+@limit(default_rate)
 async def revoke_share(
+    request: Request,
     token: str,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
@@ -142,8 +147,10 @@ async def revoke_share(
 
 
 @router.post("/merge", response_model=MergeResponse)
+@limit(default_rate)
 async def merge_annotations(
-    request: MergeRequest,
+    request: Request,
+    body: MergeRequest,
     _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Merge annotation sets with conflict resolution.
@@ -152,12 +159,12 @@ async def merge_annotations(
     specified strategy (union, last_write_wins, or intersection).
     """
     try:
-        strategy = MergeStrategy(request.strategy)
+        strategy = MergeStrategy(body.strategy)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid strategy: {request.strategy}")
+        raise HTTPException(status_code=400, detail=f"Invalid strategy: {body.strategy}")
 
     result = merge_service.merge(
-        annotation_sets=request.annotation_sets,
+        annotation_sets=body.annotation_sets,
         strategy=strategy,
     )
 

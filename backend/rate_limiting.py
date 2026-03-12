@@ -30,6 +30,7 @@ tile_rate = os.getenv("RATE_LIMIT_TILES", "500/minute")
 ml_rate = os.getenv("RATE_LIMIT_ML", "30/minute")
 auth_rate = os.getenv("RATE_LIMIT_AUTH", "10/minute")
 annotation_write_rate = os.getenv("RATE_LIMIT_ANNOTATION_WRITE", "60/minute")
+admin_rate = os.getenv("RATE_LIMIT_ADMIN", "10/minute")
 
 
 def _get_real_client_ip(request: Request) -> str:
@@ -83,6 +84,7 @@ def limit(rate: str):
 # Re-export for main.py
 __all__ = [
     "RATE_LIMITING_ENABLED",
+    "admin_rate",
     "annotation_write_rate",
     "auth_rate",
     "default_rate",

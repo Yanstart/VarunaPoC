@@ -1,54 +1,54 @@
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-openslide-python>=1.4.0
-openslide-bin>=4.0.0
-Pillow>=10.4.0
+openslide-python==1.4.1
+openslide-bin==4.0.0.3
+Pillow==10.4.0
 python-multipart==0.0.6
 prometheus-client==0.19.0
 
 # Phase 2: Database + Annotations
-sqlalchemy[asyncio]>=2.0.29
-asyncpg>=0.30.0
+sqlalchemy[asyncio]==2.0.29
+asyncpg==0.30.0
 geoalchemy2==0.14.3
 alembic==1.13.1
-shapely>=2.0.4
+shapely==2.0.4
 python-dotenv==1.0.1
-pydantic-settings>=2.0.0
+pydantic-settings==2.7.1
 
 # Phase 2: Detection pipeline
-scikit-image>=0.24.0
-scipy>=1.14.0
+scikit-image==0.24.0
+scipy==1.14.0
 
 # Phase 3: Auth (OIDC + JWT)
 python-jose[cryptography]==3.3.0
 httpx==0.27.0
 
 # Phase 4: Testing
-pytest-asyncio>=0.24.0
+pytest-asyncio==0.24.0
 
 # Phase 4: Load testing
-locust>=2.20.0
+locust==2.20.0
 
 # Phase 5: Caching
-cachetools>=5.3.0
+cachetools==5.3.3
 
 # Rate limiting
-slowapi>=0.1.9
+slowapi==0.1.9
 
 # Similarity search
-faiss-cpu>=1.7.4
+faiss-cpu==1.7.4
 
 # ML: Slideflow + feature extractors
 # Note: torch CPU-only requires --index-url https://download.pytorch.org/whl/cpu
-slideflow>=3.0.2
-pyvips>=3.1.0
-transformers>=5.0.0
-timm>=1.0.0
-imghdr-lts>=1.0.0
+slideflow==3.0.2
+pyvips==3.1.0
+transformers==5.0.0
+timm==1.0.0
+imghdr-lts==1.0.0
 
 # ML: Optimized inference (ML_BACKEND=auto|pytorch|onnx|openvino)
-onnxruntime>=1.18.0
-openvino>=2024.0.0
+onnxruntime==1.18.0
+openvino==2024.0.0
 
 # OpenTelemetry (optional: OTEL_ENABLED=true)
 # opentelemetry-api>=1.20.0

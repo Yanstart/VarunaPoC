@@ -5,7 +5,7 @@
   "displayNameHtml": "<div class=\"kc-logo-text\"><span>VarunaPoC</span></div>",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
-  "revokeRefreshToken": false,
+  "revokeRefreshToken": true,
   "refreshTokenMaxReuse": 0,
   "accessTokenLifespan": 3600,
   "accessTokenLifespanForImplicitFlow": 900,
