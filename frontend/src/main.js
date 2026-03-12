@@ -14,6 +14,7 @@ import { Pages } from './core/Constants.js';
 import { Router } from './core/Router.js';
 import { apiService } from './services/ApiService.js';
 import { viewerManager } from './viewers/ViewerManager.js';
+import { themeService } from './services/ThemeService.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -357,6 +358,12 @@ additionalStyles.textContent = `
 document.head.appendChild(additionalStyles);
 
 // ==========================================
+// THEME INITIALIZATION
+// ==========================================
+
+themeService.init();
+
+// ==========================================
 // START APPLICATION
 // ==========================================
 
@@ -370,4 +377,5 @@ window.__VarunaApp = {
     viewerManager,
     apiService,
     router,
+    themeService,
 };

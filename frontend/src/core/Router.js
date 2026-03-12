@@ -47,6 +47,7 @@ import { MagnificationBar } from '../components/MagnificationBar.js';
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
 
 import { isMLWorkerBusy } from '../services/mlWorkerAccess.js';
+import { themeService } from '../services/ThemeService.js';
 
 export class Router {
     /**
@@ -182,6 +183,9 @@ export class Router {
             });
             app.appendChild(worklistBtn);
         }
+
+        // Theme toggle (home page)
+        app.appendChild(this._createThemeToggle('home'));
 
         const compareBtn = document.createElement('button');
         compareBtn.className = 'compare-mode-button';
@@ -359,6 +363,9 @@ export class Router {
         title.className = 'compare-title';
         title.textContent = 'Mode comparaison';
         header.appendChild(title);
+
+        // Theme toggle in compare header
+        header.appendChild(this._createThemeToggle());
 
         const container = document.createElement('main');
         container.id = 'compare-container';
@@ -688,6 +695,89 @@ export class Router {
     // INTERNAL HELPERS
     // ==========================================
 
+    /**
+     * Create a theme toggle button (sun/moon icon).
+     * @param {'header'|'home'} [context='header'] - Where the toggle is placed
+     * @returns {HTMLButtonElement}
+     */
+    _createThemeToggle(context) {
+        const btn = document.createElement('button');
+        btn.className = 'theme-toggle';
+        if (context === 'home') {
+            btn.classList.add('theme-toggle--home');
+        }
+        btn.title = themeService.isDark ? 'Activer le theme clair' : 'Activer le theme sombre';
+
+        const NS = 'http://www.w3.org/2000/svg';
+
+        const buildSunIcon = () => {
+            const svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('width', '18');
+            svg.setAttribute('height', '18');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2');
+            svg.setAttribute('stroke-linecap', 'round');
+            svg.setAttribute('stroke-linejoin', 'round');
+            const circle = document.createElementNS(NS, 'circle');
+            circle.setAttribute('cx', '12');
+            circle.setAttribute('cy', '12');
+            circle.setAttribute('r', '5');
+            svg.appendChild(circle);
+            const rays = [
+                ['12','1','12','3'], ['12','21','12','23'],
+                ['4.22','4.22','5.64','5.64'], ['18.36','18.36','19.78','19.78'],
+                ['1','12','3','12'], ['21','12','23','12'],
+                ['4.22','19.78','5.64','18.36'], ['18.36','5.64','19.78','4.22'],
+            ];
+            for (const [x1, y1, x2, y2] of rays) {
+                const line = document.createElementNS(NS, 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                svg.appendChild(line);
+            }
+            return svg;
+        };
+
+        const buildMoonIcon = () => {
+            const svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('width', '18');
+            svg.setAttribute('height', '18');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2');
+            svg.setAttribute('stroke-linecap', 'round');
+            svg.setAttribute('stroke-linejoin', 'round');
+            const path = document.createElementNS(NS, 'path');
+            path.setAttribute('d', 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z');
+            svg.appendChild(path);
+            return svg;
+        };
+
+        const updateIcon = () => {
+            const isDark = themeService.isDark;
+            btn.title = isDark ? 'Activer le theme clair' : 'Activer le theme sombre';
+            btn.textContent = '';
+            btn.appendChild(isDark ? buildSunIcon() : buildMoonIcon());
+        };
+
+        updateIcon();
+
+        btn.addEventListener('click', () => {
+            themeService.toggle();
+            updateIcon();
+        });
+
+        // Also update if theme changes externally (e.g., system preference)
+        eventBus.on(Events.THEME_CHANGED, () => updateIcon());
+
+        return btn;
+    }
+
     _addDefinition(dl, term, value) {
         const dt = document.createElement('dt');
         dt.textContent = term;
@@ -792,6 +882,9 @@ export class Router {
         mlSvg.appendChild(p3);
         mlBtn.appendChild(mlSvg);
         header.appendChild(mlBtn);
+
+        // Theme toggle button
+        header.appendChild(this._createThemeToggle());
 
         // User menu slot
         const userSlot = document.createElement('div');
