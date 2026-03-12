@@ -107,8 +107,18 @@ except ImportError:
     print("[INFO] OpenTelemetry disabled")
 
 # Rate limiting optionnel (requires slowapi)
-try:
-    from slowapi import Limiter, _rate_limit_exceeded_handler
+from rate_limiting import (
+    RATE_LIMITING_ENABLED,
+    annotation_write_rate,
+    auth_rate,
+    default_rate,
+    limiter,
+    ml_rate,
+    tile_rate,
+)
+
+if RATE_LIMITING_ENABLED:
+    from slowapi import _rate_limit_exceeded_handler
     from slowapi.errors import RateLimitExceeded
     from starlette.requests import Request as _StarletteRequest
 
@@ -141,15 +151,13 @@ try:
         headers_enabled=True,  # Add X-RateLimit-* headers
     )
     RATE_LIMITING_ENABLED = True
+
     print(
         f"[INFO] Rate limiting enabled "
-        f"(default={_default_rate}, tiles={_tile_rate}, ml={_ml_rate})"
+        f"(default={default_rate}, tiles={tile_rate}, ml={ml_rate}, "
+        f"auth={auth_rate}, annotations={annotation_write_rate})"
     )
-except ImportError:
-    RATE_LIMITING_ENABLED = False
-    limiter = None
-    _tile_rate = None
-    _ml_rate = None
+else:
     print("[INFO] Rate limiting disabled (slowapi not installed)")
 
 

@@ -27,6 +27,7 @@ from auth.schemas import (
     SessionStateData,
     SessionStateResponse,
 )
+from rate_limiting import auth_rate, limit
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 
 @router.get("/me", response_model=AuthStatusResponse)
+@limit(auth_rate)
 async def get_me(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),  # noqa: B008
@@ -57,6 +59,7 @@ async def get_me(
 
 
 @router.post("/break-glass", response_model=BreakGlassResponse)
+@limit(auth_rate)
 async def activate_break_glass_endpoint(
     data: BreakGlassRequest,
     request: Request,

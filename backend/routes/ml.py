@@ -21,13 +21,14 @@ import os
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
 from core.interfaces import get_provider
+from rate_limiting import limit, ml_rate
 from services.ml import TagExtractor, TagRouter
 from services.ml.worker import (
     MLWorkerBusyError,
@@ -532,9 +533,11 @@ def get_disk_cache():
 
 
 @router.post("/predict/{slide_id}", response_model=PredictionResponse)
+@limit(ml_rate)
 async def predict_slide(
+    request: Request,
     slide_id: str,
-    request: PredictionRequest = PredictionRequest(),
+    body: PredictionRequest = PredictionRequest(),
     tag_extractor=Depends(get_tag_extractor),
     tag_router=Depends(get_tag_router),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
@@ -582,8 +585,8 @@ async def predict_slide(
 
         worker = get_ml_worker()
         region_tuple = (
-            (request.region.x, request.region.y, request.region.width, request.region.height)
-            if request.region
+            (body.region.x, body.region.y, body.region.width, body.region.height)
+            if body.region
             else None
         )
 
@@ -622,9 +625,11 @@ async def predict_slide(
 
 
 @router.post("/features/{slide_id}", response_model=FeatureExtractionResponse)
+@limit(ml_rate)
 async def extract_features(
+    request: Request,
     slide_id: str,
-    request: FeatureExtractionRequest = FeatureExtractionRequest(),
+    body: FeatureExtractionRequest = FeatureExtractionRequest(),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -658,9 +663,7 @@ async def extract_features(
 
         # Extract features via ML worker (heavy — isolated process)
         worker = get_ml_worker()
-        result = await worker.submit(
-            "extract_features", slide_path, request.tile_size, request.overlap
-        )
+        result = await worker.submit("extract_features", slide_path, body.tile_size, body.overlap)
 
         return FeatureExtractionResponse(
             slide_id=slide_id,
@@ -682,7 +685,9 @@ async def extract_features(
 
 
 @router.get("/heatmap/{slide_id}")
+@limit(ml_rate)
 async def get_heatmap(
+    request: Request,
     slide_id: str,
     prediction_class: str = Query(..., description="Target class for heatmap"),
     resolution_level: int = Query(2, ge=0, le=5, description="Resolution level (0=max)"),
@@ -756,7 +761,9 @@ async def get_heatmap(
 
 
 @router.post("/detect/{slide_id}")
+@limit(ml_rate)
 async def detect_regions_endpoint(
+    request: Request,
     slide_id: str,
     threshold: float = Query(0.5, ge=0.0, le=1.0, description="Confidence threshold"),
     min_area: float = Query(100.0, ge=0.0, description="Minimum region area (px^2)"),
@@ -1430,8 +1437,10 @@ async def search_similar(
 
 
 @router.post("/batch/predict", response_model=BatchJobResponse)
+@limit(ml_rate)
 async def batch_predict(
-    request: BatchPredictionRequest,
+    request: Request,
+    body: BatchPredictionRequest,
     background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
@@ -1447,7 +1456,7 @@ async def batch_predict(
     4. Client poll /batch/status/{job_id}
 
     Args:
-        request: Liste slide_ids
+        body: Liste slide_ids
 
     Returns:
         BatchJobResponse avec job_id
@@ -1467,17 +1476,17 @@ async def batch_predict(
     job = {
         "job_id": job_id,
         "status": "queued",
-        "total_slides": len(request.slide_ids),
+        "total_slides": len(body.slide_ids),
         "processed_slides": 0,
         "failed_slides": 0,
         "created_at": datetime.utcnow().isoformat(),
-        "estimated_time_minutes": len(request.slide_ids) * 2,  # 2 min per slide
+        "estimated_time_minutes": len(body.slide_ids) * 2,  # 2 min per slide
     }
 
     # TODO: Store job in DB
 
     # Launch background task
-    # background_tasks.add_task(process_batch_predictions, job_id, request.slide_ids)
+    # background_tasks.add_task(process_batch_predictions, job_id, body.slide_ids)
 
     return BatchJobResponse(**job)
 

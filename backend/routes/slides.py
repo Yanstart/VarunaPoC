@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 import openslide
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -37,6 +37,7 @@ from auth.schemas import CurrentUser
 from core.database import get_db
 from models.view_history import ViewHistory
 from models.worklist import WorklistAssignment
+from rate_limiting import limit, tile_rate
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.slide_scanner import (
@@ -699,7 +700,9 @@ def get_dzi_metadata(slide_id: str, current_user: CurrentUser = Depends(get_curr
 
 
 @router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
+@limit(tile_rate)
 def get_tile(
+    request: Request,
     slide_id: str,
     level: int,
     col: int,
