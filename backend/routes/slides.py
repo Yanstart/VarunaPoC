@@ -26,7 +26,13 @@ from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
-from services.slide_scanner import get_slide_by_name, get_slide_path_by_id, scan_slides_directory
+from services.slide_scanner import (
+    get_last_scan_timestamp,
+    get_slide_by_name,
+    get_slide_path_by_id,
+    rescan,
+    scan_slides_directory,
+)
 from services.tile_server import tile_server
 
 # ==========================================
@@ -99,6 +105,7 @@ def list_slides(current_user: CurrentUser = Depends(get_current_user)):
     Returns:
         {
             "count": int,
+            "last_scan_timestamp": str | null,  # ISO 8601 UTC, null si cache vide
             "slides": [
                 {
                     "id": str,
@@ -115,9 +122,54 @@ def list_slides(current_user: CurrentUser = Depends(get_current_user)):
         - Scan récursif de /Slides et sous-dossiers
         - has_companions indique si .mrxs a son dossier compagnon
         - Pour navigation hiérarchique, utiliser /api/browse
+        - last_scan_timestamp indique quand le cache a ete construit (UTC ISO 8601)
+        - Pour forcer un nouveau scan, utiliser POST /api/slides/rescan (ADMIN_TECHNIQUE)
     """
     slides = scan_slides_directory()
-    return {"count": len(slides), "slides": slides}
+    ts = get_last_scan_timestamp()
+    return {
+        "count": len(slides),
+        "last_scan_timestamp": ts.isoformat() if ts else None,
+        "slides": slides,
+    }
+
+
+@router.post("/rescan", tags=["navigation"])
+def rescan_slides(
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """
+    Force un nouveau scan filesystem et invalide le cache de lames.
+
+    Vide le cache en mémoire (ID->path et données complètes) puis relance
+    immédiatement un scan recursif complet de /Slides.
+
+    Returns:
+        {
+            "count": int,               # Nombre de lames detectees apres rescan
+            "last_scan_timestamp": str  # ISO 8601 UTC du nouveau scan
+        }
+
+    Raises:
+        403: Acces refuse - role ADMIN_TECHNIQUE requis
+
+    Technical Notes:
+        - Operation synchrone: le rescan est effectue avant de repondre
+        - Invalide le cache de tile_server si present
+        - Apres appel, GET /api/slides/ refletera le nouveau scan
+        - Utile apres ajout/suppression de lames sur le filesystem
+        - Acces restreint a ADMIN_TECHNIQUE (gestion technique du serveur)
+
+    Security:
+        - Requiert le role ADMIN_TECHNIQUE
+        - Quand AUTH_ENABLED=false, tous les utilisateurs ont ce role (dev/PoC)
+    """
+    slides = rescan()
+    ts = get_last_scan_timestamp()
+    return {
+        "count": len(slides),
+        "last_scan_timestamp": ts.isoformat() if ts else None,
+    }
 
 
 @router.get("/browse", tags=["navigation"])
