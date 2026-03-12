@@ -220,15 +220,20 @@ class AuthService {
      * Logout: clear tokens and redirect to IdP logout.
      */
     async logout() {
+        // Revoke refresh token at OIDC provider before clearing local state
+        await this._revokeTokens();
+
         try {
             const discovery = await this._getDiscovery();
             const logoutEndpoint = discovery.end_session_endpoint;
 
+            // Save id_token before clearing (needed for logout redirect hint)
+            const idTokenHint = this._idToken;
             this._clearTokens();
 
             if (logoutEndpoint) {
                 const params = new URLSearchParams({
-                    id_token_hint: this._idToken || '',
+                    id_token_hint: idTokenHint || '',
                     post_logout_redirect_uri: OIDC_CONFIG.postLogoutRedirectUri,
                     client_id: OIDC_CONFIG.clientId,
                 });
@@ -356,21 +361,21 @@ class AuthService {
         }
 
         // Persist tokens
-        localStorage.setItem('varuna_access_token', this._accessToken);
+        sessionStorage.setItem('varuna_access_token', this._accessToken);
         if (this._refreshToken) {
-            localStorage.setItem('varuna_refresh_token', this._refreshToken);
+            sessionStorage.setItem('varuna_refresh_token', this._refreshToken);
         }
         if (this._idToken) {
-            localStorage.setItem('varuna_id_token', this._idToken);
+            sessionStorage.setItem('varuna_id_token', this._idToken);
         }
 
         this._startRefreshTimer();
     }
 
     _loadTokensFromStorage() {
-        this._accessToken = localStorage.getItem('varuna_access_token');
-        this._refreshToken = localStorage.getItem('varuna_refresh_token');
-        this._idToken = localStorage.getItem('varuna_id_token');
+        this._accessToken = sessionStorage.getItem('varuna_access_token');
+        this._refreshToken = sessionStorage.getItem('varuna_refresh_token');
+        this._idToken = sessionStorage.getItem('varuna_id_token');
 
         if (this._accessToken) {
             try {
@@ -395,13 +400,36 @@ class AuthService {
         this._idToken = null;
         this._claims = null;
 
-        localStorage.removeItem('varuna_access_token');
-        localStorage.removeItem('varuna_refresh_token');
-        localStorage.removeItem('varuna_id_token');
+        sessionStorage.removeItem('varuna_access_token');
+        sessionStorage.removeItem('varuna_refresh_token');
+        sessionStorage.removeItem('varuna_id_token');
 
         if (this._refreshTimer) {
             clearTimeout(this._refreshTimer);
             this._refreshTimer = null;
+        }
+    }
+
+    async _revokeTokens() {
+        if (!this._refreshToken) {return;}
+
+        try {
+            const discovery = await this._getDiscovery();
+            const revocationEndpoint = discovery.revocation_endpoint;
+            if (!revocationEndpoint) {return;}
+
+            await fetch(revocationEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    token: this._refreshToken,
+                    token_type_hint: 'refresh_token',
+                    client_id: OIDC_CONFIG.clientId,
+                }),
+            });
+        } catch (err) {
+            // Revocation failure must not block logout
+            console.warn('[AuthService] Token revocation failed:', err.message);
         }
     }
 

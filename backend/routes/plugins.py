@@ -15,11 +15,12 @@ References:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.plugin_loader import get_plugin_registry
+from rate_limiting import admin_rate, limit
 from services.plugin_manager import PluginManager, PluginType
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,9 @@ async def list_plugins(
 
 
 @router.post("/{name}/activate")
+@limit(admin_rate)
 async def activate_plugin(
+    request: Request,
     name: str,
     _current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ):
@@ -112,7 +115,9 @@ async def activate_plugin(
 
 
 @router.post("/{name}/deactivate")
+@limit(admin_rate)
 async def deactivate_plugin(
+    request: Request,
     name: str,
     _current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
 ):
