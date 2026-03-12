@@ -64,5 +64,8 @@ HEALTHCHECK --interval=30s --timeout=60s --start-period=40s --retries=3 \
 # Start FastAPI server with Uvicorn
 # --host 0.0.0.0: Listen on all interfaces (required for Docker)
 # --port 8000: Standard backend port
-# --workers 1: Single worker for Phase 1 (increase later if needed)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# UVICORN_WORKERS: number of worker processes (default 1; recommended 2*CPU+1 for prod)
+# LOG_LEVEL: uvicorn log level (default info; options: debug, info, warning, error, critical)
+CMD uvicorn main:app --host 0.0.0.0 --port 8000 \
+    --workers ${UVICORN_WORKERS:-1} \
+    --log-level ${LOG_LEVEL:-info}
