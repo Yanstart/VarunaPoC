@@ -9,9 +9,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from services.annotation_merge import MergeStrategy, merge_service
 from services.sharing import sharing_service
 
@@ -67,7 +69,10 @@ class MergeResponse(BaseModel):
 
 
 @router.post("/", response_model=ShareResponse, status_code=201)
-async def create_share(request: CreateShareRequest):
+async def create_share(
+    request: CreateShareRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Create a share link for a slide."""
     link = sharing_service.create_share(
         slide_id=request.slide_id,
@@ -84,7 +89,10 @@ async def create_share(request: CreateShareRequest):
 
 
 @router.get("/links", response_model=list[ShareResponse])
-async def list_shares(slide_id: Optional[str] = None):
+async def list_shares(
+    slide_id: Optional[str] = None,
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """List active share links, optionally filtered by slide_id."""
     links = sharing_service.list_shares(slide_id=slide_id)
     return [
@@ -100,7 +108,10 @@ async def list_shares(slide_id: Optional[str] = None):
 
 
 @router.get("/{token}", response_model=ShareResponse)
-async def validate_share(token: str):
+async def validate_share(
+    token: str,
+    _current_user: CurrentUser = Depends(get_current_user),
+):
     """Validate a share token and return share info."""
     link = sharing_service.validate_share(token)
     if link is None:
@@ -115,7 +126,10 @@ async def validate_share(token: str):
 
 
 @router.delete("/{token}", status_code=204)
-async def revoke_share(token: str):
+async def revoke_share(
+    token: str,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Revoke a share link."""
     revoked = sharing_service.revoke_share(token)
     if not revoked:
@@ -128,7 +142,10 @@ async def revoke_share(token: str):
 
 
 @router.post("/merge", response_model=MergeResponse)
-async def merge_annotations(request: MergeRequest):
+async def merge_annotations(
+    request: MergeRequest,
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Merge annotation sets with conflict resolution.
 
     Accepts multiple annotation lists and merges them using the

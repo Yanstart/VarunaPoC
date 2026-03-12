@@ -12,8 +12,10 @@ References:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from auth.dependencies import get_current_user, require_role
+from auth.schemas import CurrentUser
 from services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,11 @@ def get_embedding_service() -> EmbeddingService:
 
 
 @router.post("/{slide_id}")
-async def extract_embeddings(slide_id: str, model: str = "uni"):
+async def extract_embeddings(
+    slide_id: str,
+    model: str = "uni",
+    _current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+):
     """Extract embeddings from a slide using a foundation model.
 
     Args:
@@ -66,7 +72,7 @@ async def extract_embeddings(slide_id: str, model: str = "uni"):
 
 
 @router.get("/models")
-async def list_models():
+async def list_models(_current_user: CurrentUser = Depends(get_current_user)):
     """List available embedding models with their specifications.
 
     Returns:
