@@ -15,6 +15,24 @@
 #   docker compose -f docker-compose.production.yml --env-file .env.production --profile auth --profile monitoring up -d
 
 # ==============================================================================
+# SECRETS
+# Docker Secrets provide credentials as read-only files at /run/secrets/{name}
+# inside the container.  The backend resolves them via backend.core.secrets.get_secret().
+#
+# Before deploying, create the secret files on the host (never commit them):
+#   mkdir -p ./secrets && chmod 700 ./secrets
+#   printf 'your-db-password'    > ./secrets/db_password.txt    && chmod 600 ./secrets/db_password.txt
+#   printf 'your-redis-password' > ./secrets/redis_password.txt && chmod 600 ./secrets/redis_password.txt
+#
+# See docs/Deployment/SECRETS_MANAGEMENT.md for the full migration guide.
+# ==============================================================================
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+
+# ==============================================================================
 # LOGGING ANCHORS - Docker log rotation to prevent disk exhaustion
 # ==============================================================================
 x-logging-default: &logging-default
@@ -55,14 +73,21 @@ x-logging-oneshot: &logging-oneshot
 services:
   # ============================================================================
   # DATABASE - PostgreSQL + PostGIS
+  # Example of Docker Secrets usage: db_password is mounted at
+  # /run/secrets/db_password instead of being passed as a plaintext env var.
+  # The POSTGRES_PASSWORD_FILE variable tells the official postgres image to
+  # read the password from a file rather than from POSTGRES_PASSWORD.
   # ============================================================================
   db:
     image: postgis/postgis:16-3.4
     <<: *logging-default
+    secrets:
+      - db_password
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-varuna}
       POSTGRES_USER: ${POSTGRES_USER:-varuna}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      # Read password from the mounted secret file (official postgres image convention)
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     volumes:
       - varuna-db-data:/var/lib/postgresql/data
     networks:
