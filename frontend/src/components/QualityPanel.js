@@ -96,9 +96,21 @@ class QualityPanel {
 
         // Bind header toggle
         const header = this.element.querySelector('.quality-panel__header');
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', String(!this.isCollapsed));
         header.addEventListener('click', () => {
             this.isCollapsed = !this.isCollapsed;
             this.element.classList.toggle('is-collapsed', this.isCollapsed);
+            header.setAttribute('aria-expanded', String(!this.isCollapsed));
+        });
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.isCollapsed = !this.isCollapsed;
+                this.element.classList.toggle('is-collapsed', this.isCollapsed);
+                header.setAttribute('aria-expanded', String(!this.isCollapsed));
+            }
         });
 
         // Bind compute button

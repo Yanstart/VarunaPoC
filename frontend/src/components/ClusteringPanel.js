@@ -74,7 +74,16 @@ class ClusteringPanel {
 
         header.appendChild(titleSpan);
         header.appendChild(chevron);
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', String(!this.isCollapsed));
         header.addEventListener('click', () => this._toggleCollapse());
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this._toggleCollapse();
+            }
+        });
         this.element.appendChild(header);
 
         // Body container
@@ -348,11 +357,15 @@ class ClusteringPanel {
         this.isCollapsed = !this.isCollapsed;
         const body = this.element.querySelector('.clustering-panel__body');
         const chevron = this.element.querySelector('.clustering-panel__chevron');
+        const header = this.element.querySelector('.clustering-panel__header');
         if (body) {
             body.style.display = this.isCollapsed ? 'none' : 'block';
         }
         if (chevron) {
             chevron.textContent = this.isCollapsed ? '\u25B6' : '\u25BC';
+        }
+        if (header) {
+            header.setAttribute('aria-expanded', String(!this.isCollapsed));
         }
         try { localStorage.setItem('varuna_panel_clustering_open', String(!this.isCollapsed)); } catch (_) { /* noop */ }
     }

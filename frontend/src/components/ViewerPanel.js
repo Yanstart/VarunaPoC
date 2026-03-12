@@ -235,6 +235,7 @@ class ViewerPanel {
         const selectBtn = document.createElement('button');
         selectBtn.className = 'viewer-panel-action';
         selectBtn.title = 'Sélectionner une lame';
+        selectBtn.setAttribute('aria-label', 'Sélectionner une lame');
         selectBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
         selectBtn.addEventListener('click', () => this._onSelectSlide());
 
@@ -242,6 +243,7 @@ class ViewerPanel {
         const resetBtn = document.createElement('button');
         resetBtn.className = 'viewer-panel-action';
         resetBtn.title = 'Réinitialiser la vue';
+        resetBtn.setAttribute('aria-label', 'Réinitialiser la vue');
         resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
         resetBtn.addEventListener('click', () => this.resetView());
 
@@ -249,6 +251,7 @@ class ViewerPanel {
         const mlBtn = document.createElement('button');
         mlBtn.className = 'viewer-panel-action viewer-panel-action--ml';
         mlBtn.title = 'Analyse IA';
+        mlBtn.setAttribute('aria-label', 'Analyse IA');
         mlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
         mlBtn.addEventListener('click', () => this._toggleMLPanel());
 
@@ -261,6 +264,7 @@ class ViewerPanel {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'viewer-panel-action';
             closeBtn.title = 'Fermer le panneau';
+            closeBtn.setAttribute('aria-label', 'Fermer le panneau');
             closeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
             closeBtn.addEventListener('click', () => this._onClose());
             actions.appendChild(closeBtn);

@@ -48,6 +48,7 @@ class AnnotationLayer {
         this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         this.svg.classList.add('annotation-layer');
         this.svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        this.svg.setAttribute('aria-hidden', 'true');
         this.svg.style.cssText = `
             position: absolute;
             top: 0; left: 0;

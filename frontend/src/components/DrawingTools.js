@@ -100,6 +100,8 @@ class DrawingTools {
     _createToolbar() {
         this.element = document.createElement('div');
         this.element.className = 'drawing-tools';
+        this.element.setAttribute('role', 'toolbar');
+        this.element.setAttribute('aria-label', 'Outils de dessin');
         this._renderToolbar();
     }
 
@@ -120,7 +122,9 @@ class DrawingTools {
             btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
             btn.dataset.tool = tool;
             btn.title = TOOL_LABELS[tool];
-            // TOOL_ICONS is a static constant defined in this module, not user input
+            btn.setAttribute('aria-label', TOOL_LABELS[tool]);
+            btn.setAttribute('aria-pressed', String(tool === this.activeTool));
+            // TOOL_ICONS is a static constant defined in this module, not user input — safe static SVG
             btn.innerHTML = TOOL_ICONS[tool];
             btn.addEventListener('click', () => this._setTool(tool));
             this.element.appendChild(btn);
@@ -130,6 +134,8 @@ class DrawingTools {
         const moreBtn = document.createElement('button');
         moreBtn.className = 'drawing-tools__btn drawing-tools__btn--more';
         moreBtn.title = 'Plus d\'outils';
+        moreBtn.setAttribute('aria-label', 'Plus d\'outils');
+        moreBtn.setAttribute('aria-expanded', String(this.overflowOpen));
         moreBtn.textContent = '+';
         moreBtn.addEventListener('click', () => this._toggleOverflow());
         this.element.appendChild(moreBtn);
@@ -145,7 +151,9 @@ class DrawingTools {
             btn.className = `drawing-tools__btn ${tool === this.activeTool ? 'is-active' : ''}`;
             btn.dataset.tool = tool;
             btn.title = TOOL_LABELS[tool];
-            // TOOL_ICONS is a static constant defined in this module, not user input
+            btn.setAttribute('aria-label', TOOL_LABELS[tool]);
+            btn.setAttribute('aria-pressed', String(tool === this.activeTool));
+            // TOOL_ICONS is a static constant defined in this module, not user input — safe static SVG
             btn.innerHTML = TOOL_ICONS[tool];
             btn.addEventListener('click', () => this._setTool(tool));
             this.overflowMenu.appendChild(btn);
@@ -157,6 +165,7 @@ class DrawingTools {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'drawing-tools__btn drawing-tools__btn--danger';
         deleteBtn.title = 'Supprimer la s\u00e9lection (Del)';
+        deleteBtn.setAttribute('aria-label', 'Supprimer la s\u00e9lection');
         // Static SVG icon, not user input — safe constant, no user data
         deleteBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg>';
         deleteBtn.addEventListener('click', () => this._deleteSelected());
@@ -279,7 +288,11 @@ class DrawingTools {
         } else {
             // Update toolbar UI
             this.element.querySelectorAll('.drawing-tools__btn').forEach(btn => {
-                btn.classList.toggle('is-active', btn.dataset.tool === toolName);
+                const isActive = btn.dataset.tool === toolName;
+                btn.classList.toggle('is-active', isActive);
+                if (btn.dataset.tool) {
+                    btn.setAttribute('aria-pressed', String(isActive));
+                }
             });
         }
 
@@ -308,6 +321,10 @@ class DrawingTools {
         this.overflowOpen = !this.overflowOpen;
         if (this.overflowMenu) {
             this.overflowMenu.style.display = this.overflowOpen ? 'flex' : 'none';
+        }
+        const moreBtn = this.element.querySelector('.drawing-tools__btn--more');
+        if (moreBtn) {
+            moreBtn.setAttribute('aria-expanded', String(this.overflowOpen));
         }
     }
 
