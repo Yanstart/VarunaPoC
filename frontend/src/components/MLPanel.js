@@ -15,6 +15,7 @@ import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * MLPanel component
@@ -63,70 +64,117 @@ class MLPanel {
     _build() {
         this.element = document.createElement('div');
         this.element.className = 'ml-panel';
-        this.element.innerHTML = `
-            <div class="ml-panel__header ml-panel__header--collapsible">
-                <span class="ml-panel__title">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                        <path d="M2 17l10 5 10-5"/>
-                        <path d="M2 12l10 5 10-5"/>
-                    </svg>
-                    Analyse IA
-                </span>
-                <span class="ml-panel__chevron">\u25B6</span>
-            </div>
-            <div class="ml-panel__content">
-                <div class="ml-panel__model-selector">
-                    <label class="ml-panel__model-label">Modele IA</label>
-                    <select class="ml-panel__model-select" disabled>
-                        <option value="">Chargement...</option>
-                    </select>
-                </div>
-                <div class="ml-panel__scope">
-                    <label class="ml-panel__scope-label">Portee</label>
-                    <div class="ml-panel__scope-radios">
-                        <label class="ml-panel__scope-option">
-                            <input type="radio" name="ml-scope" value="slide" checked>
-                            Lame entiere
-                        </label>
-                        <label class="ml-panel__scope-option">
-                            <input type="radio" name="ml-scope" value="viewport">
-                            Vue actuelle
-                        </label>
-                    </div>
-                </div>
-                <div class="ml-panel__actions">
-                    <button class="ml-panel__btn ml-panel__btn--predict" disabled>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 16v-4"/>
-                            <path d="M12 8h.01"/>
-                        </svg>
-                        Analyser la lame
-                    </button>
-                    <button class="ml-panel__btn ml-panel__btn--heatmap" disabled>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            <path d="M3 9h18"/>
-                            <path d="M3 15h18"/>
-                            <path d="M9 3v18"/>
-                            <path d="M15 3v18"/>
-                        </svg>
-                        Afficher la carte de chaleur
-                    </button>
-                </div>
-                <div class="ml-panel__opacity" style="display: none;">
-                    <label>Opacité de la carte</label>
-                    <input type="range" min="0" max="100" value="50" class="ml-panel__slider">
-                    <span class="ml-panel__opacity-value">50%</span>
-                </div>
-                <div class="ml-panel__results">
-                    <div class="ml-panel__placeholder">
-                        Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
-                    </div>
-                </div>
-            </div>
-        `;
+        const _t = (k, p) => i18nService.t(k, p);
+
+        // Build panel structure with DOM API for safety
+        // Header (collapsible)
+        const header = document.createElement('div');
+        header.className = 'ml-panel__header ml-panel__header--collapsible';
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'ml-panel__title';
+        // SVG icon for header - static constant, not user input
+        titleSpan.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
+        titleSpan.appendChild(document.createTextNode(' ' + _t('panel.ml')));
+        header.appendChild(titleSpan);
+        const chevron = document.createElement('span');
+        chevron.className = 'ml-panel__chevron';
+        chevron.textContent = '\u25B6';
+        header.appendChild(chevron);
+        this.element.appendChild(header);
+
+        // Content wrapper
+        const content = document.createElement('div');
+        content.className = 'ml-panel__content';
+
+        // Model selector
+        const modelDiv = document.createElement('div');
+        modelDiv.className = 'ml-panel__model-selector';
+        const modelLabel = document.createElement('label');
+        modelLabel.className = 'ml-panel__model-label';
+        modelLabel.textContent = _t('ml.model');
+        modelDiv.appendChild(modelLabel);
+        const modelSelect = document.createElement('select');
+        modelSelect.className = 'ml-panel__model-select';
+        modelSelect.disabled = true;
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = _t('ml.loading');
+        modelSelect.appendChild(defaultOpt);
+        modelDiv.appendChild(modelSelect);
+        content.appendChild(modelDiv);
+
+        // Scope
+        const scopeDiv = document.createElement('div');
+        scopeDiv.className = 'ml-panel__scope';
+        const scopeLabel = document.createElement('label');
+        scopeLabel.className = 'ml-panel__scope-label';
+        scopeLabel.textContent = _t('ml.scope');
+        scopeDiv.appendChild(scopeLabel);
+        const scopeRadios = document.createElement('div');
+        scopeRadios.className = 'ml-panel__scope-radios';
+        const slideOption = document.createElement('label');
+        slideOption.className = 'ml-panel__scope-option';
+        const slideRadio = document.createElement('input');
+        slideRadio.type = 'radio'; slideRadio.name = 'ml-scope'; slideRadio.value = 'slide'; slideRadio.checked = true;
+        slideOption.appendChild(slideRadio);
+        slideOption.appendChild(document.createTextNode(' ' + _t('ml.scopeSlide')));
+        const vpOption = document.createElement('label');
+        vpOption.className = 'ml-panel__scope-option';
+        const vpRadio = document.createElement('input');
+        vpRadio.type = 'radio'; vpRadio.name = 'ml-scope'; vpRadio.value = 'viewport';
+        vpOption.appendChild(vpRadio);
+        vpOption.appendChild(document.createTextNode(' ' + _t('ml.scopeViewport')));
+        scopeRadios.appendChild(slideOption);
+        scopeRadios.appendChild(vpOption);
+        scopeDiv.appendChild(scopeRadios);
+        content.appendChild(scopeDiv);
+
+        // Actions
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'ml-panel__actions';
+        const predictBtn = document.createElement('button');
+        predictBtn.className = 'ml-panel__btn ml-panel__btn--predict';
+        predictBtn.disabled = true;
+        // Static SVG icon - not user input
+        predictBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+        predictBtn.appendChild(document.createTextNode(' ' + _t('ml.analyze')));
+        actionsDiv.appendChild(predictBtn);
+        const heatmapBtn = document.createElement('button');
+        heatmapBtn.className = 'ml-panel__btn ml-panel__btn--heatmap';
+        heatmapBtn.disabled = true;
+        // Static SVG icon - not user input
+        heatmapBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>';
+        heatmapBtn.appendChild(document.createTextNode(' ' + _t('ml.showHeatmap')));
+        actionsDiv.appendChild(heatmapBtn);
+        content.appendChild(actionsDiv);
+
+        // Opacity
+        const opacityDiv = document.createElement('div');
+        opacityDiv.className = 'ml-panel__opacity';
+        opacityDiv.style.display = 'none';
+        const opacityLabel = document.createElement('label');
+        opacityLabel.textContent = _t('ml.heatmapOpacity');
+        opacityDiv.appendChild(opacityLabel);
+        const slider = document.createElement('input');
+        slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.value = '50';
+        slider.className = 'ml-panel__slider';
+        opacityDiv.appendChild(slider);
+        const opacityValue = document.createElement('span');
+        opacityValue.className = 'ml-panel__opacity-value';
+        opacityValue.textContent = '50%';
+        opacityDiv.appendChild(opacityValue);
+        content.appendChild(opacityDiv);
+
+        // Results
+        const resultsDiv = document.createElement('div');
+        resultsDiv.className = 'ml-panel__results';
+        const placeholder = document.createElement('div');
+        placeholder.className = 'ml-panel__placeholder';
+        placeholder.textContent = _t('ml.loadAndAnalyze');
+        resultsDiv.appendChild(placeholder);
+        content.appendChild(resultsDiv);
+
+        this.element.appendChild(content);
 
         // Get references
         this.predictBtn = this.element.querySelector('.ml-panel__btn--predict');
@@ -231,11 +279,11 @@ class MLPanel {
         this.opacityContainer.style.display = 'none';
 
         // Reset results
-        this.resultsContainer.innerHTML = `
-            <div class="ml-panel__placeholder">
-                Cliquez « Analyser la lame » pour lancer la prédiction IA
-            </div>
-        `;
+        this.resultsContainer.textContent = '';
+        const hint = document.createElement('div');
+        hint.className = 'ml-panel__placeholder';
+        hint.textContent = i18nService.t('ml.analyzeHint');
+        this.resultsContainer.appendChild(hint);
     }
 
     /**
@@ -251,11 +299,11 @@ class MLPanel {
         this.heatmapBtn.classList.remove('is-active');
         this.opacityContainer.style.display = 'none';
 
-        this.resultsContainer.innerHTML = `
-            <div class="ml-panel__placeholder">
-                Chargez une lame et cliquez « Analyser » pour lancer la prédiction IA
-            </div>
-        `;
+        this.resultsContainer.textContent = '';
+        const ph = document.createElement('div');
+        ph.className = 'ml-panel__placeholder';
+        ph.textContent = i18nService.t('ml.loadAndAnalyze');
+        this.resultsContainer.appendChild(ph);
     }
 
     /**
@@ -270,21 +318,30 @@ class MLPanel {
 
         this.isLoading = true;
         this.predictBtn.disabled = true;
-        this.predictBtn.innerHTML = `
-            <span class="ml-panel__spinner"></span>
-            Analyse en cours...
-        `;
+        // Update predict button to show spinner
+        this.predictBtn.textContent = '';
+        const spinner = document.createElement('span');
+        spinner.className = 'ml-panel__spinner';
+        this.predictBtn.appendChild(spinner);
+        this.predictBtn.appendChild(document.createTextNode(' ' + i18nService.t('ml.analyzing')));
 
         // Show loading in results
-        this.resultsContainer.innerHTML = `
-            <div class="ml-panel__loading">
-                <span class="ml-panel__spinner ml-panel__spinner--large"></span>
-                <p>Analyse IA en cours...</p>
-                <p class="ml-panel__loading-sub">Cela peut prendre quelques secondes</p>
-            </div>
-        `;
+        this.resultsContainer.textContent = '';
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'ml-panel__loading';
+        const spinnerLarge = document.createElement('span');
+        spinnerLarge.className = 'ml-panel__spinner ml-panel__spinner--large';
+        loadingDiv.appendChild(spinnerLarge);
+        const loadP = document.createElement('p');
+        loadP.textContent = i18nService.t('ml.analysisInProgress');
+        loadingDiv.appendChild(loadP);
+        const subP = document.createElement('p');
+        subP.className = 'ml-panel__loading-sub';
+        subP.textContent = i18nService.t('ml.analysisDuration');
+        loadingDiv.appendChild(subP);
+        this.resultsContainer.appendChild(loadingDiv);
 
-        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'ml', label: 'Analyse IA' });
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'ml', label: i18nService.t('panel.ml') });
         eventBus.emit(Events.ML_PREDICTION_START, {
             viewerId: this.viewerId,
             slideId: this.slideId,
@@ -330,15 +387,10 @@ class MLPanel {
         } finally {
             this.isLoading = false;
             this.predictBtn.disabled = false;
-            // Safe: static SVG icon, no user data
-            this.predictBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 16v-4"/>
-                    <path d="M12 8h.01"/>
-                </svg>
-                Analyser la lame
-            `;
+            // Restore predict button with icon + translated text
+            // Static SVG icon - not user input
+            this.predictBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+            this.predictBtn.appendChild(document.createTextNode(' ' + i18nService.t('ml.analyze')));
             eventBus.emit(Events.ML_WORKER_FREE);
         }
     }
@@ -355,58 +407,108 @@ class MLPanel {
         // Get confidence color
         const confColor = this._getConfidenceColor(result.confidence);
 
-        // Build probabilities bars
-        const probBars = Object.entries(result.probabilities || {})
-            .sort((a, b) => b[1] - a[1])
-            .map(([cls, prob]) => {
-                const pct = (prob * 100).toFixed(1);
-                const isMain = cls === result.prediction_class;
-                return `
-                    <div class="ml-panel__prob-row ${isMain ? 'is-main' : ''}">
-                        <span class="ml-panel__prob-label">${cls}</span>
-                        <div class="ml-panel__prob-bar">
-                            <div class="ml-panel__prob-fill" style="width: ${pct}%"></div>
-                        </div>
-                        <span class="ml-panel__prob-value">${pct}%</span>
-                    </div>
-                `;
-            })
-            .join('');
+        const _t = (k) => i18nService.t(k);
 
-        this.resultsContainer.innerHTML = `
-            <div class="ml-panel__result">
-                <div class="ml-panel__prediction">
-                    <span class="ml-panel__prediction-label">Prédiction</span>
-                    <span class="ml-panel__prediction-class">${result.prediction_class}</span>
-                </div>
-                <div class="ml-panel__metrics">
-                    <div class="ml-panel__metric">
-                        <span class="ml-panel__metric-label">Confiance</span>
-                        <span class="ml-panel__metric-value" style="color: ${confColor}">
-                            ${confidence}%
-                        </span>
-                    </div>
-                    ${uncertainty !== null ? `
-                        <div class="ml-panel__metric">
-                            <span class="ml-panel__metric-label">Incertitude</span>
-                            <span class="ml-panel__metric-value ml-panel__metric-value--uncertainty">
-                                ±${uncertainty}%
-                            </span>
-                        </div>
-                    ` : ''}
-                    <div class="ml-panel__metric">
-                        <span class="ml-panel__metric-label">Temps</span>
-                        <span class="ml-panel__metric-value">
-                            ${result.execution_time_ms?.toFixed(0) || '?'}ms
-                        </span>
-                    </div>
-                </div>
-                <div class="ml-panel__probabilities">
-                    <span class="ml-panel__prob-title">Probabilités par classe</span>
-                    ${probBars}
-                </div>
-            </div>
-        `;
+        // Build results via DOM API
+        this.resultsContainer.textContent = '';
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'ml-panel__result';
+
+        // Prediction label
+        const predRow = document.createElement('div');
+        predRow.className = 'ml-panel__prediction';
+        const predLabel = document.createElement('span');
+        predLabel.className = 'ml-panel__prediction-label';
+        predLabel.textContent = _t('ml.prediction');
+        predRow.appendChild(predLabel);
+        const predClass = document.createElement('span');
+        predClass.className = 'ml-panel__prediction-class';
+        predClass.textContent = result.prediction_class;
+        predRow.appendChild(predClass);
+        resultDiv.appendChild(predRow);
+
+        // Metrics
+        const metricsDiv = document.createElement('div');
+        metricsDiv.className = 'ml-panel__metrics';
+
+        // Confidence
+        const confMetric = document.createElement('div');
+        confMetric.className = 'ml-panel__metric';
+        const confLabel = document.createElement('span');
+        confLabel.className = 'ml-panel__metric-label';
+        confLabel.textContent = _t('ml.confidence');
+        confMetric.appendChild(confLabel);
+        const confValue = document.createElement('span');
+        confValue.className = 'ml-panel__metric-value';
+        confValue.style.color = confColor;
+        confValue.textContent = `${confidence}%`;
+        confMetric.appendChild(confValue);
+        metricsDiv.appendChild(confMetric);
+
+        // Uncertainty
+        if (uncertainty !== null) {
+            const uncMetric = document.createElement('div');
+            uncMetric.className = 'ml-panel__metric';
+            const uncLabel = document.createElement('span');
+            uncLabel.className = 'ml-panel__metric-label';
+            uncLabel.textContent = _t('ml.uncertainty');
+            uncMetric.appendChild(uncLabel);
+            const uncValue = document.createElement('span');
+            uncValue.className = 'ml-panel__metric-value ml-panel__metric-value--uncertainty';
+            uncValue.textContent = `\u00b1${uncertainty}%`;
+            uncMetric.appendChild(uncValue);
+            metricsDiv.appendChild(uncMetric);
+        }
+
+        // Time
+        const timeMetric = document.createElement('div');
+        timeMetric.className = 'ml-panel__metric';
+        const timeLabel = document.createElement('span');
+        timeLabel.className = 'ml-panel__metric-label';
+        timeLabel.textContent = _t('ml.time');
+        timeMetric.appendChild(timeLabel);
+        const timeValue = document.createElement('span');
+        timeValue.className = 'ml-panel__metric-value';
+        timeValue.textContent = `${result.execution_time_ms?.toFixed(0) || '?'}ms`;
+        timeMetric.appendChild(timeValue);
+        metricsDiv.appendChild(timeMetric);
+
+        resultDiv.appendChild(metricsDiv);
+
+        // Probabilities
+        const probDiv = document.createElement('div');
+        probDiv.className = 'ml-panel__probabilities';
+        const probTitle = document.createElement('span');
+        probTitle.className = 'ml-panel__prob-title';
+        probTitle.textContent = _t('ml.classProbabilities');
+        probDiv.appendChild(probTitle);
+
+        const sortedProbs = Object.entries(result.probabilities || {}).sort((a, b) => b[1] - a[1]);
+        for (const [cls, prob] of sortedProbs) {
+            const pct = (prob * 100).toFixed(1);
+            const isMain = cls === result.prediction_class;
+            const row = document.createElement('div');
+            row.className = `ml-panel__prob-row${isMain ? ' is-main' : ''}`;
+            const label = document.createElement('span');
+            label.className = 'ml-panel__prob-label';
+            label.textContent = cls;
+            row.appendChild(label);
+            const barOuter = document.createElement('div');
+            barOuter.className = 'ml-panel__prob-bar';
+            const barFill = document.createElement('div');
+            barFill.className = 'ml-panel__prob-fill';
+            barFill.style.width = `${pct}%`;
+            barOuter.appendChild(barFill);
+            row.appendChild(barOuter);
+            const val = document.createElement('span');
+            val.className = 'ml-panel__prob-value';
+            val.textContent = `${pct}%`;
+            row.appendChild(val);
+            probDiv.appendChild(row);
+        }
+        resultDiv.appendChild(probDiv);
+
+        this.resultsContainer.appendChild(resultDiv);
     }
 
     /**
@@ -415,17 +517,19 @@ class MLPanel {
      * @private
      */
     _displayError(message) {
-        this.resultsContainer.innerHTML = `
-            <div class="ml-panel__error">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                <p>Erreur d'analyse</p>
-                <p class="ml-panel__error-detail">${message}</p>
-            </div>
-        `;
+        this.resultsContainer.textContent = '';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'ml-panel__error';
+        // Static SVG icon - not user input
+        errorDiv.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+        const errTitle = document.createElement('p');
+        errTitle.textContent = i18nService.t('error.analysisError');
+        errorDiv.appendChild(errTitle);
+        const errDetail = document.createElement('p');
+        errDetail.className = 'ml-panel__error-detail';
+        errDetail.textContent = message;
+        errorDiv.appendChild(errDetail);
+        this.resultsContainer.appendChild(errorDiv);
     }
 
     /**
@@ -450,30 +554,16 @@ class MLPanel {
         this.heatmapVisible = !this.heatmapVisible;
         this.heatmapBtn.classList.toggle('is-active', this.heatmapVisible);
 
+        // Static SVG icon constant - not user input
+        const heatmapSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>';
         if (this.heatmapVisible) {
             this.opacityContainer.style.display = 'flex';
-            this.heatmapBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <path d="M3 9h18"/>
-                    <path d="M3 15h18"/>
-                    <path d="M9 3v18"/>
-                    <path d="M15 3v18"/>
-                </svg>
-                Masquer la carte de chaleur
-            `;
+            this.heatmapBtn.innerHTML = heatmapSvg;
+            this.heatmapBtn.appendChild(document.createTextNode(' ' + i18nService.t('ml.hideHeatmap')));
         } else {
             this.opacityContainer.style.display = 'none';
-            this.heatmapBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <path d="M3 9h18"/>
-                    <path d="M3 15h18"/>
-                    <path d="M9 3v18"/>
-                    <path d="M15 3v18"/>
-                </svg>
-                Afficher la carte de chaleur
-            `;
+            this.heatmapBtn.innerHTML = heatmapSvg;
+            this.heatmapBtn.appendChild(document.createTextNode(' ' + i18nService.t('ml.showHeatmap')));
         }
 
         eventBus.emit(Events.ML_HEATMAP_TOGGLE, {
@@ -572,7 +662,7 @@ class MLPanel {
         if (models.length === 0) {
             const opt = document.createElement('option');
             opt.value = '';
-            opt.textContent = 'Aucun mod\u00e8le disponible';
+            opt.textContent = i18nService.t('ml.noModels');
             select.appendChild(opt);
             return;
         }
@@ -581,7 +671,7 @@ class MLPanel {
             const opt = document.createElement('option');
             opt.value = model.model_id;
             const friendly = this._friendlyModelName(model);
-            opt.textContent = i === 0 ? `${friendly} (recommand\u00e9)` : friendly;
+            opt.textContent = i === 0 ? `${friendly} (${i18nService.t('ml.recommended')})` : friendly;
             const tooltip = this._modelTooltip(model);
             if (tooltip) {
                 opt.title = tooltip;

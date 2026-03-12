@@ -44,3 +44,6 @@
 
 /* 10. Similarity Panel styles (Wave 3) */
 @import './css/similarity-panel.css';
+
+/* 11. Language Selector styles (Wave 6) */
+@import './css/language-selector.css';
