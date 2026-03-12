@@ -24,6 +24,10 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Load .env file before Settings reads env vars
 
+from core.logging_config import setup_logging
+
+setup_logging()
+
 from settings import get_settings
 
 settings = get_settings()
@@ -82,6 +86,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+from core.log_filters import PIIMaskingFilter
+
+logging.getLogger().addFilter(PIIMaskingFilter())
+
 # Plugin loader (always available — uses only stdlib)
 from core.plugin_loader import discover_plugins, load_plugin, unload_plugins
 
@@ -133,20 +141,64 @@ else:
 @asynccontextmanager
 async def lifespan(_app):
     """Startup/shutdown events for DB, plugins, and other resources."""
+    # --- Startup validation (issue #282) ---
+    from pathlib import Path as FsPath
+
+    slides_path = FsPath(settings.slides_repository_path)
+    if not slides_path.exists():
+        logger.warning(
+            "SLIDES_REPOSITORY_PATH does not exist: %s — browse/tile endpoints will fail",
+            slides_path,
+        )
+
+    if settings.auth_enabled:
+        oidc_url = os.getenv("OIDC_ISSUER_URL", "")
+        if not oidc_url:
+            _msg = (
+                "AUTH_ENABLED=true but OIDC_ISSUER_URL is not set. "
+                "Set OIDC_ISSUER_URL or disable auth with AUTH_ENABLED=false."
+            )
+            raise ValueError(_msg)
+        logger.info("Auth enabled: OIDC issuer=%s", oidc_url)
+    else:
+        logger.warning("AUTH_ENABLED=false — all endpoints accessible without authentication")
+
+    logger.info(
+        "Startup config: auth=%s, slides=%s, db=%s",
+        settings.auth_enabled,
+        settings.slides_repository_path,
+        "configured" if "postgresql" in settings.database_url else "sqlite",
+    )
+
+    # --- Database ---
     try:
         from core.database import init_db
 
         await init_db()
         logger.info("Database connection pool initialized")
     except Exception as e:
-        logger.warning(f"Database not available (annotations disabled): {e}")
+        logger.warning("Database not available (annotations disabled): %s", e)
 
     manifests = discover_plugins(PLUGINS_DIR)
     for manifest in manifests:
         plugin_name = manifest.get("name", manifest.get("_name", "unknown"))
         load_plugin(plugin_name, _app, meta=manifest)
 
+    # Feature flag summary — logged once at startup for observability
+    logger.info("Feature flags: %s", feature_registry.get_all())
+
     yield
+
+    # --- Shutdown: ML worker cleanup (issue #281) ---
+    try:
+        from routes.ml import _ml_worker
+
+        if _ml_worker is not None and _ml_worker.is_alive():
+            logger.info("Stopping ML worker process...")
+            _ml_worker.stop()
+            logger.info("ML worker stopped")
+    except Exception as e:
+        logger.debug("ML worker cleanup skipped: %s", e)
 
     unload_plugins()
 
@@ -207,13 +259,19 @@ if RATE_LIMITING_ENABLED:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Exception handlers — structured error responses, no stack traces in production
+from core.exception_handlers import register_exception_handlers
+
+register_exception_handlers(app)
+
 # CORS configuration
 allow_origins = settings.cors_origin_list
 if "*" in allow_origins and settings.auth_enabled:
-    logger.warning(
-        "CORS_ORIGINS contains wildcard in production mode. "
-        "This is a security risk -- set explicit origins."
+    _cors_wildcard_err = (
+        "CORS_ORIGINS contains wildcard '*' but AUTH_ENABLED=true. "
+        "This is a security risk. Set explicit origins in CORS_ORIGINS."
     )
+    raise ValueError(_cors_wildcard_err)
 
 app.add_middleware(
     CORSMiddleware,
@@ -222,6 +280,23 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Security headers — X-Content-Type-Options, X-Frame-Options, etc.
+from core.security_headers import SecurityHeadersMiddleware
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Access log middleware — logs method, path, status, duration for every request
+# (health/metrics paths are excluded to reduce noise)
+from core.access_log import AccessLogMiddleware
+
+app.add_middleware(AccessLogMiddleware)
+
+# X-Request-ID middleware — added last so it executes first in the chain
+# (Starlette/FastAPI middleware stack: last registered = outermost = runs first)
+from core.request_context import RequestIDMiddleware
+
+app.add_middleware(RequestIDMiddleware)
 
 # Prometheus monitoring middleware (optionnel)
 if MONITORING_ENABLED:

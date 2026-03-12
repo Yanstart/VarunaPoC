@@ -88,4 +88,4 @@ class AnnotationResponse(BaseModel):
 
 
 class AnnotationBatchCreate(BaseModel):
-    annotations: List[AnnotationCreate] = Field(..., min_length=1, max_length=10000)
+    annotations: List[AnnotationCreate] = Field(..., min_length=1, max_length=1000)
