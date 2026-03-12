@@ -2,13 +2,14 @@
 Collaboration Feature Tests
 
 Tests for sharing (Issue #13), WebSocket annotations (Issue #14),
-and annotation merge (Issue #35).
+annotation merge (Issue #35), and WebSocket security (Issue #209).
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import WebSocketDisconnect
 
 from services.annotation_merge import AnnotationMergeService, MergeStrategy
 from services.sharing import SharingService
@@ -418,3 +419,205 @@ class TestAnnotationMergeService:
         result = self.service.merge([[a]], MergeStrategy.UNION)
 
         assert result.processing_time_ms >= 0
+
+
+# ============================================
+# WebSocket Security Tests (Issue #209)
+# ============================================
+
+import json as _json
+import time
+
+from routes.ws import (
+    WS_CLOSE_RATE_LIMIT,
+    WS_MAX_MESSAGE_SIZE,
+    _RateLimiter,
+    _resolve_user_from_token,
+    slide_websocket,
+)
+
+
+class TestRateLimiter:
+    """Tests for the per-connection sliding-window rate limiter."""
+
+    def test_allows_messages_within_limit(self):
+        """Messages within the rate limit are accepted."""
+        rl = _RateLimiter(max_messages=5, window=60.0)
+        for _ in range(5):
+            assert rl.is_allowed() is True
+
+    def test_blocks_message_exceeding_limit(self):
+        """The (max+1)th message within the window is rejected."""
+        rl = _RateLimiter(max_messages=3, window=60.0)
+        for _ in range(3):
+            rl.is_allowed()
+        assert rl.is_allowed() is False
+
+    def test_window_expiry_resets_count(self):
+        """After the window expires, new messages are accepted again."""
+        rl = _RateLimiter(max_messages=2, window=0.05)
+        rl.is_allowed()
+        rl.is_allowed()
+        assert rl.is_allowed() is False  # window full
+
+        time.sleep(0.06)  # let the window expire
+        assert rl.is_allowed() is True  # fresh window
+
+
+class TestResolveUserFromToken:
+    """Tests for JWT resolution helper _resolve_user_from_token."""
+
+    @pytest.mark.asyncio
+    async def test_auth_disabled_returns_anonymous(self):
+        """When AUTH_ENABLED=false, any token (or None) yields anonymous user."""
+        with patch("auth.AUTH_ENABLED", False):
+            user = await _resolve_user_from_token(None)
+
+        assert user is not None
+        assert user["name"] == "anonymous"
+        assert "ADMIN_TECHNIQUE" in user["roles"]
+
+    @pytest.mark.asyncio
+    async def test_auth_enabled_missing_token_returns_none(self):
+        """When AUTH_ENABLED=true and no token is provided, returns None."""
+        with patch("auth.AUTH_ENABLED", True):
+            user = await _resolve_user_from_token(None)
+
+        assert user is None
+
+    @pytest.mark.asyncio
+    async def test_auth_enabled_invalid_token_returns_none(self):
+        """When AUTH_ENABLED=true and token is invalid, returns None."""
+        # jwt_validator is imported lazily inside _resolve_user_from_token.
+        # Inject a fake module so we don't need python-jose installed in CI.
+        import sys
+        import types
+
+        fake_jv = types.ModuleType("auth.jwt_validator")
+        fake_jv.validate_token = AsyncMock(side_effect=ValueError("bad token"))
+
+        with (
+            patch("auth.AUTH_ENABLED", True),
+            patch.dict(sys.modules, {"auth.jwt_validator": fake_jv}),
+        ):
+            user = await _resolve_user_from_token("invalid.jwt.token")
+
+        assert user is None
+
+    @pytest.mark.asyncio
+    async def test_auth_enabled_valid_token_returns_user(self):
+        """When AUTH_ENABLED=true and token is valid, returns user info dict."""
+        import sys
+        import types
+
+        fake_claims = {
+            "sub": "user-123",
+            "preferred_username": "dr.smith",
+            "email": "dr.smith@hospital.be",
+            "realm_access": {"roles": ["MEDECIN"]},
+        }
+
+        fake_jv = types.ModuleType("auth.jwt_validator")
+        fake_jv.validate_token = AsyncMock(return_value=fake_claims)
+
+        with (
+            patch("auth.AUTH_ENABLED", True),
+            patch.dict(sys.modules, {"auth.jwt_validator": fake_jv}),
+        ):
+            user = await _resolve_user_from_token("valid.jwt.token")
+
+        assert user is not None
+        assert user["id"] == "user-123"
+        assert user["name"] == "dr.smith"
+        assert user["email"] == "dr.smith@hospital.be"
+        assert "MEDECIN" in user["roles"]
+
+
+class TestWebSocketSecurityEndpoint:
+    """Integration tests for WebSocket security (close codes, size limits)."""
+
+    def _make_mock_ws(self, token=None):
+        """Create a mock WebSocket with query_params and close tracking."""
+        ws = MagicMock()
+        ws.accept = AsyncMock()
+        ws.send_json = AsyncMock()
+        ws.close = AsyncMock()
+        ws.client = MagicMock()
+        ws.client.host = "127.0.0.1"
+        ws.query_params = {"token": token} if token else {}
+        return ws
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_connection_closes_4001(self):
+        """Connection without a valid token is closed with code 4001."""
+        ws = self._make_mock_ws(token=None)
+
+        with patch("auth.AUTH_ENABLED", True):
+            await slide_websocket(ws, "slide_auth_test")
+
+        ws.close.assert_called_once_with(code=4001)
+        ws.accept.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_oversized_message_is_dropped_connection_stays(self):
+        """A message exceeding WS_MAX_MESSAGE_SIZE is dropped; connection remains open."""
+        import routes.ws as ws_module
+
+        oversized_payload = b"x" * (WS_MAX_MESSAGE_SIZE + 1)
+        normal_payload = _json.dumps({"type": "cursor_move", "position": {"x": 1, "y": 1}}).encode()
+
+        call_count = 0
+
+        async def _receive_bytes():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return oversized_payload
+            if call_count == 2:
+                return normal_payload
+            raise WebSocketDisconnect
+
+        ws = self._make_mock_ws(token=None)
+        ws.receive_bytes = _receive_bytes
+
+        original_manager = ws_module.manager
+        ws_module.manager = ws_module.ConnectionManager()
+        try:
+            with patch("auth.AUTH_ENABLED", False):
+                await slide_websocket(ws, "slide_size_test")
+        finally:
+            ws_module.manager = original_manager
+
+        # Connection should NOT have been closed with an error code
+        for call in ws.close.call_args_list:
+            assert call.kwargs.get("code") not in (4001, 4002), f"Unexpected close code: {call}"
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_exceeded_closes_4002(self):
+        """Exceeding the rate limit closes the connection with code 4002."""
+        import routes.ws as ws_module
+
+        msg = _json.dumps({"type": "cursor_move", "position": {"x": 0, "y": 0}}).encode()
+
+        async def _receive_bytes():
+            return msg
+
+        ws = self._make_mock_ws(token=None)
+        ws.receive_bytes = _receive_bytes
+
+        limiter = MagicMock()
+        # First call allowed so connect succeeds; subsequent calls denied
+        limiter.is_allowed.side_effect = [True] + [False] * 200
+
+        original_manager = ws_module.manager
+        ws_module.manager = ws_module.ConnectionManager()
+        try:
+            with (
+                patch("auth.AUTH_ENABLED", False),
+                patch("routes.ws._RateLimiter", return_value=limiter),
+            ):
+                await slide_websocket(ws, "slide_rate_test")
+        finally:
+            ws_module.manager = original_manager
+
+        ws.close.assert_called_with(code=WS_CLOSE_RATE_LIMIT)
