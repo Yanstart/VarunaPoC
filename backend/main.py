@@ -77,6 +77,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Plugin loader (always available — uses only stdlib)
+from core.plugin_loader import discover_plugins, load_plugin, unload_plugins
+
+# PLUGINS_DIR: directory scanned for plugin packages at startup
+PLUGINS_DIR = os.getenv("PLUGINS_DIR", "./plugins")
+
 # Monitoring optionnel (requires prometheus_client)
 try:
     from monitoring import metrics_endpoint, prometheus_middleware
@@ -117,8 +123,7 @@ except ImportError:
 
 @asynccontextmanager
 async def lifespan(_app):
-    """Startup/shutdown events for DB and other resources."""
-    # Startup
+    """Startup/shutdown events for DB, plugins, and other resources."""
     try:
         from core.database import init_db
 
@@ -126,8 +131,16 @@ async def lifespan(_app):
         logger.info("Database connection pool initialized")
     except Exception as e:
         logger.warning(f"Database not available (annotations disabled): {e}")
+
+    manifests = discover_plugins(PLUGINS_DIR)
+    for manifest in manifests:
+        plugin_name = manifest.get("name", manifest.get("_name", "unknown"))
+        load_plugin(plugin_name, _app, meta=manifest)
+
     yield
-    # Shutdown
+
+    unload_plugins()
+
     try:
         from core.database import close_db
 
