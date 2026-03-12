@@ -14,6 +14,7 @@ Version: 1.5.0
 
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -110,15 +111,73 @@ def scan_slides_directory(slides_dir: str = None) -> List[Dict]:
 # Cache ID->Path (évite rescans répétés)
 _slide_cache: Dict[str, str] = {}
 _slide_data_cache: Dict[str, Dict] = {}
+_last_scan_timestamp: Optional[datetime] = None
 
 
 def _ensure_cache_populated():
     """Populate both caches if empty (single scan shared by all lookups)."""
-    global _slide_cache, _slide_data_cache
+    global _slide_cache, _slide_data_cache, _last_scan_timestamp
     if not _slide_cache:
         slides = scan_slides_directory()
         _slide_cache = {s["id"]: s["path"] for s in slides}
         _slide_data_cache = {s["id"]: s for s in slides}
+        _last_scan_timestamp = datetime.now(timezone.utc)
+
+
+def invalidate_cache() -> None:
+    """
+    Vide les caches en mémoire (ID->path et données complètes).
+
+    Force un nouveau scan filesystem au prochain accès.
+    Remet _last_scan_timestamp à None jusqu'au prochain scan.
+
+    Technical Notes:
+        - Thread-safe via GIL Python (opérations d'affectation atomiques)
+        - Le prochain appel à _ensure_cache_populated() relancera le scan
+        - Utile après ajout/suppression de lames sur le filesystem
+    """
+    global _slide_cache, _slide_data_cache, _last_scan_timestamp
+    _slide_cache = {}
+    _slide_data_cache = {}
+    _last_scan_timestamp = None
+    logger.info("Slide cache invalidated")
+
+
+def rescan() -> List[Dict]:
+    """
+    Invalide le cache puis relance un scan complet du filesystem.
+
+    Equivalent à invalidate_cache() suivi de _ensure_cache_populated(),
+    mais retourne directement la liste des lames trouvées.
+
+    Returns:
+        Liste complète des lames détectées après le nouveau scan.
+
+    Technical Notes:
+        - Met à jour _last_scan_timestamp avec l'heure UTC du scan
+        - Toutes les entrées de cache sont reconstruites depuis zéro
+        - Voir scan_slides_directory() pour la logique de détection
+    """
+    invalidate_cache()
+    _ensure_cache_populated()
+    return list(_slide_data_cache.values())
+
+
+def get_last_scan_timestamp() -> Optional[datetime]:
+    """
+    Retourne la date/heure UTC du dernier scan filesystem réussi.
+
+    Returns:
+        datetime UTC du dernier scan, ou None si aucun scan n'a encore eu lieu
+        (cache vide ou invalidé sans rescan).
+
+    Technical Notes:
+        - Initialisé à None au démarrage du serveur
+        - Mis à jour par _ensure_cache_populated() et rescan()
+        - Remis à None par invalidate_cache()
+        - Timezone-aware (UTC)
+    """
+    return _last_scan_timestamp
 
 
 def get_slide_path_by_id(slide_id: str) -> Optional[str]:
