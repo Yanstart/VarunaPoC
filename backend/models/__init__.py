@@ -3,6 +3,8 @@
 from .annotation import Annotation
 from .annotation_label import AnnotationLabel
 from .correction import Correction
+from .view_history import ViewHistory
+from .worklist import WorklistAssignment
 
 # Phase 3: Auth models (optional - requires auth module)
 try:
@@ -21,7 +23,7 @@ except ImportError:
     _QUALITY_MODELS = []
 
 __all__ = (
-    ["Annotation", "AnnotationLabel", "Correction"]
+    ["Annotation", "AnnotationLabel", "Correction", "ViewHistory", "WorklistAssignment"]
     + [m.__name__ for m in _AUTH_MODELS]
     + [m.__name__ for m in _QUALITY_MODELS]
 )

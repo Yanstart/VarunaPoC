@@ -10,9 +10,16 @@ API Design:
 - GET /api/slides/{id}/overview → Image overview (JPEG)
 - GET /api/slides/worklist → Liste de travail (mes cas assignés)
 - GET /api/slides/history → Historique des lames consultées
+
+Worklist / History DB strategy:
+    Primary:  PostgreSQL tables worklist_assignments + view_history (migration 006).
+    Fallback: Deterministic mock derived from the slide filesystem scan.
+              Used when the DB is unavailable (no DATABASE_URL, network down, etc.)
+              so the endpoint stays functional in dev/offline environments.
 """
 
 import hashlib
+import logging
 import random
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
@@ -21,13 +28,21 @@ import openslide
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
+from core.database import get_db
+from models.view_history import ViewHistory
+from models.worklist import WorklistAssignment
 from services.folder_browser import browse_directory
 from services.slide_loader import get_slide_metadata, get_slide_overview_bytes
 from services.slide_scanner import get_slide_by_name, get_slide_path_by_id, scan_slides_directory
 from services.tile_server import tile_server
+
+logger = logging.getLogger(__name__)
 
 # ==========================================
 # Worklist & History Schemas
@@ -191,21 +206,78 @@ def browse_slides_directory(
 
 
 @router.get("/worklist", tags=["navigation"])
-def get_worklist(
+async def get_worklist(
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Liste de travail : cas assignés au médecin connecté.
 
-    Mock implementation: génère des items déterministes depuis la liste de lames.
-    Le seed est basé sur le hash du sub utilisateur pour la reproductibilité.
+    Primary: queries the worklist_assignments table in PostgreSQL.
+    Fallback: deterministic mock derived from the filesystem scan when the DB
+              is unavailable (offline dev, missing DATABASE_URL, etc.).
+
+    Args:
+        db: Async DB session injected by FastAPI.
+        current_user: Authenticated user (MEDECIN or ADMIN_TECHNIQUE role).
 
     Returns:
         WorklistResponse avec items et counts par statut.
-    """
-    slides = scan_slides_directory()
 
-    # Deterministic seed from user sub
+    Technical Notes:
+        - DB rows are filtered by user_sub = current_user.sub.
+        - The slide_name shown in the response is resolved from the filesystem
+          scan (slide metadata is not stored in the DB — it lives in the files).
+        - On SQLAlchemyError (DB down, connection refused, etc.) the endpoint
+          falls back silently to the mock implementation and logs a warning.
+          See migration 006 for the worklist_assignments schema.
+    """
+    # --- Build a quick id -> name lookup from the filesystem scan ---
+    slides = scan_slides_directory()
+    slide_map: Dict[str, dict] = {s["id"]: s for s in slides}
+
+    # --- Attempt DB query ---
+    try:
+        stmt = (
+            select(WorklistAssignment)
+            .where(WorklistAssignment.user_sub == current_user.sub)
+            .order_by(WorklistAssignment.assigned_date.desc())
+        )
+        result = await db.execute(stmt)
+        assignments = result.scalars().all()
+
+        if assignments:
+            statuses = ["pending", "in_progress", "completed"]
+            items = []
+            for row in assignments:
+                slide_info = slide_map.get(row.slide_id, {})
+                slide_name = slide_info.get("name", row.slide_id)
+                slide_path = slide_info.get("path", "")
+                case_path = "/".join(slide_path.replace("\\", "/").split("/")[:-1]) or "/"
+                items.append(
+                    WorklistItem(
+                        slide_id=row.slide_id,
+                        slide_name=slide_name,
+                        case_path=case_path,
+                        status=row.status,
+                        assigned_date=row.assigned_date.isoformat(),
+                        is_new=row.is_new,
+                    )
+                )
+            counts = {s: sum(1 for item in items if item.status == s) for s in statuses}
+            return WorklistResponse(items=items, counts=counts)
+
+        # DB is reachable but no assignments for this user yet — return empty list
+        # (do NOT fall back to mock so the UI correctly shows an empty worklist)
+        return WorklistResponse(
+            items=[],
+            counts={"pending": 0, "in_progress": 0, "completed": 0},
+        )
+
+    except SQLAlchemyError as exc:
+        logger.warning("Worklist DB query failed (%s), falling back to mock data", exc)
+
+    # --- Mock fallback (DB unavailable) ---
     seed = int(hashlib.md5(current_user.sub.encode()).hexdigest()[:8], 16)
     rng = random.Random(seed)
 
@@ -216,17 +288,10 @@ def get_worklist(
     items = []
 
     for slide in slides:
-        # Pick status based on weighted random
         status = rng.choices(statuses, weights=weights, k=1)[0]
-
-        # assigned_date: random date in the last 30 days
         days_ago = rng.randint(0, 30)
         assigned_date = now - timedelta(days=days_ago)
-
-        # is_new: ~30% of pending items
         is_new = status == "pending" and rng.random() < 0.3
-
-        # Derive case_path from slide path
         slide_path = slide.get("path", "")
         case_path = "/".join(slide_path.replace("\\", "/").split("/")[:-1]) or "/"
 
@@ -241,35 +306,76 @@ def get_worklist(
             )
         )
 
-    # Sort by date, most recent first
     items.sort(key=lambda x: x.assigned_date, reverse=True)
-
-    # Compute counts
     counts = {s: sum(1 for item in items if item.status == s) for s in statuses}
-
     return WorklistResponse(items=items, counts=counts)
 
 
 @router.get("/history", tags=["navigation"])
-def get_history(
+async def get_history(
     limit: int = Query(20, ge=1, le=100, description="Nombre max d'items à retourner"),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
     Historique des lames récemment consultées.
 
-    Mock implementation: génère un historique déterministe depuis la liste de lames.
-    Le seed est basé sur le hash du sub utilisateur pour la reproductibilité.
+    Primary: queries the view_history table in PostgreSQL, ordered by
+             viewed_at descending (most recent first).
+    Fallback: deterministic mock when the DB is unavailable.
 
     Args:
-        limit: Nombre maximum d'items (défaut 20, max 100).
+        limit: Maximum number of items to return (default 20, max 100).
+        db: Async DB session injected by FastAPI.
+        current_user: Authenticated user (MEDECIN or ADMIN_TECHNIQUE role).
 
     Returns:
         HistoryResponse avec items et total.
+
+    Technical Notes:
+        - One row per (slide_id, user_sub) in view_history; view_count reflects
+          total opens, viewed_at reflects the most recent open.
+        - slide_name is resolved from the filesystem scan at query time.
+        - On SQLAlchemyError the endpoint falls back to the mock and logs a
+          warning. See migration 006 for the view_history schema.
     """
     slides = scan_slides_directory()
+    slide_map: Dict[str, dict] = {s["id"]: s for s in slides}
 
-    # Deterministic seed from user sub
+    # --- Attempt DB query ---
+    try:
+        stmt = (
+            select(ViewHistory)
+            .where(ViewHistory.user_sub == current_user.sub)
+            .order_by(ViewHistory.viewed_at.desc())
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+        # Count total rows for this user (without the LIMIT)
+        count_stmt = select(ViewHistory).where(ViewHistory.user_sub == current_user.sub)
+        count_result = await db.execute(count_stmt)
+        total = len(count_result.scalars().all())
+
+        items = []
+        for row in rows:
+            slide_info = slide_map.get(row.slide_id, {})
+            slide_name = slide_info.get("name", row.slide_id)
+            items.append(
+                HistoryItem(
+                    slide_id=row.slide_id,
+                    slide_name=slide_name,
+                    viewed_at=row.viewed_at.isoformat(),
+                    view_count=row.view_count,
+                )
+            )
+        return HistoryResponse(items=items, total=total)
+
+    except SQLAlchemyError as exc:
+        logger.warning("History DB query failed (%s), falling back to mock data", exc)
+
+    # --- Mock fallback (DB unavailable) ---
     seed = int(hashlib.md5(current_user.sub.encode()).hexdigest()[:8], 16) + 42
     rng = random.Random(seed)
 
@@ -277,12 +383,9 @@ def get_history(
     items = []
 
     for slide in slides:
-        # viewed_at: random datetime in the last 7 days
         seconds_ago = rng.randint(0, 7 * 24 * 3600)
         viewed_at = now - timedelta(seconds=seconds_ago)
-
         view_count = rng.randint(1, 10)
-
         items.append(
             HistoryItem(
                 slide_id=slide["id"],
@@ -292,12 +395,9 @@ def get_history(
             )
         )
 
-    # Sort by viewed_at, most recent first
     items.sort(key=lambda x: x.viewed_at, reverse=True)
-
     total = len(items)
     items = items[:limit]
-
     return HistoryResponse(items=items, total=total)
 
 
