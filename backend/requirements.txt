@@ -13,6 +13,7 @@ geoalchemy2==0.14.3
 alembic==1.13.1
 shapely>=2.0.4
 python-dotenv==1.0.1
+pydantic-settings>=2.0.0
 
 # Phase 2: Detection pipeline
 scikit-image>=0.24.0
