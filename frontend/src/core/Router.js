@@ -47,6 +47,7 @@ import { AutoTagBadge } from '../components/AutoTagBadge.js';
 import { MagnificationBar } from '../components/MagnificationBar.js';
 import { ScaleBar } from '../components/ScaleBar.js';
 import { MLTabsContainer } from '../components/MLTabsContainer.js';
+import { getToastManager } from '../components/ToastManager.js';
 
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
 
@@ -59,6 +60,7 @@ export class Router {
      */
     constructor(appState) {
         this._state = appState;
+        this._state.toastManager = getToastManager();
         /** @type {LanguageSelector|null} */
         this._langSelector = null;
     }
@@ -1242,7 +1244,7 @@ export class Router {
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
-            'compareLayout', 'caseSidebar', 'userMenu', 'loginPage',
+            'compareLayout', 'caseSidebar', 'userMenu', 'loginPage', 'toastManager',
         ];
 
         for (const key of destroyKeys) {
