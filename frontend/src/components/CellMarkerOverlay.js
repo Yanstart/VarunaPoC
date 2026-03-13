@@ -94,15 +94,15 @@ export class CellMarkerOverlay {
         const viewerEl = this.viewer.container || this.viewer.element;
         if (!viewerEl) return;
 
+        const dpr = window.devicePixelRatio || 1;
         const w = viewerEl.clientWidth;
         const h = viewerEl.clientHeight;
 
-        if (this._canvas.width !== w || this._canvas.height !== h) {
-            this._canvas.width = w;
-            this._canvas.height = h;
-        }
+        this._canvas.width = w * dpr;
+        this._canvas.height = h * dpr;
         this._canvas.style.width = w + 'px';
         this._canvas.style.height = h + 'px';
+        this._ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         this._ctx.clearRect(0, 0, w, h);
 

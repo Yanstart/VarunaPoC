@@ -158,5 +158,11 @@
   "layout.grid2x2": "グリッド 2×2",
   "legend.low": "低",
   "legend.high": "高",
-  "legend.attention": "注意"
+  "legend.attention": "注意",
+  "counting.showMarkers": "マーカーを表示",
+  "counting.opacity": "不透明度：",
+  "detection.feedbackConfirmed": "フィードバック確認済み",
+  "detection.feedbackRejected": "フィードバック拒否済み",
+  "detection.correctionSaved": "修正を保存しました",
+  "detection.feedbackError": "フィードバック送信失敗"
 }

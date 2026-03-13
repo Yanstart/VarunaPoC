@@ -19,6 +19,7 @@ import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
 import { annotationStore } from '../services/AnnotationStore.js';
+import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
@@ -364,7 +365,8 @@ class DetectionPanel {
 
         // Hover highlight on detection items
         const resultsContainer = this.element.querySelector('.detection-panel__results');
-        if (resultsContainer) {
+        if (!this._hoverListenersAdded && resultsContainer) {
+            this._hoverListenersAdded = true;
             resultsContainer.addEventListener('mouseenter', (e) => {
                 const item = e.target.closest('[data-detection-item-index]');
                 if (item) {
@@ -661,19 +663,23 @@ class DetectionPanel {
                 notes: null,
             });
             this.feedbackStatus.set(index, correctionType);
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'success',
+                message: correctionType === 'confirmed' ? i18nService.t('detection.feedbackConfirmed')
+                    : correctionType === 'rejected' ? i18nService.t('detection.feedbackRejected')
+                        : i18nService.t('detection.correctionSaved'),
+                duration: 2000,
+            });
         } catch (e) {
             console.warn('[DetectionPanel] Feedback submission failed:', e);
             // Mark locally anyway for UX feedback
             this.feedbackStatus.set(index, correctionType);
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'error',
+                message: i18nService.t('detection.feedbackError'),
+                duration: 3000,
+            });
         }
-
-        eventBus.emit(Events.TOAST_SHOW, {
-            type: 'success',
-            message: correctionType === 'confirmed' ? 'Feedback confirmé'
-                : correctionType === 'rejected' ? 'Feedback rejeté'
-                    : 'Correction enregistrée',
-            duration: 2000,
-        });
 
         this._renderPreview();
     }
@@ -718,6 +724,7 @@ class DetectionPanel {
         this.accepted.clear();
         this.rejected.clear();
         this.highlightedIndex = null;
+        this._hoverListenersAdded = false;
         annotationStore.clearDetectionPreview();
     }
 

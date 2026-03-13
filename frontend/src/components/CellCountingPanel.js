@@ -20,6 +20,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
@@ -287,13 +288,13 @@ class CellCountingPanel {
             eventBus.emit(Events.CELL_MARKERS_TOGGLE, { visible: checkbox.checked });
         });
         checkLabel.appendChild(checkbox);
-        const checkText = document.createTextNode(' Afficher les marqueurs');
+        const checkText = document.createTextNode(` ${i18nService.t('counting.showMarkers')}`);
         checkLabel.appendChild(checkText);
         markerControls.appendChild(checkLabel);
 
         const opacityLabel = document.createElement('label');
         opacityLabel.className = 'cell-counting-panel__marker-opacity';
-        opacityLabel.textContent = 'Opacité : ';
+        opacityLabel.textContent = i18nService.t('counting.opacity');
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.min = '0';

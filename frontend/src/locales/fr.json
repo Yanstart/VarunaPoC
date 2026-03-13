@@ -158,5 +158,11 @@
   "layout.grid2x2": "Grille 2×2",
   "legend.low": "Faible",
   "legend.high": "Élevé",
-  "legend.attention": "Attention"
+  "legend.attention": "Attention",
+  "counting.showMarkers": "Afficher les marqueurs",
+  "counting.opacity": "Opacité : ",
+  "detection.feedbackConfirmed": "Feedback confirmé",
+  "detection.feedbackRejected": "Feedback rejeté",
+  "detection.correctionSaved": "Correction enregistrée",
+  "detection.feedbackError": "Envoi du feedback échoué"
 }

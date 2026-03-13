@@ -70,7 +70,10 @@ export class MLProgressBar {
             const plural = this._activeCount > 1 ? 's' : '';
             this._label.textContent = `${this._activeCount} analyse${plural} en cours`;
         } else {
-            // Brief green flash then hide
+            // Only show done flash if bar was actually active
+            if (!this.el.classList.contains('ml-progress-bar--active')) {
+                return;
+            }
             this.el.classList.remove('ml-progress-bar--active');
             this.el.classList.add('ml-progress-bar--done');
             this._hideTimer = setTimeout(() => {

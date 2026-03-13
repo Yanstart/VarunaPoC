@@ -437,8 +437,9 @@ export class Router {
         });
         this._state._keyNavHandler = (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) { return; }
-            if (e.key === 'ArrowLeft') { eventBus.emit(Events.SLIDE_NAV_PREV); }
-            if (e.key === 'ArrowRight') { eventBus.emit(Events.SLIDE_NAV_NEXT); }
+            if (!e.altKey) { return; }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); eventBus.emit(Events.SLIDE_NAV_PREV); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); eventBus.emit(Events.SLIDE_NAV_NEXT); }
         };
         document.addEventListener('keydown', this._state._keyNavHandler);
 
@@ -668,6 +669,8 @@ export class Router {
         }
 
         this._state.selectedSlide = newSlide;
+        this._state.currentSlideId = newSlide.id;
+        this._updateSlideNav();
 
         const titleH1 = document.querySelector('.viewer-title h1');
         if (titleH1) { titleH1.textContent = newSlide.name; }

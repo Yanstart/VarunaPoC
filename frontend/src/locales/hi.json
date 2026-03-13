@@ -158,5 +158,11 @@
   "layout.grid2x2": "ग्रिड 2×2",
   "legend.low": "कम",
   "legend.high": "उच्च",
-  "legend.attention": "ध्यान"
+  "legend.attention": "ध्यान",
+  "counting.showMarkers": "मार्कर दिखाएं",
+  "counting.opacity": "अपारदर्शिता: ",
+  "detection.feedbackConfirmed": "फीडबैक पुष्टि",
+  "detection.feedbackRejected": "फीडबैक अस्वीकृत",
+  "detection.correctionSaved": "सुधार सहेजा गया",
+  "detection.feedbackError": "फीडबैक सबमिशन विफल"
 }

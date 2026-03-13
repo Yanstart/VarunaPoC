@@ -990,8 +990,8 @@ async def count_cells(
 
                 with openslide.OpenSlide(str(slide_path)) as osr:
                     slide_dims = osr.dimensions
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Could not read slide dimensions for cell positions: %s", exc)
 
         worker = get_ml_worker()
         region_data = request.region.model_dump() if request.region else None
