@@ -104,6 +104,7 @@
   "ml.noModels": "कोई मॉडल उपलब्ध नहीं",
   "ml.recommended": "अनुशंसित",
   "ml.cancelConfirm": "AI विश्लेषण जारी है। रद्द करें और स्लाइड बदलें?",
+  "ml.qualityWarning": "कम गुणवत्ता ({score}%) — परिणाम अविश्वसनीय हो सकते हैं",
   "tools.select": "चयन (V)",
   "tools.rectangle": "आयत (R)",
   "tools.polygon": "बहुभुज (P)",

@@ -104,6 +104,7 @@
   "ml.noModels": "没有可用模型",
   "ml.recommended": "推荐",
   "ml.cancelConfirm": "AI分析正在进行中。取消并切换切片？",
+  "ml.qualityWarning": "质量低 ({score}%) — 结果可能不可靠",
   "tools.select": "选择 (V)",
   "tools.rectangle": "矩形 (R)",
   "tools.polygon": "多边形 (P)",

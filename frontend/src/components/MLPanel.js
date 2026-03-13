@@ -41,6 +41,7 @@ class MLPanel {
         this.heatmapOpacity = 0.5;
         this.isLoading = false;
         this.isCollapsed = (() => { try { return localStorage.getItem('varuna_panel_ml_open') !== 'true'; } catch (_) { return true; } })();
+        this._qualityScore = null;
 
         // Elements
         this.element = null;
@@ -273,6 +274,16 @@ class MLPanel {
                 }
             }),
         );
+
+        // Listen for quality score to show cross-validation warning
+        this._unsubscribers.push(
+            eventBus.on(Events.QUALITY_READY, ({ slideId, metrics }) => {
+                if (slideId === this.slideId) {
+                    this._qualityScore = metrics.overall_score ?? metrics.score ?? null;
+                    this._updateQualityWarning();
+                }
+            }),
+        );
     }
 
     /**
@@ -283,6 +294,9 @@ class MLPanel {
         this.slideId = slideId;
         this.prediction = null;
         this.heatmapVisible = false;
+        this._qualityScore = null;
+        const existing = this.element.querySelector('.ml-panel__quality-warning');
+        if (existing) existing.remove();
 
         // Enable predict button
         this.predictBtn.disabled = false;
@@ -296,6 +310,25 @@ class MLPanel {
         hint.className = 'ml-panel__placeholder';
         hint.textContent = i18nService.t('ml.analyzeHint');
         this.resultsContainer.appendChild(hint);
+    }
+
+    /**
+     * Show or hide quality warning banner based on quality score
+     * @private
+     */
+    _updateQualityWarning() {
+        const existing = this.element.querySelector('.ml-panel__quality-warning');
+        if (existing) existing.remove();
+
+        if (this._qualityScore !== null && this._qualityScore < 0.6) {
+            const warning = document.createElement('div');
+            warning.className = 'ml-panel__quality-warning';
+            warning.textContent = i18nService.t('ml.qualityWarning', {
+                score: (this._qualityScore * 100).toFixed(0),
+            });
+            const content = this.element.querySelector('.ml-panel__content');
+            if (content) content.prepend(warning);
+        }
     }
 
     /**

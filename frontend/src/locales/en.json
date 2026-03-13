@@ -104,6 +104,7 @@
   "ml.noModels": "No models available",
   "ml.recommended": "recommended",
   "ml.cancelConfirm": "An AI analysis is in progress. Cancel it and switch slides?",
+  "ml.qualityWarning": "Low quality ({score}%) — results may be unreliable",
   "tools.select": "Select (V)",
   "tools.rectangle": "Rectangle (R)",
   "tools.polygon": "Polygon (P)",

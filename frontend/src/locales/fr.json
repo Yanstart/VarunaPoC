@@ -104,6 +104,7 @@
   "ml.noModels": "Aucun modele disponible",
   "ml.recommended": "recommande",
   "ml.cancelConfirm": "Une analyse IA est en cours. Voulez-vous l'annuler et changer de lame ?",
+  "ml.qualityWarning": "Qualite faible ({score}%) — resultats potentiellement peu fiables",
   "tools.select": "Selection (V)",
   "tools.rectangle": "Rectangle (R)",
   "tools.polygon": "Polygone (P)",
