@@ -89,6 +89,12 @@ export const Events = Object.freeze({
     PAGE_CHANGED: 'ui:pageChanged',
     /** @payload {{ type: 'error'|'warning'|'success', message: string, duration?: number }} */
     TOAST_SHOW: 'ui:toastShow',
+    /** @payload {{ slideId: string, bbox: number[], centroid: number[] }} */
+    FOCUS_ZONE_NAVIGATE: 'ui:focusZoneNavigate',
+    /** @payload (none) */
+    SLIDE_NAV_PREV: 'ui:slideNavPrev',
+    /** @payload (none) */
+    SLIDE_NAV_NEXT: 'ui:slideNavNext',
 
     // -- ML --
     /** @payload {{ viewerId: string, slideId: string, modelId: string }} */
@@ -175,6 +181,10 @@ export const Events = Object.freeze({
     CELL_COUNTING_COMPLETE: 'cellCounting:complete',
     /** @payload {{ viewerId: string, error: string }} */
     CELL_COUNTING_ERROR: 'cellCounting:error',
+    /** @payload {{ visible: boolean }} */
+    CELL_MARKERS_TOGGLE: 'cellCounting:markersToggle',
+    /** @payload {{ opacity: number }} */
+    CELL_MARKERS_OPACITY: 'cellCounting:markersOpacity',
 
     // -- Clustering (Wave 4) --
     /** @payload {{ viewerId: string }} */
