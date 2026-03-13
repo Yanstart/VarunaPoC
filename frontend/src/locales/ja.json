@@ -166,5 +166,14 @@
   "detection.feedbackRejected": "フィードバック拒否済み",
   "detection.correctionSaved": "修正を保存しました",
   "detection.feedbackError": "フィードバック送信失敗",
-  "api.retryIn": "MLワーカービジー、{seconds}秒後にリトライ..."
+  "api.retryIn": "MLワーカービジー、{seconds}秒後にリトライ...",
+  "metadata.title": "メタデータ",
+  "metadata.format": "フォーマット",
+  "metadata.dimensions": "寸法",
+  "metadata.mpp": "解像度 (MPP)",
+  "metadata.scanner": "スキャナー",
+  "metadata.stain": "染色",
+  "metadata.objective": "対物レンズ",
+  "metadata.copy": "コピー",
+  "metadata.copied": "メタデータをコピーしました"
 }

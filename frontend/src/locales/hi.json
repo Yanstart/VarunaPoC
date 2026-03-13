@@ -166,5 +166,14 @@
   "detection.feedbackRejected": "फीडबैक अस्वीकृत",
   "detection.correctionSaved": "सुधार सहेजा गया",
   "detection.feedbackError": "फीडबैक सबमिशन विफल",
-  "api.retryIn": "ML वर्कर व्यस्त, {seconds}s में पुनः प्रयास..."
+  "api.retryIn": "ML वर्कर व्यस्त, {seconds}s में पुनः प्रयास...",
+  "metadata.title": "मेटाडेटा",
+  "metadata.format": "प्रारूप",
+  "metadata.dimensions": "आयाम",
+  "metadata.mpp": "रिज़ॉल्यूशन (MPP)",
+  "metadata.scanner": "स्कैनर",
+  "metadata.stain": "रंगाई",
+  "metadata.objective": "ऑब्जेक्टिव",
+  "metadata.copy": "कॉपी करें",
+  "metadata.copied": "मेटाडेटा कॉपी किया गया"
 }

@@ -29,6 +29,7 @@ import { CompareLayout } from '../components/CompareLayout.js';
 import { MLPanel } from '../components/MLPanel.js';
 import { HeatmapOverlay } from '../components/HeatmapOverlay.js';
 import { CaseSidebar } from '../components/CaseSidebar.js';
+import { MetadataPanel } from '../components/MetadataPanel.js';
 
 import { AnnotationLayer } from '../components/AnnotationLayer.js';
 import { DrawingTools } from '../components/DrawingTools.js';
@@ -694,7 +695,7 @@ export class Router {
 
         const resetTargets = [
             'mlPanel', 'detectionPanel', 'cellCountingPanel',
-            'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge',
+            'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
         ];
         for (const key of resetTargets) {
             if (this._state[key] && this._state[key].setSlide) {
@@ -772,6 +773,9 @@ export class Router {
             note.appendChild(document.createElement('br'));
             note.appendChild(document.createTextNode(this._t('slide.minimapHint')));
             infoPanel.appendChild(note);
+
+            this._state.metadataPanel = new MetadataPanel(infoPanel);
+            this._state.metadataPanel.setSlide(slide.id);
 
         } catch (err) {
             console.error('[App] Load failed:', err);
@@ -1371,7 +1375,7 @@ export class Router {
             'clusteringOverlay', 'cellMarkerOverlay',
             'mlProgressBar', 'heatmapLegend',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
-            'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
+            'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
             'compareLayout', 'caseSidebar', 'userMenu', 'loginPage', 'toastManager',
         ];

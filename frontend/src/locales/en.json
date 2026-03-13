@@ -166,5 +166,14 @@
   "detection.feedbackRejected": "Feedback rejected",
   "detection.correctionSaved": "Correction saved",
   "detection.feedbackError": "Feedback submission failed",
-  "api.retryIn": "ML worker busy, retrying in {seconds}s..."
+  "api.retryIn": "ML worker busy, retrying in {seconds}s...",
+  "metadata.title": "Metadata",
+  "metadata.format": "Format",
+  "metadata.dimensions": "Dimensions",
+  "metadata.mpp": "Resolution (MPP)",
+  "metadata.scanner": "Scanner",
+  "metadata.stain": "Stain",
+  "metadata.objective": "Objective",
+  "metadata.copy": "Copy",
+  "metadata.copied": "Metadata copied"
 }

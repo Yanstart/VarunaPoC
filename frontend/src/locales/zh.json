@@ -166,5 +166,14 @@
   "detection.feedbackRejected": "反馈已拒绝",
   "detection.correctionSaved": "修正已保存",
   "detection.feedbackError": "反馈提交失败",
-  "api.retryIn": "ML工作器忙碌，{seconds}秒后重试..."
+  "api.retryIn": "ML工作器忙碌，{seconds}秒后重试...",
+  "metadata.title": "元数据",
+  "metadata.format": "格式",
+  "metadata.dimensions": "尺寸",
+  "metadata.mpp": "分辨率 (MPP)",
+  "metadata.scanner": "扫描仪",
+  "metadata.stain": "染色",
+  "metadata.objective": "物镜",
+  "metadata.copy": "复制",
+  "metadata.copied": "元数据已复制"
 }

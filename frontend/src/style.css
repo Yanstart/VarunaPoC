@@ -56,3 +56,6 @@
 
 /* 13. Cell marker overlay styles (UX Wave B) */
 @import './css/cell-markers.css';
+
+/* 14. Metadata Panel styles (UX Wave C) */
+@import './css/metadata-panel.css';

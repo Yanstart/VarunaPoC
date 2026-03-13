@@ -166,5 +166,14 @@
   "detection.feedbackRejected": "Feedback rejeté",
   "detection.correctionSaved": "Correction enregistrée",
   "detection.feedbackError": "Envoi du feedback échoué",
-  "api.retryIn": "Worker ML occupe, nouvel essai dans {seconds}s..."
+  "api.retryIn": "Worker ML occupe, nouvel essai dans {seconds}s...",
+  "metadata.title": "Metadonnees",
+  "metadata.format": "Format",
+  "metadata.dimensions": "Dimensions",
+  "metadata.mpp": "Resolution (MPP)",
+  "metadata.scanner": "Scanner",
+  "metadata.stain": "Coloration",
+  "metadata.objective": "Objectif",
+  "metadata.copy": "Copier",
+  "metadata.copied": "Metadonnees copiees"
 }
