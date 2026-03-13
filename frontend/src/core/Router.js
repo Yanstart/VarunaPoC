@@ -396,6 +396,33 @@ export class Router {
         this._applyRoleVisibility();
         await this._initCaseSidebar(slide);
 
+        // Focus zone navigation — pan+zoom viewer to selected zone
+        this._state._focusNavUnsub = eventBus.on(Events.FOCUS_ZONE_NAVIGATE, ({ bbox }) => {
+            const vi = getLegacyViewer();
+            if (!vi || !vi._osdViewer || !bbox || bbox.length !== 4) { return; }
+
+            const tiledImage = vi._osdViewer.world.getItemAt(0);
+            if (!tiledImage) { return; }
+
+            const [xMin, yMin, xMax, yMax] = bbox;
+            const padding = 0.2;
+            const w = xMax - xMin;
+            const h = yMax - yMin;
+            const padW = w * padding;
+            const padH = h * padding;
+
+            // Convert padded bbox corners from slide pixels to OSD viewport coords
+            const topLeft = tiledImage.imageToViewportCoordinates(xMin - padW, yMin - padH);
+            const bottomRight = tiledImage.imageToViewportCoordinates(xMax + padW, yMax + padH);
+
+            vi.setViewport({
+                x: topLeft.x,
+                y: topLeft.y,
+                width: bottomRight.x - topLeft.x,
+                height: bottomRight.y - topLeft.y,
+            });
+        });
+
         eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
     }
 
@@ -1242,6 +1269,11 @@ export class Router {
         if (this._themeUnsub) {
             this._themeUnsub();
             this._themeUnsub = null;
+        }
+
+        if (this._state._focusNavUnsub) {
+            this._state._focusNavUnsub();
+            this._state._focusNavUnsub = null;
         }
 
         const destroyKeys = [
