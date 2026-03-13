@@ -379,11 +379,11 @@ try:
 except ImportError:
     print("[INFO] Sharing module disabled")
 
-# WebSocket (unversioned — mounted directly on app)
+# WebSocket (versioned under /api/v1)
 try:
     from routes import ws
 
-    app.include_router(ws.router)
+    api_v1.include_router(ws.router)
     COLLABORATION_ENABLED = True
 except ImportError:
     print("[INFO] WebSocket module disabled")

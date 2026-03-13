@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.database import get_db
+from core.error_helpers import internal_error, slide_not_found, slide_open_error
 from models.view_history import ViewHistory
 from models.worklist import WorklistAssignment
 from rate_limiting import admin_rate, limit, tile_rate
@@ -87,20 +88,6 @@ class HistoryResponse(BaseModel):
 # MPP (Microns Per Pixel) Schema
 # ==========================================
 
-# Objective power to MPP lookup table (common scanner defaults)
-_OBJECTIVE_TO_MPP = {
-    100: 0.10,
-    80: 0.125,
-    60: 0.167,
-    40: 0.25,
-    20: 0.50,
-    10: 1.0,
-    5: 2.0,
-    4: 2.5,
-    2: 5.0,
-    1: 10.0,
-}
-
 
 class MPPResponse(BaseModel):
     """Microns-per-pixel metadata for a slide."""
@@ -111,10 +98,87 @@ class MPPResponse(BaseModel):
     source: str = "openslide"
 
 
+# ==========================================
+# Slide List / Browse / Info Response Schemas (#306)
+# ==========================================
+
+
+class SlideEntry(BaseModel):
+    id: str
+    name: str
+    path: str
+    format: str
+    has_companions: bool = False
+
+
+class SlideListResponse(BaseModel):
+    count: int
+    last_scan_timestamp: Optional[str] = None
+    slides: List[SlideEntry]
+
+
+class RescanResponse(BaseModel):
+    count: int
+    last_scan_timestamp: Optional[str] = None
+
+
+class BrowseFolderEntry(BaseModel):
+    name: str
+    path: str
+    item_count: int = 0
+
+
+class BrowseSlideEntry(BaseModel):
+    name: str
+    path: str
+    id: Optional[str] = None
+    format_string: str = ""
+    structure_type: str = ""
+    is_supported: bool = True
+    notes: str = ""
+    dependencies: List[str] = []
+
+
+class BrowseFileEntry(BaseModel):
+    name: str
+    extension: Optional[str] = None
+    is_supported: bool = False
+    notes: str = ""
+
+
+class BrowseResponse(BaseModel):
+    current_path: str
+    parent_path: Optional[str] = None
+    breadcrumb: List[str] = []
+    folders: List[BrowseFolderEntry] = []
+    slides: List[BrowseSlideEntry] = []
+    files: List[BrowseFileEntry] = []
+
+
+class SlideInfoResponse(BaseModel):
+    dimensions: List[int]
+    level_count: int
+    level_dimensions: List[List[int]]
+    level_downsamples: List[float]
+    vendor: Optional[str] = None
+    format: Optional[str] = None
+
+
+class DziMetadataResponse(BaseModel):
+    width: int
+    height: int
+    tile_size: int
+    overlap: int
+    format: str = "jpeg"
+    levels: int
+    level_dimensions: List[List[int]]
+    level_downsamples: List[float]
+
+
 router = APIRouter(prefix="/slides")
 
 
-@router.get("/", tags=["navigation"])
+@router.get("/", tags=["navigation"], response_model=SlideListResponse)
 def list_slides(current_user: CurrentUser = Depends(get_current_user)):
     """
     Liste toutes les lames détectées dans /Slides (scan récursif complet).
@@ -151,7 +215,7 @@ def list_slides(current_user: CurrentUser = Depends(get_current_user)):
     }
 
 
-@router.post("/rescan", tags=["navigation"])
+@router.post("/rescan", tags=["navigation"], response_model=RescanResponse)
 @limit(admin_rate)
 def rescan_slides(
     request: Request,
@@ -191,7 +255,7 @@ def rescan_slides(
     }
 
 
-@router.get("/browse", tags=["navigation"])
+@router.get("/browse", tags=["navigation"], response_model=BrowseResponse)
 def browse_slides_directory(
     path: str = Query(
         "/",
@@ -263,7 +327,7 @@ def browse_slides_directory(
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
-        raise HTTPException(500, f"Error browsing directory: {e}")
+        raise internal_error("browse_directory", e)
 
 
 @router.get("/worklist", tags=["navigation"])
@@ -499,13 +563,6 @@ def resolve_slide_by_name(
     return slide
 
 
-def _resolve_mpp_from_properties(props: dict) -> tuple[float, float, str] | None:
-    """Try to resolve MPP from slide properties using vendor-specific keys."""
-    from services.slide_utils import resolve_mpp_from_properties
-
-    return resolve_mpp_from_properties(props)
-
-
 @router.get("/{slide_id}/mpp", tags=["visualization"], response_model=MPPResponse)
 def get_slide_mpp(
     slide_id: str = Path(
@@ -536,64 +593,33 @@ def get_slide_mpp(
           standard lookup table (40x -> 0.25, 20x -> 0.50, etc.).
         - Returns 404 if neither MPP nor objective power is available.
     """
+    from services.slide_utils import resolve_slide_mpp
+
     slide_path = get_slide_path_by_id(slide_id)
     if not slide_path:
-        raise HTTPException(404, f"Slide {slide_id} not found")
+        raise slide_not_found(slide_id)
 
     try:
-        slide = openslide.OpenSlide(slide_path)
+        mpp_data = resolve_slide_mpp(slide_path)
     except openslide.OpenSlideError as e:
-        raise HTTPException(
-            422,
-            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
-        )
+        raise slide_open_error(slide_id, e)
 
-    try:
-        props = slide.properties
-
-        # Read objective power (may be None)
-        obj_str = props.get("openslide.objective-power")
-        objective = int(float(obj_str)) if obj_str else None
-
-        # Try direct MPP from metadata
-        mpp_x_str = props.get("openslide.mpp-x")
-        mpp_y_str = props.get("openslide.mpp-y")
-
-        if mpp_x_str and mpp_y_str:
-            return MPPResponse(
-                mpp_x=float(mpp_x_str),
-                mpp_y=float(mpp_y_str),
-                objective=objective,
-                source="openslide",
-            )
-
-        # Vendor-specific MPP fallbacks (Aperio, Hamamatsu, TIFF)
-        vendor_mpp = _resolve_mpp_from_properties(props)
-        if vendor_mpp:
-            mpp_x, mpp_y, source = vendor_mpp
-            return MPPResponse(mpp_x=mpp_x, mpp_y=mpp_y, objective=objective, source=source)
-
-        # Fallback: estimate from objective power
-        if objective and objective in _OBJECTIVE_TO_MPP:
-            estimated = _OBJECTIVE_TO_MPP[objective]
-            return MPPResponse(
-                mpp_x=estimated,
-                mpp_y=estimated,
-                objective=objective,
-                source="estimated_from_objective",
-            )
-
-        # No MPP data available
+    if not mpp_data:
         raise HTTPException(
             404,
             f"MPP data not available for slide {slide_id}. "
             "Neither openslide.mpp-x/y nor openslide.objective-power found in metadata.",
         )
-    finally:
-        slide.close()
+
+    return MPPResponse(
+        mpp_x=mpp_data.mpp_x,
+        mpp_y=mpp_data.mpp_y,
+        objective=mpp_data.objective,
+        source=mpp_data.source,
+    )
 
 
-@router.get("/{slide_id}/info", tags=["visualization"])
+@router.get("/{slide_id}/info", tags=["visualization"], response_model=SlideInfoResponse)
 def get_slide_info(
     background_tasks: BackgroundTasks,
     slide_id: str = Path(
@@ -646,12 +672,9 @@ def get_slide_info(
 
         return metadata
     except openslide.OpenSlideError as e:
-        raise HTTPException(
-            422,
-            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
-        )
+        raise slide_open_error(slide_id, e)
     except RuntimeError as e:
-        raise HTTPException(500, str(e))
+        raise internal_error("get_slide_info", e)
 
 
 @router.get("/{slide_id}/overview", tags=["visualization"])
@@ -691,15 +714,12 @@ def get_overview(
         img_bytes = get_slide_overview_bytes(slide_path)
         return Response(content=img_bytes, media_type="image/jpeg")
     except openslide.OpenSlideError as e:
-        raise HTTPException(
-            422,
-            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
-        )
+        raise slide_open_error(slide_id, e)
     except RuntimeError as e:
-        raise HTTPException(500, str(e))
+        raise internal_error("get_slide_info", e)
 
 
-@router.get("/{slide_id}/dzi.json", tags=["visualization"])
+@router.get("/{slide_id}/dzi.json", tags=["visualization"], response_model=DziMetadataResponse)
 def get_dzi_metadata(
     slide_id: str = Path(
         ...,
@@ -748,12 +768,9 @@ def get_dzi_metadata(
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
     except openslide.OpenSlideError as e:
-        raise HTTPException(
-            422,
-            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
-        )
+        raise slide_open_error(slide_id, e)
     except Exception as e:
-        raise HTTPException(500, f"Error getting DZI metadata: {e}")
+        raise internal_error("get_dzi_metadata", e)
 
 
 @router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
@@ -830,9 +847,6 @@ def get_tile(
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
     except openslide.OpenSlideError as e:
-        raise HTTPException(
-            422,
-            f"Slide detected but cannot be opened (corrupt or incompatible): {e}",
-        )
+        raise slide_open_error(slide_id, e)
     except Exception as e:
-        raise HTTPException(500, f"Error extracting tile: {e}")
+        raise internal_error("get_tile", e)

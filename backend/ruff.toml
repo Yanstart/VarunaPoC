@@ -87,7 +87,7 @@ exclude = [
 "main.py" = ["I001", "F401", "T201"]
 "monitoring.py" = ["I001", "F401", "F841", "TRY203", "ARG001"]
 # Routes - legacy FastAPI routes + ML routes with FastAPI Depends pattern
-"routes/**/*.py" = ["I001", "F401", "RET504", "TRY301", "B008", "UP", "ARG001", "DTZ003", "ERA001"]
+"routes/**/*.py" = ["I001", "F401", "RET504", "TRY301", "B008", "UP", "ARG001", "DTZ003", "ERA001", "EM101"]
 # FHIR - standard resource definitions with long FHIR URLs (ISC001 from Black formatting)
 "fhir/**/*.py" = ["ISC001", "B008", "ARG001"]
 # Quality routes - FastAPI Depends pattern

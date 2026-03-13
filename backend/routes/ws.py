@@ -25,7 +25,7 @@ from auth.schemas import CurrentUser
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["websocket"])
+router = APIRouter(prefix="/ws", tags=["websocket"])
 
 # ---------------------------------------------------------------------------
 # Configuration
