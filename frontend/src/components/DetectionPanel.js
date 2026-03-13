@@ -362,6 +362,25 @@ class DetectionPanel {
             });
         });
 
+        // Hover highlight on detection items
+        const resultsContainer = this.element.querySelector('.detection-panel__results');
+        if (resultsContainer) {
+            resultsContainer.addEventListener('mouseenter', (e) => {
+                const item = e.target.closest('[data-detection-item-index]');
+                if (item) {
+                    const idx = parseInt(item.dataset.detectionItemIndex, 10);
+                    eventBus.emit(Events.DETECTION_HIGHLIGHT, { regionIndex: idx });
+                }
+            }, true);
+
+            resultsContainer.addEventListener('mouseleave', (e) => {
+                const item = e.target.closest('[data-detection-item-index]');
+                if (item) {
+                    eventBus.emit(Events.DETECTION_HIGHLIGHT, { regionIndex: null });
+                }
+            }, true);
+        }
+
         // Feedback buttons (confirm/reject ML prediction)
         this.element.querySelectorAll('.feedback-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -647,6 +666,14 @@ class DetectionPanel {
             // Mark locally anyway for UX feedback
             this.feedbackStatus.set(index, correctionType);
         }
+
+        eventBus.emit(Events.TOAST_SHOW, {
+            type: 'success',
+            message: correctionType === 'confirmed' ? 'Feedback confirmé'
+                : correctionType === 'rejected' ? 'Feedback rejeté'
+                    : 'Correction enregistrée',
+            duration: 2000,
+        });
 
         this._renderPreview();
     }
