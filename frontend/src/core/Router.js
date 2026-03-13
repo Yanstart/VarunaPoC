@@ -450,6 +450,28 @@ export class Router {
             }
         });
 
+        this._state._mlToggleHandler = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            if (e.key === 'm' || e.key === 'M') {
+                this._state._mlOverlaysHidden = !this._state._mlOverlaysHidden;
+                eventBus.emit(Events.ML_OVERLAYS_TOGGLE, { visible: !this._state._mlOverlaysHidden });
+
+                // Show/hide ML hidden badge
+                let badge = document.querySelector('.ml-hidden-badge');
+                if (this._state._mlOverlaysHidden) {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'ml-hidden-badge';
+                        badge.textContent = i18nService.t('ml.overlaysHidden');
+                        document.querySelector('.viewer-area')?.appendChild(badge);
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+            }
+        };
+        document.addEventListener('keydown', this._state._mlToggleHandler);
+
         eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
     }
 
@@ -1375,6 +1397,8 @@ export class Router {
         if (this._state._slideNavPrevUnsub) { this._state._slideNavPrevUnsub(); this._state._slideNavPrevUnsub = null; }
         if (this._state._slideNavNextUnsub) { this._state._slideNavNextUnsub(); this._state._slideNavNextUnsub = null; }
         if (this._state._keyNavHandler) { document.removeEventListener('keydown', this._state._keyNavHandler); this._state._keyNavHandler = null; }
+        if (this._state._mlToggleHandler) { document.removeEventListener('keydown', this._state._mlToggleHandler); this._state._mlToggleHandler = null; }
+        this._state._mlOverlaysHidden = false;
         if (this._state._compareSwitchUnsub) { this._state._compareSwitchUnsub(); this._state._compareSwitchUnsub = null; }
 
         const destroyKeys = [

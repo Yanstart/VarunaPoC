@@ -130,6 +130,14 @@ class AnnotationLayer {
                 this._renderDisagreements(visible ? features : []);
             }),
         );
+        this._unsubscribers.push(
+            eventBus.on(Events.ML_OVERLAYS_TOGGLE, ({ visible }) => {
+                const previews = this.svg?.querySelectorAll('.detection-preview');
+                if (previews) {
+                    previews.forEach(el => { el.style.display = visible ? '' : 'none'; });
+                }
+            }),
+        );
     }
 
     _extractSlideDimensions() {

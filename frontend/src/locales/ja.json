@@ -107,6 +107,7 @@
   "ml.recommended": "推奨",
   "ml.cancelConfirm": "AI分析が進行中です。キャンセルしてスライドを切り替えますか？",
   "ml.qualityWarning": "品質低下 ({score}%) — 結果が信頼できない可能性があります",
+  "ml.overlaysHidden": "ML非表示 (M)",
   "tools.select": "選択 (V)",
   "tools.rectangle": "矩形 (R)",
   "tools.polygon": "ポリゴン (P)",

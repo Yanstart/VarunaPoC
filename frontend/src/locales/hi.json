@@ -107,6 +107,7 @@
   "ml.recommended": "अनुशंसित",
   "ml.cancelConfirm": "AI विश्लेषण जारी है। रद्द करें और स्लाइड बदलें?",
   "ml.qualityWarning": "कम गुणवत्ता ({score}%) — परिणाम अविश्वसनीय हो सकते हैं",
+  "ml.overlaysHidden": "ML छिपा (M)",
   "tools.select": "चयन (V)",
   "tools.rectangle": "आयत (R)",
   "tools.polygon": "बहुभुज (P)",
