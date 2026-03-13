@@ -29,6 +29,7 @@ from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
 from core.interfaces import get_provider
 from rate_limiting import limit, ml_rate
+from schemas.geojson import GeoJSONFeatureCollection
 from services.ml import TagExtractor, TagRouter
 from services.ml.worker import (
     MLWorkerBusyError,
@@ -697,6 +698,7 @@ async def detect_regions_endpoint(
     simplify_tolerance: float = Query(2.0, ge=0.0, description="Douglas-Peucker tolerance"),
     resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution level"),
     prediction_class: str = Query("tissue", description="Target class for heatmap"),
+    region: Optional[str] = Query(None, description="Viewport region x,y,w,h in slide pixels"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -738,6 +740,22 @@ async def detect_regions_endpoint(
             simplify_tolerance=simplify_tolerance,
         )
 
+        # Filter by viewport region if specified
+        if region:
+            try:
+                rx, ry, rw, rh = [float(v) for v in region.split(",")]
+                filtered = [
+                    f
+                    for f in geojson.features
+                    if _centroid_in_region(f.properties.get("centroid", [0, 0]), rx, ry, rw, rh)
+                ]
+                geojson = GeoJSONFeatureCollection(
+                    features=filtered,
+                    metadata={"num_regions": len(filtered)},
+                )
+            except (ValueError, TypeError):
+                pass  # Invalid region format — return unfiltered
+
         return DetectionResponse(
             slide_id=slide_id,
             geojson=geojson,
@@ -766,6 +784,14 @@ async def detect_regions_endpoint(
     except Exception as e:
         logger.error(f"Detection error: {e}", exc_info=True)
         raise _translate_ml_error(e)
+
+
+def _centroid_in_region(centroid: list, rx: float, ry: float, rw: float, rh: float) -> bool:
+    """Check if centroid [x, y] falls within region bbox."""
+    if len(centroid) < 2:
+        return False
+    cx, cy = centroid
+    return rx <= cx <= rx + rw and ry <= cy <= ry + rh
 
 
 def _compute_focus_zones(heatmap, slide_dimensions, threshold, top_n):
