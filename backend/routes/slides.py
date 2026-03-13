@@ -327,10 +327,10 @@ def browse_slides_directory(
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
-        raise internal_error("browse_directory", e)
+        raise internal_error("browse_directory", e)  # noqa: EM101
 
 
-@router.get("/worklist", tags=["navigation"])
+@router.get("/worklist", tags=["navigation"], response_model=WorklistResponse)
 async def get_worklist(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
@@ -436,7 +436,7 @@ async def get_worklist(
     return WorklistResponse(items=items, counts=counts)
 
 
-@router.get("/history", tags=["navigation"])
+@router.get("/history", tags=["navigation"], response_model=HistoryResponse)
 async def get_history(
     limit: int = Query(20, ge=1, le=100, description="Nombre max d'items à retourner"),
     db: AsyncSession = Depends(get_db),
@@ -674,7 +674,7 @@ def get_slide_info(
     except openslide.OpenSlideError as e:
         raise slide_open_error(slide_id, e)
     except RuntimeError as e:
-        raise internal_error("get_slide_info", e)
+        raise internal_error("get_slide_info", e)  # noqa: EM101
 
 
 @router.get("/{slide_id}/overview", tags=["visualization"])
@@ -716,7 +716,7 @@ def get_overview(
     except openslide.OpenSlideError as e:
         raise slide_open_error(slide_id, e)
     except RuntimeError as e:
-        raise internal_error("get_slide_info", e)
+        raise internal_error("get_overview", e)  # noqa: EM101
 
 
 @router.get("/{slide_id}/dzi.json", tags=["visualization"], response_model=DziMetadataResponse)
@@ -770,7 +770,7 @@ def get_dzi_metadata(
     except openslide.OpenSlideError as e:
         raise slide_open_error(slide_id, e)
     except Exception as e:
-        raise internal_error("get_dzi_metadata", e)
+        raise internal_error("get_dzi_metadata", e)  # noqa: EM101
 
 
 @router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
@@ -849,4 +849,4 @@ def get_tile(
     except openslide.OpenSlideError as e:
         raise slide_open_error(slide_id, e)
     except Exception as e:
-        raise internal_error("get_tile", e)
+        raise internal_error("get_tile", e)  # noqa: EM101

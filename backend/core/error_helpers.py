@@ -30,4 +30,5 @@ def slide_not_found(slide_id: str) -> HTTPException:
 def internal_error(context: str, exc: Exception) -> HTTPException:
     """Log the real error server-side, return a generic 500 to the caller."""
     logger.exception("Internal error in %s: %s", context, exc)
-    return HTTPException(500, f"Internal error in {context}")
+    msg = "Internal server error"
+    return HTTPException(500, msg)
