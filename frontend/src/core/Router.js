@@ -43,6 +43,7 @@ import { DriftDashboard } from '../components/DriftDashboard.js';
 import { createWorklistView } from '../components/WorklistView.js';
 import { createRecentCases } from '../components/RecentCases.js';
 import { FocusAssistPanel } from '../components/FocusAssistPanel.js';
+import { SimilarityPanel } from '../components/SimilarityPanel.js';
 import { AutoTagBadge } from '../components/AutoTagBadge.js';
 import { MagnificationBar } from '../components/MagnificationBar.js';
 import { ScaleBar } from '../components/ScaleBar.js';
@@ -644,7 +645,7 @@ export class Router {
 
         const resetTargets = [
             'mlPanel', 'detectionPanel', 'cellCountingPanel',
-            'clusteringPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge',
+            'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge',
         ];
         for (const key of resetTargets) {
             if (this._state[key] && this._state[key].setSlide) {
@@ -1004,6 +1005,10 @@ export class Router {
         // ClusteringPanel in "clustering" tab
         const clusteringPane = tabsContainer.getPane('clustering');
         this._state.clusteringPanel = new ClusteringPanel(clusteringPane, { slideId: slide.id });
+
+        // SimilarityPanel in "similaire" tab
+        const similairePane = tabsContainer.getPane('similaire');
+        this._state.similarityPanel = new SimilarityPanel(similairePane, { slideId: slide.id });
     }
 
     _initInfoPanelWidgets(infoPanel) {
@@ -1240,7 +1245,8 @@ export class Router {
         }
 
         const destroyKeys = [
-            'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'clusteringOverlay',
+            'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'similarityPanel',
+            'clusteringOverlay',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',

@@ -142,6 +142,7 @@
   "tabs.detection": "Détection",
   "tabs.counting": "Comptage",
   "tabs.clustering": "Clustering",
+  "tabs.similarity": "Similaire",
   "sync.label": "Synchroniser",
   "sync.on": "Sync : On",
   "sync.off": "Sync : Off",
