@@ -120,10 +120,19 @@ class AnnotationStore {
             });
             this.annotations.set(annotation.id, annotation);
             eventBus.emit(Events.ANNOTATION_CREATED, { annotation });
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'success',
+                message: 'Annotation sauvegard\u00e9e',
+                duration: 2000,
+            });
             this.loadStats();
             return annotation;
         } catch (err) {
             console.error('[AnnotationStore] Failed to create annotation:', err);
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'error',
+                message: 'Sauvegarde de l\u2019annotation \u00e9chou\u00e9e. V\u00e9rifiez la connexion.',
+            });
             return null;
         }
     }
@@ -140,6 +149,10 @@ class AnnotationStore {
             return annotation;
         } catch (err) {
             console.error('[AnnotationStore] Failed to update annotation:', err);
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'error',
+                message: 'Mise \u00e0 jour de l\u2019annotation \u00e9chou\u00e9e.',
+            });
             return null;
         }
     }
@@ -154,10 +167,19 @@ class AnnotationStore {
                 this.selectedId = null;
             }
             eventBus.emit(Events.ANNOTATION_DELETED, { annotationId });
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'success',
+                message: 'Annotation supprim\u00e9e',
+                duration: 2000,
+            });
             this.loadStats();
             return true;
         } catch (err) {
             console.error('[AnnotationStore] Failed to delete annotation:', err);
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'error',
+                message: 'Suppression de l\u2019annotation \u00e9chou\u00e9e.',
+            });
             return false;
         }
     }
