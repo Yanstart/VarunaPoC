@@ -662,7 +662,9 @@ class ViewerPanel {
         // Do NOT emit it again here - double emission causes MLPanel.setSlide() to be called
         // twice, resetting prediction state and making heatmap non-reactivable.
 
-        // Fetch MPP and initialize scale bar + measurement tools
+        // Fire-and-forget: MPP fetch is non-blocking — scale bar/ruler are
+        // optional enhancements that should not delay slide display. Errors are
+        // caught internally by _initMeasurementTools.
         this._initMeasurementTools(slideId);
 
         // Auto-tag: fetch and display slide tags
