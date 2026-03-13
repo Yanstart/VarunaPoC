@@ -94,7 +94,7 @@ export class QualityBadge {
 
         try {
             const data = await apiService.getSlideQuality(slideId);
-            if (this._destroyed) return;
+            if (this._destroyed || this.slideId !== slideId) return;
 
             this._data = data;
             this._render(data);
