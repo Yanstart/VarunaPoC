@@ -85,6 +85,17 @@ class ClusteringOverlay {
             }),
         );
 
+        // Clear overlay on clustering error (prevents stuck overlay after 429)
+        this._unsubscribers.push(
+            eventBus.on(Events.CLUSTERING_ERROR, () => {
+                this.clusters = [];
+                this.tileAssignments = [];
+                this.visibleClusters.clear();
+                this._clusterColors = {};
+                this._render();
+            }),
+        );
+
         // Listen for viewport changes to update overlay position
         if (this.viewer) {
             this.viewer.addHandler('viewport-change', this._boundRender);
