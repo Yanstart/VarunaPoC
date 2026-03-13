@@ -512,11 +512,20 @@ class DetectionPanel {
         eventBus.emit(Events.DETECTION_START, { slideId: this.slideId });
 
         try {
-            this.detectionResult = await apiService.detect(this.slideId, {
+            const detectParams = {
                 threshold: this.threshold,
                 min_area: this.minArea,
                 prediction_class: this.predictionClass,
-            });
+            };
+
+            if (this.analysisScope === 'viewport' && this._viewerInstance) {
+                const bounds = this._viewerInstance.getViewportPixelBounds();
+                if (bounds) {
+                    detectParams.region = `${bounds.x},${bounds.y},${bounds.width},${bounds.height}`;
+                }
+            }
+
+            this.detectionResult = await apiService.detect(this.slideId, detectParams);
 
             // Show preview on annotation layer
             const features = this.detectionResult.geojson?.features || [];

@@ -710,6 +710,7 @@ class ApiService {
         if (params.simplify_tolerance !== undefined) {queryParams.set('simplify_tolerance', params.simplify_tolerance);}
         if (params.resolution_level !== undefined) {queryParams.set('resolution_level', params.resolution_level);}
         if (params.prediction_class) {queryParams.set('prediction_class', params.prediction_class);}
+        if (params.region) queryParams.set('region', params.region);
 
         const qs = queryParams.toString();
         const url = `/api/ml/detect/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`;
