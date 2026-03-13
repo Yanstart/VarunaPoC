@@ -142,6 +142,7 @@
   "tabs.detection": "检测",
   "tabs.counting": "计数",
   "tabs.clustering": "聚类",
+  "tabs.similarity": "相似",
   "sync.label": "同步",
   "sync.on": "同步: 开",
   "sync.off": "同步: 关",

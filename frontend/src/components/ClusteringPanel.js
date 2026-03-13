@@ -341,6 +341,7 @@ class ClusteringPanel {
             });
         } catch (err) {
             console.error('[ClusteringPanel] Clustering failed:', err);
+            this._visibleClusters.clear();
             eventBus.emit(Events.CLUSTERING_ERROR, { error: err.message });
             this._renderError(userFriendlyMLError(err));
         } finally {

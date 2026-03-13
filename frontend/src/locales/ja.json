@@ -142,6 +142,7 @@
   "tabs.detection": "検出",
   "tabs.counting": "カウント",
   "tabs.clustering": "クラスタリング",
+  "tabs.similarity": "類似",
   "sync.label": "同期",
   "sync.on": "同期: オン",
   "sync.off": "同期: オフ",

@@ -51,6 +51,11 @@ const TAB_DEFS = [
         i18nKey: 'tabs.clustering',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></svg>',
     },
+    {
+        id: 'similaire',
+        i18nKey: 'tabs.similarity',
+        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="8" height="10" rx="1"/><rect x="14" y="3" width="8" height="10" rx="1"/><path d="M6 17v2M18 17v2M12 14v5"/></svg>',
+    },
 ];
 
 class MLTabsContainer {

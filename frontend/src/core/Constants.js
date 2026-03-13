@@ -87,6 +87,8 @@ export const Events = Object.freeze({
     FOLDER_CHANGED: 'ui:folderChanged',
     /** @payload {{ page: Pages }} */
     PAGE_CHANGED: 'ui:pageChanged',
+    /** @payload {{ type: 'error'|'warning'|'success', message: string, duration?: number }} */
+    TOAST_SHOW: 'ui:toastShow',
 
     // -- ML --
     /** @payload {{ viewerId: string, slideId: string, modelId: string }} */
