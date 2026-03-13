@@ -11,6 +11,8 @@
   "nav.back": "返回",
   "nav.myCases": "我的病例",
   "nav.compareMode": "对比模式",
+  "nav.prevSlide": "上一张",
+  "nav.nextSlide": "下一张",
   "slide.loading": "正在加载切片...",
   "slide.loaded": "切片已加载",
   "slide.error": "切片加载错误",

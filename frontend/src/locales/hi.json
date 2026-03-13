@@ -11,6 +11,8 @@
   "nav.back": "वापस",
   "nav.myCases": "मेरे केस",
   "nav.compareMode": "तुलना मोड",
+  "nav.prevSlide": "पिछली स्लाइड",
+  "nav.nextSlide": "अगली स्लाइड",
   "slide.loading": "स्लाइड लोड हो रही है...",
   "slide.loaded": "स्लाइड लोड हो गई",
   "slide.error": "स्लाइड लोडिंग त्रुटि",

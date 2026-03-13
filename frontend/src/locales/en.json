@@ -11,6 +11,8 @@
   "nav.back": "Back",
   "nav.myCases": "My cases",
   "nav.compareMode": "Compare mode",
+  "nav.prevSlide": "Previous slide",
+  "nav.nextSlide": "Next slide",
   "slide.loading": "Loading slide...",
   "slide.loaded": "Slide loaded",
   "slide.error": "Slide loading error",

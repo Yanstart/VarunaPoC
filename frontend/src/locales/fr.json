@@ -11,6 +11,8 @@
   "nav.back": "Retour",
   "nav.myCases": "Mes cas",
   "nav.compareMode": "Mode comparaison",
+  "nav.prevSlide": "Lame précédente",
+  "nav.nextSlide": "Lame suivante",
   "slide.loading": "Chargement de la lame...",
   "slide.loaded": "Lame chargee",
   "slide.error": "Erreur de chargement de la lame",
