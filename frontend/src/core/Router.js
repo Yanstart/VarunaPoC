@@ -444,14 +444,18 @@ export class Router {
         };
         document.addEventListener('keydown', this._state._keyNavHandler);
 
-        this._state._compareSwitchUnsub = eventBus.on(Events.CASE_SLIDE_SWITCH, ({ compare }) => {
+        this._state._compareSwitchUnsub = eventBus.on(Events.CASE_SLIDE_SWITCH, ({ slideId, compare }) => {
             if (compare) {
                 this.showComparePage(this._state.selectedSlide);
+            } else if (slideId) {
+                const slides = this._state.caseSlides || [];
+                const target = slides.find(s => s.id === slideId) || { id: slideId };
+                this._handleSlideSwitch(target);
             }
         });
 
         this._state._mlToggleHandler = (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
             if (e.key === 'm' || e.key === 'M') {
                 this._state._mlOverlaysHidden = !this._state._mlOverlaysHidden;
                 eventBus.emit(Events.ML_OVERLAYS_TOGGLE, { visible: !this._state._mlOverlaysHidden });
@@ -1398,6 +1402,8 @@ export class Router {
         if (this._state._slideNavNextUnsub) { this._state._slideNavNextUnsub(); this._state._slideNavNextUnsub = null; }
         if (this._state._keyNavHandler) { document.removeEventListener('keydown', this._state._keyNavHandler); this._state._keyNavHandler = null; }
         if (this._state._mlToggleHandler) { document.removeEventListener('keydown', this._state._mlToggleHandler); this._state._mlToggleHandler = null; }
+        const mlBadge = document.querySelector('.ml-hidden-badge');
+        if (mlBadge) mlBadge.remove();
         this._state._mlOverlaysHidden = false;
         if (this._state._compareSwitchUnsub) { this._state._compareSwitchUnsub(); this._state._compareSwitchUnsub = null; }
 

@@ -415,18 +415,18 @@ class CellCountingPanel {
         if (!this.result) return;
         const r = this.result;
 
-        const headers = ['metric', 'value'];
+        const headers = ['field', 'value', 'detail'];
         const rows = [
-            ['total_cells', r.total_cells],
-            ['positive', r.positive],
-            ['negative', r.negative],
-            ['ratio', r.ratio],
-            ['percentage', r.percentage],
+            ['total_cells', r.total_cells, ''],
+            ['positive', r.positive, ''],
+            ['negative', r.negative, ''],
+            ['ratio', r.ratio, ''],
+            ['percentage', r.percentage, ''],
         ];
 
         // Add cell positions if available
         if (r.cells && r.cells.length > 0) {
-            rows.push(['', '']);  // Empty separator
+            rows.push(['', '', '']);
             rows.push(['cell_x', 'cell_y', 'positive']);
             for (const cell of r.cells) {
                 rows.push([cell.x, cell.y, cell.positive]);

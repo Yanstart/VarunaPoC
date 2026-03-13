@@ -106,6 +106,34 @@
     letter-spacing: 0.3px;
 }
 
+/* Badges and compare button */
+.case-sidebar__badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 8px;
+    background: var(--bg-secondary, #e0e0e0);
+    color: var(--text-secondary, #888);
+}
+.case-sidebar__badge--active {
+    background: var(--accent-color, #4a90d9);
+    color: #fff;
+}
+.case-sidebar__compare-btn {
+    margin-left: 0.25rem;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    background: var(--bg-secondary, #f5f5f5);
+    color: var(--text-secondary, #666);
+    flex-shrink: 0;
+}
+.case-sidebar__compare-btn:hover {
+    background: var(--bg-hover, #eee);
+}
+
 /* Viewer layout: viewer-body is now a direct child in the template */
 .viewer-body {
     display: flex;

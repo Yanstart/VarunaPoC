@@ -123,6 +123,8 @@ export class MetadataPanel {
                 message: i18nService.t('metadata.copied'),
                 duration: 2000,
             });
+        }).catch(() => {
+            // Clipboard API not available (non-HTTPS or unsupported)
         });
     }
 

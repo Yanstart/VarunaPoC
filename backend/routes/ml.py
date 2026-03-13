@@ -754,7 +754,7 @@ async def detect_regions_endpoint(
                     metadata={"num_regions": len(filtered)},
                 )
             except (ValueError, TypeError):
-                pass  # Invalid region format — return unfiltered
+                logger.warning("Invalid region format: %s", region)
 
         return DetectionResponse(
             slide_id=slide_id,

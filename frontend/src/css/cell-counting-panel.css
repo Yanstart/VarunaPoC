@@ -219,3 +219,9 @@
 .cell-counting-panel__error p {
     margin: 0 0 8px 0;
 }
+
+/* Export button modifier */
+.cell-counting-panel__btn--export {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+}

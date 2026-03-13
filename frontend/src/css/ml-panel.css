@@ -476,3 +476,14 @@
 .ml-panel__model-select:disabled {
     opacity: 0.5;
 }
+
+/* Quality warning banner */
+.ml-panel__quality-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
