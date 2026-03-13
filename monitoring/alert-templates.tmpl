@@ -1,0 +1,27 @@
+{{ define "email.default.subject" }}[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join " " }}{{ end }}
+
+{{ define "email.default.html" }}
+<h2>{{ .Status | toUpper }}: {{ .GroupLabels.SortedPairs.Values | join " " }}</h2>
+<table>
+{{ range .Alerts }}
+<tr>
+  <td><b>{{ .Labels.alertname }}</b></td>
+  <td>{{ .Annotations.summary }}</td>
+</tr>
+<tr>
+  <td>Severity</td>
+  <td>{{ .Labels.severity }}</td>
+</tr>
+<tr>
+  <td>Since</td>
+  <td>{{ .StartsAt.Format "2006-01-02 15:04:05" }}</td>
+</tr>
+{{ if .Annotations.runbook_url }}
+<tr>
+  <td>Runbook</td>
+  <td><a href="{{ .Annotations.runbook_url }}">{{ .Annotations.runbook_url }}</a></td>
+</tr>
+{{ end }}
+{{ end }}
+</table>
+{{ end }}

@@ -66,6 +66,19 @@ def setup_logging():
 
     root_logger.addHandler(handler)
 
+    # Optional file handler — activated when LOG_FILE env var is set
+    log_file = os.getenv("LOG_FILE")
+    if log_file:
+        from logging.handlers import RotatingFileHandler
+
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=100_000_000,
+            backupCount=5,
+        )
+        file_handler.setFormatter(handler.formatter)
+        root_logger.addHandler(file_handler)
+
     # Quiet noisy libraries
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("watchfiles").setLevel(logging.WARNING)

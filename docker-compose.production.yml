@@ -93,6 +93,7 @@ services:
     networks:
       - varuna-production-network
     restart: unless-stopped
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-varuna} -d ${POSTGRES_DB:-varuna}"]
       interval: 10s
@@ -159,6 +160,7 @@ services:
     networks:
       - varuna-production-network
     restart: unless-stopped
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -210,6 +212,7 @@ services:
     networks:
       - varuna-production-network
     restart: unless-stopped
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 10s
@@ -391,6 +394,9 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
+    depends_on:
+      alertmanager:
+        condition: service_healthy
     networks:
       - varuna-production-network
       - varuna-monitoring-network
@@ -429,7 +435,8 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
     networks:
       - varuna-production-network
       - varuna-monitoring-network
@@ -488,6 +495,7 @@ services:
       - '--storage.path=/alertmanager'
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/alert-templates.tmpl:/etc/alertmanager/alert-templates.tmpl:ro
       - alertmanager-data:/alertmanager
     ports:
       - "127.0.0.1:9093:9093"

@@ -89,7 +89,14 @@ def _get_redis():
     try:
         import redis  # type: ignore[import-untyped]
 
-        _redis_client = redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=2)
+        _redis_client = redis.from_url(
+            redis_url,
+            decode_responses=True,
+            max_connections=20,
+            socket_timeout=5,
+            socket_connect_timeout=5,
+            retry_on_timeout=True,
+        )
         # Verify connectivity eagerly so we fall back fast if Redis is down
         _redis_client.ping()
         logger.info("Tile audit dedup: using Redis at %s", redis_url)

@@ -29,6 +29,8 @@ engine = create_async_engine(
     echo=os.getenv("DB_ECHO", "false").lower() == "true",
     pool_size=5,
     max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=3600,
 )
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
