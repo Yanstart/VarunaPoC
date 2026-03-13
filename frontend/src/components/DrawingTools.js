@@ -148,7 +148,7 @@ class DrawingTools {
             btn.setAttribute('aria-label', getToolLabels()[tool]);
             btn.setAttribute('aria-pressed', String(tool === this.activeTool));
             // TOOL_ICONS is a static constant defined in this module, not user input — safe static SVG
-            btn.innerHTML = TOOL_ICONS[tool]; // eslint-disable-line -- static SVG constant, not user input
+            btn.innerHTML = TOOL_ICONS[tool];
             btn.addEventListener('click', () => this._setTool(tool));
             this.element.appendChild(btn);
         }
