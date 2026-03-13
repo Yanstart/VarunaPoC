@@ -789,6 +789,10 @@ class DrawingTools {
     }
 
     _finishRuler(end) {
+        // Rulers are ephemeral measurements drawn on the SVG preview group.
+        // They persist visually until the next drawing action clears the preview,
+        // but are NOT saved as annotations. This is intentional — rulers are a
+        // quick-measure tool, not persistent geometry.
         this.isDrawing = false;
         this._clearPreview();
 

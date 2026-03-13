@@ -501,32 +501,9 @@ def resolve_slide_by_name(
 
 def _resolve_mpp_from_properties(props: dict) -> tuple[float, float, str] | None:
     """Try to resolve MPP from slide properties using vendor-specific keys."""
-    # Aperio
-    aperio_mpp = props.get("aperio.MPP")
-    if aperio_mpp:
-        v = float(aperio_mpp)
-        return (v, v, "aperio")
-    # Hamamatsu
-    hama_lens = props.get("hamamatsu.SourceLens")
-    if hama_lens:
-        mag = float(hama_lens)
-        if mag > 0:
-            v = 10.0 / mag
-            return (v, v, "hamamatsu")
-    # TIFF resolution tags
-    tiff_xres = props.get("tiff.XResolution")
-    tiff_unit = props.get("tiff.ResolutionUnit")
-    if tiff_xres:
-        try:
-            xres = float(tiff_xres)
-            if xres > 0:
-                if tiff_unit in {"centimeter", "3"}:
-                    return (10000.0 / xres, 10000.0 / xres, "tiff")
-                if tiff_unit in {"inch", "2"}:
-                    return (25400.0 / xres, 25400.0 / xres, "tiff")
-        except (ValueError, ZeroDivisionError):
-            pass
-    return None
+    from services.slide_utils import resolve_mpp_from_properties
+
+    return resolve_mpp_from_properties(props)
 
 
 @router.get("/{slide_id}/mpp", tags=["visualization"], response_model=MPPResponse)

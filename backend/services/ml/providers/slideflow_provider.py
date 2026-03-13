@@ -476,7 +476,7 @@ class SlideflowProvider:
         )
         return [best_mag]
 
-    def _open_wsi(self, slide_path: str, tile_size: int = 224) -> "sf.WSI":  # noqa: PLR0915
+    def _open_wsi(self, slide_path: str, tile_size: int = 224) -> "sf.WSI":
         """
         Open a WSI with automatic magnification detection.
 
@@ -516,34 +516,13 @@ class SlideflowProvider:
             props = slide.properties
             mpp = props.get("openslide.mpp-x")
 
-            # Fallback: vendor-specific MPP keys
+            # Fallback: vendor-specific MPP keys (shared utility)
             if not mpp:
-                mpp = props.get("aperio.MPP")
-            if not mpp:
-                # Hamamatsu: derive MPP from objective lens magnification
-                source_lens = props.get("hamamatsu.SourceLens")
-                if source_lens:
-                    try:
-                        lens_mag = float(source_lens)
-                        if lens_mag > 0:
-                            # Standard relation: 10/mpp ~ magnification
-                            mpp = str(10.0 / lens_mag)
-                    except (ValueError, ZeroDivisionError):
-                        pass
-            if not mpp:
-                # TIFF: XResolution in pixels per cm → convert to microns per pixel
-                x_res = props.get("tiff.XResolution")
-                res_unit = props.get("tiff.ResolutionUnit")
-                if x_res:
-                    try:
-                        x_res_val = float(x_res)
-                        if x_res_val > 0:
-                            if res_unit in {"centimeter", "3"}:
-                                mpp = str(10000.0 / x_res_val)
-                            elif res_unit in {"inch", "2"}:
-                                mpp = str(25400.0 / x_res_val)
-                    except (ValueError, ZeroDivisionError):
-                        pass
+                from services.slide_utils import resolve_mpp_from_properties
+
+                vendor_result = resolve_mpp_from_properties(dict(props))
+                if vendor_result:
+                    mpp = str(vendor_result[0])
 
             slide.close()
             if mpp:
