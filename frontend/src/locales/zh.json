@@ -164,5 +164,6 @@
   "detection.feedbackConfirmed": "反馈已确认",
   "detection.feedbackRejected": "反馈已拒绝",
   "detection.correctionSaved": "修正已保存",
-  "detection.feedbackError": "反馈提交失败"
+  "detection.feedbackError": "反馈提交失败",
+  "api.retryIn": "ML工作器忙碌，{seconds}秒后重试..."
 }

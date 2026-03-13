@@ -164,5 +164,6 @@
   "detection.feedbackConfirmed": "Feedback confirmed",
   "detection.feedbackRejected": "Feedback rejected",
   "detection.correctionSaved": "Correction saved",
-  "detection.feedbackError": "Feedback submission failed"
+  "detection.feedbackError": "Feedback submission failed",
+  "api.retryIn": "ML worker busy, retrying in {seconds}s..."
 }

@@ -164,5 +164,6 @@
   "detection.feedbackConfirmed": "फीडबैक पुष्टि",
   "detection.feedbackRejected": "फीडबैक अस्वीकृत",
   "detection.correctionSaved": "सुधार सहेजा गया",
-  "detection.feedbackError": "फीडबैक सबमिशन विफल"
+  "detection.feedbackError": "फीडबैक सबमिशन विफल",
+  "api.retryIn": "ML वर्कर व्यस्त, {seconds}s में पुनः प्रयास..."
 }

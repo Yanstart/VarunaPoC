@@ -12,8 +12,10 @@
  * const info = await api.getSlideInfo('abc123');
  */
 
-import { API } from '../core/Constants.js';
+import { API, Events } from '../core/Constants.js';
+import { eventBus } from '../core/EventBus.js';
 import { authService } from './AuthService.js';
+import { i18nService } from './I18nService.js';
 
 /**
  * Singleton instance
@@ -150,7 +152,9 @@ class ApiService {
             const headers = { 'Accept': 'application/json' };
             this._injectAuthHeader(headers);
 
-            const response = await fetch(url, { method: 'GET', headers });
+            const response = await this._retryableFetch(
+                () => fetch(url, { method: 'GET', headers }), url,
+            );
 
             if (response.status === 401) {
                 // Try token refresh once
@@ -205,11 +209,9 @@ class ApiService {
             };
             this._injectAuthHeader(headers);
 
-            const response = await fetch(url, {
-                method,
-                headers,
-                body: JSON.stringify(body),
-            });
+            const response = await this._retryableFetch(
+                () => fetch(url, { method, headers, body: JSON.stringify(body) }), url,
+            );
 
             if (response.status === 401) {
                 const refreshed = await authService.refreshTokenSilently();
@@ -245,6 +247,41 @@ class ApiService {
                 { originalError: error },
             );
         }
+    }
+
+    /**
+     * Retry a fetch call with exponential backoff for ML endpoints.
+     * Retries on 429/503/504 responses when the URL contains '/ml/'.
+     * @param {Function} fetchFn - Function that returns a fetch Promise
+     * @param {string} url - Request URL (used to check if ML endpoint)
+     * @returns {Promise<Response>} The fetch response
+     * @private
+     */
+    async _retryableFetch(fetchFn, url) {
+        const MAX_RETRIES = 3;
+        const BACKOFF = [1, 2, 4];
+        const RETRYABLE = new Set([429, 503, 504]);
+
+        let response = await fetchFn();
+
+        if (!url.includes('/ml/') || !RETRYABLE.has(response.status)) {
+            return response;
+        }
+
+        for (let i = 0; i < MAX_RETRIES; i++) {
+            const seconds = BACKOFF[i];
+            eventBus.emit(Events.TOAST_SHOW, {
+                message: i18nService.t('api.retryIn', { seconds }),
+                type: 'warning',
+            });
+            await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+            response = await fetchFn();
+            if (!RETRYABLE.has(response.status)) {
+                return response;
+            }
+        }
+
+        return response;
     }
 
     /**

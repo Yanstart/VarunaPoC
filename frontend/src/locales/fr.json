@@ -164,5 +164,6 @@
   "detection.feedbackConfirmed": "Feedback confirmé",
   "detection.feedbackRejected": "Feedback rejeté",
   "detection.correctionSaved": "Correction enregistrée",
-  "detection.feedbackError": "Envoi du feedback échoué"
+  "detection.feedbackError": "Envoi du feedback échoué",
+  "api.retryIn": "Worker ML occupe, nouvel essai dans {seconds}s..."
 }
