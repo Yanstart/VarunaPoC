@@ -11,6 +11,8 @@
   "nav.back": "Retour",
   "nav.myCases": "Mes cas",
   "nav.compareMode": "Mode comparaison",
+  "nav.prevSlide": "Lame précédente",
+  "nav.nextSlide": "Lame suivante",
   "slide.loading": "Chargement de la lame...",
   "slide.loaded": "Lame chargee",
   "slide.error": "Erreur de chargement de la lame",
@@ -153,5 +155,14 @@
   "sync.modeZoom": "Zoom",
   "layout.single": "Vue unique",
   "layout.sideBySide": "Côte à côte",
-  "layout.grid2x2": "Grille 2×2"
+  "layout.grid2x2": "Grille 2×2",
+  "legend.low": "Faible",
+  "legend.high": "Élevé",
+  "legend.attention": "Attention",
+  "counting.showMarkers": "Afficher les marqueurs",
+  "counting.opacity": "Opacité : ",
+  "detection.feedbackConfirmed": "Feedback confirmé",
+  "detection.feedbackRejected": "Feedback rejeté",
+  "detection.correctionSaved": "Correction enregistrée",
+  "detection.feedbackError": "Envoi du feedback échoué"
 }

@@ -12,7 +12,7 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ class CellCountResult:
     percentage: str
     processing_time_ms: float
     metadata: Optional[Dict] = field(default_factory=dict)
+    cells: Optional[List[Dict]] = None
 
 
 class CellCountingService:
@@ -37,6 +38,8 @@ class CellCountingService:
         provider=None,
         stain: str = "Ki67",
         region=None,
+        include_positions: bool = False,
+        slide_dimensions: Optional[tuple] = None,
     ) -> CellCountResult:
         """
         Count cells in a slide.
@@ -44,13 +47,25 @@ class CellCountingService:
         If provider has a loaded model capable of generating heatmaps,
         uses real contour-based counting. Otherwise falls back to
         deterministic mock mode.
+
+        Args:
+            include_positions: If True, return centroid coordinates per cell.
+            slide_dimensions: (width, height) of the slide in pixels,
+                required when include_positions is True.
         """
         start = time.time()
 
         # Try real mode if provider is available and loaded
         if provider and getattr(provider, "model_loaded", False):
             try:
-                result = self._count_real(slide_path, provider, stain, region)
+                result = self._count_real(
+                    slide_path,
+                    provider,
+                    stain,
+                    region,
+                    include_positions=include_positions,
+                    slide_dimensions=slide_dimensions,
+                )
                 result.processing_time_ms = (time.time() - start) * 1000
                 return result
             except Exception as e:
@@ -92,6 +107,8 @@ class CellCountingService:
         provider,
         stain: str,
         region=None,
+        include_positions: bool = False,
+        slide_dimensions: Optional[tuple] = None,
     ) -> CellCountResult:
         """Real counting via heatmap contour extraction."""
         import numpy as np
@@ -122,13 +139,29 @@ class CellCountingService:
             )
 
         # Classify positive/negative via mean intensity in each contour
+        heatmap_h, heatmap_w = heatmap.shape[:2]
         total = len(contours)
         positive = 0
         intensity_threshold = 0.5
+        cells_list = [] if include_positions and slide_dimensions else None
 
-        for _contour, confidence in contours:
-            if confidence >= intensity_threshold:
+        for contour, confidence in contours:
+            is_positive = confidence >= intensity_threshold
+            if is_positive:
                 positive += 1
+
+            if cells_list is not None:
+                cx = float(np.mean(contour[:, 0]))
+                cy = float(np.mean(contour[:, 1]))
+                scale_x = slide_dimensions[0] / heatmap_w
+                scale_y = slide_dimensions[1] / heatmap_h
+                cells_list.append(
+                    {
+                        "x": round(cx * scale_x),
+                        "y": round(cy * scale_y),
+                        "positive": is_positive,
+                    }
+                )
 
         negative = total - positive
         ratio = round(positive / total, 4) if total > 0 else 0.0
@@ -142,4 +175,5 @@ class CellCountingService:
             percentage=percentage,
             processing_time_ms=0,
             metadata={"mode": "real", "stain": stain, "contours_found": total},
+            cells=cells_list,
         )

@@ -400,7 +400,7 @@ class FocusAssistPanel {
         });
 
         // Emit event for viewer navigation
-        eventBus.emit('focus:zone-selected', {
+        eventBus.emit(Events.FOCUS_ZONE_NAVIGATE, {
             slideId: this.slideId,
             zone: zone,
             bbox: zone.bbox,

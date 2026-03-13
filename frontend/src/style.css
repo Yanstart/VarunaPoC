@@ -22,6 +22,8 @@
 /* 3. Component styles - ML Panel */
 @import './css/ml-panel.css';
 @import './css/ml-tabs.css';
+@import './css/ml-progress.css';
+@import './css/heatmap-legend.css';
 @import './css/magnification-bar.css';
 
 /* 4. Layout styles - Multi-viewer layouts */
@@ -51,3 +53,6 @@
 
 /* 12. Toast notification styles (UX Wave A) */
 @import './css/toast.css';
+
+/* 13. Cell marker overlay styles (UX Wave B) */
+@import './css/cell-markers.css';

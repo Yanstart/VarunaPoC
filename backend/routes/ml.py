@@ -323,6 +323,7 @@ class CountingResponse(BaseModel):
     ratio: float
     percentage: str
     processing_time_ms: float
+    cells: Optional[List[Dict[str, Any]]] = None
 
 
 class ClusterInfoModel(BaseModel):
@@ -962,6 +963,7 @@ async def measure_slide(
 async def count_cells(
     slide_id: str,
     request: CountRequest = CountRequest(),
+    include_positions: bool = Query(False, description="Return cell centroid positions"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -969,6 +971,9 @@ async def count_cells(
 
     Compte les cellules positives et négatives dans une lame ou région.
     Retourne le ratio et le pourcentage pour l'index Ki-67.
+
+    When include_positions=true, also returns cell centroid coordinates
+    in slide pixel space (requires openslide for dimension lookup).
 
     Used by frontend CellCountingPanel (Wave 4).
     """
@@ -978,6 +983,16 @@ async def count_cells(
             raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
         _check_slide_format(slide_path, slide_id)
 
+        slide_dims = None
+        if include_positions:
+            try:
+                import openslide
+
+                with openslide.OpenSlide(str(slide_path)) as osr:
+                    slide_dims = osr.dimensions
+            except Exception as exc:
+                logger.warning("Could not read slide dimensions for cell positions: %s", exc)
+
         worker = get_ml_worker()
         region_data = request.region.model_dump() if request.region else None
         result = await worker.submit(
@@ -985,6 +1000,8 @@ async def count_cells(
             slide_path,
             stain=request.stain,
             region=region_data,
+            include_positions=include_positions,
+            slide_dimensions=slide_dims,
         )
 
         return CountingResponse(
@@ -994,6 +1011,7 @@ async def count_cells(
             ratio=result.ratio,
             percentage=result.percentage,
             processing_time_ms=result.processing_time_ms,
+            cells=result.cells,
         )
 
     except HTTPException:

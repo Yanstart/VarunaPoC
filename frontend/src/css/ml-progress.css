@@ -1,0 +1,58 @@
+/* MLProgressBar — thin indeterminate progress bar for ML operations */
+
+.ml-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 300;
+    display: none;
+    pointer-events: none;
+}
+
+.ml-progress-bar--active {
+    display: block;
+}
+
+.ml-progress-bar--done {
+    display: block;
+}
+
+.ml-progress-bar__track {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(
+        90deg,
+        var(--color-primary, #3b82f6) 0%,
+        #60a5fa 50%,
+        var(--color-primary, #3b82f6) 100%
+    );
+    background-size: 200% 100%;
+    animation: ml-progress-shimmer 1.5s ease-in-out infinite;
+}
+
+.ml-progress-bar--done .ml-progress-bar__track {
+    background: var(--color-success, #22c55e);
+    background-size: 100% 100%;
+    animation: none;
+}
+
+.ml-progress-bar__label {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+    color: var(--color-text-secondary, #94a3b8);
+    background: var(--color-bg-elevated, #1e293b);
+    padding: 2px 8px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+@keyframes ml-progress-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

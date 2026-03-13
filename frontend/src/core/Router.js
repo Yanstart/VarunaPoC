@@ -48,6 +48,9 @@ import { AutoTagBadge } from '../components/AutoTagBadge.js';
 import { MagnificationBar } from '../components/MagnificationBar.js';
 import { ScaleBar } from '../components/ScaleBar.js';
 import { MLTabsContainer } from '../components/MLTabsContainer.js';
+import { MLProgressBar } from '../components/MLProgressBar.js';
+import { HeatmapLegend } from '../components/HeatmapLegend.js';
+import { CellMarkerOverlay } from '../components/CellMarkerOverlay.js';
 import { getToastManager } from '../components/ToastManager.js';
 
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
@@ -284,6 +287,8 @@ export class Router {
         viewerDiv.className = 'viewer';
         const mlPanelContainer = document.createElement('div');
         mlPanelContainer.id = 'ml-panel-container';
+        this._state.mlProgressBar = new MLProgressBar(viewerArea);
+        this._state.heatmapLegend = new HeatmapLegend(viewerArea);
         viewerArea.appendChild(viewerDiv);
         viewerArea.appendChild(mlPanelContainer);
 
@@ -355,6 +360,7 @@ export class Router {
         // Clustering Overlay (canvas on OSD viewer)
         if (viewerInstance) {
             this._state.clusteringOverlay = new ClusteringOverlay(viewerInstance);
+            this._state.cellMarkerOverlay = new CellMarkerOverlay(viewerInstance);
         }
 
         // Magnification Bar (floating badge in viewer area)
@@ -395,6 +401,47 @@ export class Router {
 
         this._applyRoleVisibility();
         await this._initCaseSidebar(slide);
+
+        // Focus zone navigation — pan+zoom viewer to selected zone
+        this._state._focusNavUnsub = eventBus.on(Events.FOCUS_ZONE_NAVIGATE, ({ bbox }) => {
+            const vi = getLegacyViewer();
+            if (!vi || !vi._osdViewer || !bbox || bbox.length !== 4) { return; }
+
+            const tiledImage = vi._osdViewer.world.getItemAt(0);
+            if (!tiledImage) { return; }
+
+            const [xMin, yMin, xMax, yMax] = bbox;
+            const padding = 0.2;
+            const w = xMax - xMin;
+            const h = yMax - yMin;
+            const padW = w * padding;
+            const padH = h * padding;
+
+            // Convert padded bbox corners from slide pixels to OSD viewport coords
+            const topLeft = tiledImage.imageToViewportCoordinates(xMin - padW, yMin - padH);
+            const bottomRight = tiledImage.imageToViewportCoordinates(xMax + padW, yMax + padH);
+
+            vi.setViewport({
+                x: topLeft.x,
+                y: topLeft.y,
+                width: bottomRight.x - topLeft.x,
+                height: bottomRight.y - topLeft.y,
+            });
+        });
+
+        this._state._slideNavPrevUnsub = eventBus.on(Events.SLIDE_NAV_PREV, () => {
+            this._navigateSlide(-1);
+        });
+        this._state._slideNavNextUnsub = eventBus.on(Events.SLIDE_NAV_NEXT, () => {
+            this._navigateSlide(1);
+        });
+        this._state._keyNavHandler = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) { return; }
+            if (!e.altKey) { return; }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); eventBus.emit(Events.SLIDE_NAV_PREV); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); eventBus.emit(Events.SLIDE_NAV_NEXT); }
+        };
+        document.addEventListener('keydown', this._state._keyNavHandler);
 
         eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
     }
@@ -622,6 +669,8 @@ export class Router {
         }
 
         this._state.selectedSlide = newSlide;
+        this._state.currentSlideId = newSlide.id;
+        this._updateSlideNav();
 
         const titleH1 = document.querySelector('.viewer-title h1');
         if (titleH1) { titleH1.textContent = newSlide.name; }
@@ -655,6 +704,9 @@ export class Router {
 
         if (this._state.clusteringOverlay && this._state.clusteringOverlay.clear) {
             this._state.clusteringOverlay.clear();
+        }
+        if (this._state.cellMarkerOverlay && this._state.cellMarkerOverlay.clear) {
+            this._state.cellMarkerOverlay.clear();
         }
 
         // Re-fetch MPP for measurement tools
@@ -919,6 +971,37 @@ export class Router {
         titleDiv.appendChild(slideInfoP);
         header.appendChild(titleDiv);
 
+        // Slide navigation buttons (hidden until case loaded)
+        const navGroup = document.createElement('div');
+        navGroup.className = 'viewer-header__nav';
+        navGroup.id = 'slide-nav-group';
+        navGroup.style.display = 'none';
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'header-button header-button--nav';
+        prevBtn.id = 'slide-nav-prev';
+        prevBtn.title = this._t('nav.prevSlide');
+        prevBtn.disabled = true;
+        prevBtn.textContent = '\u25C0';
+        prevBtn.addEventListener('click', () => eventBus.emit(Events.SLIDE_NAV_PREV));
+
+        const posLabel = document.createElement('span');
+        posLabel.className = 'viewer-header__nav-pos';
+        posLabel.id = 'slide-nav-pos';
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'header-button header-button--nav';
+        nextBtn.id = 'slide-nav-next';
+        nextBtn.title = this._t('nav.nextSlide');
+        nextBtn.disabled = true;
+        nextBtn.textContent = '\u25B6';
+        nextBtn.addEventListener('click', () => eventBus.emit(Events.SLIDE_NAV_NEXT));
+
+        navGroup.appendChild(prevBtn);
+        navGroup.appendChild(posLabel);
+        navGroup.appendChild(nextBtn);
+        header.appendChild(navGroup);
+
         // Compare button
         const compareBtn = document.createElement('button');
         compareBtn.id = 'compare-btn';
@@ -1050,6 +1133,9 @@ export class Router {
             }
         }
 
+        this._state.caseSlides = caseSlides;
+        this._state.currentSlideId = slide.id;
+
         if (caseSlides.length > 0) {
             this._state.caseSidebar = new CaseSidebar(sidebarContainer, {
                 onSlideSwitch: (newSlide) => {
@@ -1057,7 +1143,34 @@ export class Router {
                 },
             });
             this._state.caseSidebar.setCase(casePath, caseSlides, slide.id);
+            this._updateSlideNav();
         }
+    }
+
+    _navigateSlide(delta) {
+        const slides = this._state.caseSlides;
+        const currentId = this._state.currentSlideId;
+        if (!slides || slides.length <= 1) { return; }
+        const idx = slides.findIndex(s => s.id === currentId);
+        if (idx < 0) { return; }
+        const newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= slides.length) { return; }
+        this._handleSlideSwitch(slides[newIdx]);
+    }
+
+    _updateSlideNav() {
+        const slides = this._state.caseSlides;
+        const currentId = this._state.currentSlideId;
+        const navGroup = document.getElementById('slide-nav-group');
+        if (!navGroup || !slides || slides.length <= 1) { return; }
+        navGroup.style.display = 'flex';
+        const idx = slides.findIndex(s => s.id === currentId);
+        const prevBtn = document.getElementById('slide-nav-prev');
+        const nextBtn = document.getElementById('slide-nav-next');
+        const posLabel = document.getElementById('slide-nav-pos');
+        if (prevBtn) { prevBtn.disabled = idx <= 0; }
+        if (nextBtn) { nextBtn.disabled = idx >= slides.length - 1; }
+        if (posLabel) { posLabel.textContent = `${idx + 1}/${slides.length}`; }
     }
 
     _toggleMLPanel(_slide) {
@@ -1244,9 +1357,19 @@ export class Router {
             this._themeUnsub = null;
         }
 
+        if (this._state._focusNavUnsub) {
+            this._state._focusNavUnsub();
+            this._state._focusNavUnsub = null;
+        }
+
+        if (this._state._slideNavPrevUnsub) { this._state._slideNavPrevUnsub(); this._state._slideNavPrevUnsub = null; }
+        if (this._state._slideNavNextUnsub) { this._state._slideNavNextUnsub(); this._state._slideNavNextUnsub = null; }
+        if (this._state._keyNavHandler) { document.removeEventListener('keydown', this._state._keyNavHandler); this._state._keyNavHandler = null; }
+
         const destroyKeys = [
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'similarityPanel',
-            'clusteringOverlay',
+            'clusteringOverlay', 'cellMarkerOverlay',
+            'mlProgressBar', 'heatmapLegend',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',

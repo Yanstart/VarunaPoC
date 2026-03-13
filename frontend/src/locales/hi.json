@@ -11,6 +11,8 @@
   "nav.back": "वापस",
   "nav.myCases": "मेरे केस",
   "nav.compareMode": "तुलना मोड",
+  "nav.prevSlide": "पिछली स्लाइड",
+  "nav.nextSlide": "अगली स्लाइड",
   "slide.loading": "स्लाइड लोड हो रही है...",
   "slide.loaded": "स्लाइड लोड हो गई",
   "slide.error": "स्लाइड लोडिंग त्रुटि",
@@ -153,5 +155,14 @@
   "sync.modeZoom": "ज़ूम",
   "layout.single": "एकल दृश्य",
   "layout.sideBySide": "साथ-साथ",
-  "layout.grid2x2": "ग्रिड 2×2"
+  "layout.grid2x2": "ग्रिड 2×2",
+  "legend.low": "कम",
+  "legend.high": "उच्च",
+  "legend.attention": "ध्यान",
+  "counting.showMarkers": "मार्कर दिखाएं",
+  "counting.opacity": "अपारदर्शिता: ",
+  "detection.feedbackConfirmed": "फीडबैक पुष्टि",
+  "detection.feedbackRejected": "फीडबैक अस्वीकृत",
+  "detection.correctionSaved": "सुधार सहेजा गया",
+  "detection.feedbackError": "फीडबैक सबमिशन विफल"
 }

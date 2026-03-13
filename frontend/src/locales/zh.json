@@ -11,6 +11,8 @@
   "nav.back": "返回",
   "nav.myCases": "我的病例",
   "nav.compareMode": "对比模式",
+  "nav.prevSlide": "上一张",
+  "nav.nextSlide": "下一张",
   "slide.loading": "正在加载切片...",
   "slide.loaded": "切片已加载",
   "slide.error": "切片加载错误",
@@ -153,5 +155,14 @@
   "sync.modeZoom": "缩放",
   "layout.single": "单视图",
   "layout.sideBySide": "并排",
-  "layout.grid2x2": "网格 2×2"
+  "layout.grid2x2": "网格 2×2",
+  "legend.low": "低",
+  "legend.high": "高",
+  "legend.attention": "注意",
+  "counting.showMarkers": "显示标记",
+  "counting.opacity": "不透明度：",
+  "detection.feedbackConfirmed": "反馈已确认",
+  "detection.feedbackRejected": "反馈已拒绝",
+  "detection.correctionSaved": "修正已保存",
+  "detection.feedbackError": "反馈提交失败"
 }
