@@ -99,6 +99,14 @@ export class QualityBadge {
             this._data = data;
             this._render(data);
 
+            // Warn on low quality
+            if (data.overall_score < 0.5 && this.eventBus) {
+                this.eventBus.emit(Events.TOAST_SHOW, {
+                    type: 'warning',
+                    message: `Qualit\u00e9 faible (${Math.round(data.overall_score * 100)}%) \u2014 r\u00e9sultats ML possiblement affect\u00e9s`,
+                });
+            }
+
             if (this.eventBus) {
                 this.eventBus.emit(Events.QUALITY_READY, { slideId, data });
             }
@@ -259,10 +267,15 @@ export class QualityBadge {
         this._data = null;
         this._hideTooltip();
 
-        // Reset to idle state (user clicks to trigger)
+        // Reset to loading state
         this.el.className = 'quality-badge';
         this._dot.className = 'quality-badge__dot';
-        this._label.textContent = 'Qualit\u00e9 : cliquez pour \u00e9valuer';
+        this._label.textContent = 'Qualit\u00e9 : \u00e9valuation...';
+
+        // Auto-trigger quality assessment
+        if (slideId) {
+            this._fetchQuality(slideId);
+        }
     }
 
     /**
