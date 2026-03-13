@@ -48,6 +48,9 @@ import { AutoTagBadge } from '../components/AutoTagBadge.js';
 import { MagnificationBar } from '../components/MagnificationBar.js';
 import { ScaleBar } from '../components/ScaleBar.js';
 import { MLTabsContainer } from '../components/MLTabsContainer.js';
+import { MLProgressBar } from '../components/MLProgressBar.js';
+import { HeatmapLegend } from '../components/HeatmapLegend.js';
+import { CellMarkerOverlay } from '../components/CellMarkerOverlay.js';
 import { getToastManager } from '../components/ToastManager.js';
 
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
@@ -284,6 +287,8 @@ export class Router {
         viewerDiv.className = 'viewer';
         const mlPanelContainer = document.createElement('div');
         mlPanelContainer.id = 'ml-panel-container';
+        this._state.mlProgressBar = new MLProgressBar(viewerArea);
+        this._state.heatmapLegend = new HeatmapLegend(viewerArea);
         viewerArea.appendChild(viewerDiv);
         viewerArea.appendChild(mlPanelContainer);
 
@@ -355,6 +360,7 @@ export class Router {
         // Clustering Overlay (canvas on OSD viewer)
         if (viewerInstance) {
             this._state.clusteringOverlay = new ClusteringOverlay(viewerInstance);
+            this._state.cellMarkerOverlay = new CellMarkerOverlay(viewerInstance);
         }
 
         // Magnification Bar (floating badge in viewer area)
@@ -695,6 +701,9 @@ export class Router {
 
         if (this._state.clusteringOverlay && this._state.clusteringOverlay.clear) {
             this._state.clusteringOverlay.clear();
+        }
+        if (this._state.cellMarkerOverlay && this._state.cellMarkerOverlay.clear) {
+            this._state.cellMarkerOverlay.clear();
         }
 
         // Re-fetch MPP for measurement tools
@@ -1356,7 +1365,8 @@ export class Router {
 
         const destroyKeys = [
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'similarityPanel',
-            'clusteringOverlay',
+            'clusteringOverlay', 'cellMarkerOverlay',
+            'mlProgressBar', 'heatmapLegend',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
