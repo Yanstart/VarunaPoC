@@ -178,5 +178,6 @@
   "metadata.stain": "Stain",
   "metadata.objective": "Objective",
   "metadata.copy": "Copy",
-  "metadata.copied": "Metadata copied"
+  "metadata.copied": "Metadata copied",
+  "export.csv": "Export CSV"
 }

@@ -178,5 +178,6 @@
   "metadata.stain": "Coloration",
   "metadata.objective": "Objectif",
   "metadata.copy": "Copier",
-  "metadata.copied": "Metadonnees copiees"
+  "metadata.copied": "Metadonnees copiees",
+  "export.csv": "Exporter CSV"
 }

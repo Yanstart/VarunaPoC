@@ -178,5 +178,6 @@
   "metadata.stain": "染色",
   "metadata.objective": "対物レンズ",
   "metadata.copy": "コピー",
-  "metadata.copied": "メタデータをコピーしました"
+  "metadata.copied": "メタデータをコピーしました",
+  "export.csv": "CSVエクスポート"
 }

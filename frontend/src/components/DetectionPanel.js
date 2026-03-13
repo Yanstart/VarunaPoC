@@ -22,6 +22,7 @@ import { annotationStore } from '../services/AnnotationStore.js';
 import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
+import { ExportService } from '../services/ExportService.js';
 
 class DetectionPanel {
     /**
@@ -327,6 +328,9 @@ class DetectionPanel {
                     <button class="detection-panel__btn detection-panel__btn--danger">
                         Tout rejeter
                     </button>
+                    <button class="detection-panel__btn detection-panel__btn--export">
+                        ${i18nService.t('export.csv')}
+                    </button>
                 </div>
             </div>
         `;
@@ -408,6 +412,10 @@ class DetectionPanel {
         this.element.querySelector('.detection-panel__btn--danger').addEventListener('click', () => {
             this._resetState();
             this._renderIdle();
+        });
+
+        this.element.querySelector('.detection-panel__btn--export').addEventListener('click', () => {
+            this._exportCSV();
         });
     }
 
@@ -724,6 +732,24 @@ class DetectionPanel {
         if (item) {
             item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+    }
+
+    _exportCSV() {
+        if (!this.detectionResult?.geojson?.features) return;
+
+        const headers = ['region', 'confidence', 'area_px', 'centroid_x', 'centroid_y', 'label'];
+        const rows = this.detectionResult.geojson.features.map((f, i) => [
+            `detection_${i}`,
+            f.properties.confidence,
+            f.properties.area_px,
+            f.properties.centroid?.[0] ?? '',
+            f.properties.centroid?.[1] ?? '',
+            this.selectedLabelId || '',
+        ]);
+
+        const csv = ExportService.toCSV(headers, rows);
+        const slideName = this.slideId || 'slide';
+        ExportService.download(csv, `${slideName}_detection_${ExportService.dateStamp()}.csv`);
     }
 
     _resetState() {

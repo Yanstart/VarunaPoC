@@ -178,5 +178,6 @@
   "metadata.stain": "रंगाई",
   "metadata.objective": "ऑब्जेक्टिव",
   "metadata.copy": "कॉपी करें",
-  "metadata.copied": "मेटाडेटा कॉपी किया गया"
+  "metadata.copied": "मेटाडेटा कॉपी किया गया",
+  "export.csv": "CSV निर्यात"
 }

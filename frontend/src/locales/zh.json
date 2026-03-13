@@ -178,5 +178,6 @@
   "metadata.stain": "染色",
   "metadata.objective": "物镜",
   "metadata.copy": "复制",
-  "metadata.copied": "元数据已复制"
+  "metadata.copied": "元数据已复制",
+  "export.csv": "导出CSV"
 }
