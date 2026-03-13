@@ -10,6 +10,8 @@
 
 import { apiService } from '../services/ApiService.js';
 import { i18nService } from '../services/I18nService.js';
+import { eventBus } from '../core/EventBus.js';
+import { Events } from '../core/Constants.js';
 
 /**
  * Extract stain type from a slide filename.
@@ -174,6 +176,21 @@ export class CaseSidebar {
             }
 
             item.appendChild(info);
+
+            if (slide.id !== this.activeSlideId) {
+                const compareBtn = document.createElement('button');
+                compareBtn.className = 'case-sidebar__compare-btn';
+                compareBtn.title = i18nService.t('case.compare');
+                compareBtn.textContent = '\u2194';  // ↔ arrows
+                compareBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    eventBus.emit(Events.CASE_SLIDE_SWITCH, {
+                        slideId: slide.id,
+                        compare: true,
+                    });
+                });
+                item.appendChild(compareBtn);
+            }
 
             // Click to switch
             item.addEventListener('click', () => {

@@ -444,6 +444,12 @@ export class Router {
         };
         document.addEventListener('keydown', this._state._keyNavHandler);
 
+        this._state._compareSwitchUnsub = eventBus.on(Events.CASE_SLIDE_SWITCH, ({ compare }) => {
+            if (compare) {
+                this.showComparePage(this._state.selectedSlide);
+            }
+        });
+
         eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
     }
 
@@ -1369,6 +1375,7 @@ export class Router {
         if (this._state._slideNavPrevUnsub) { this._state._slideNavPrevUnsub(); this._state._slideNavPrevUnsub = null; }
         if (this._state._slideNavNextUnsub) { this._state._slideNavNextUnsub(); this._state._slideNavNextUnsub = null; }
         if (this._state._keyNavHandler) { document.removeEventListener('keydown', this._state._keyNavHandler); this._state._keyNavHandler = null; }
+        if (this._state._compareSwitchUnsub) { this._state._compareSwitchUnsub(); this._state._compareSwitchUnsub = null; }
 
         const destroyKeys = [
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'similarityPanel',
