@@ -8,6 +8,9 @@
  * @module components/CaseSidebar
  */
 
+import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
+
 /**
  * Extract stain type from a slide filename.
  * (Duplicated from CaseBrowser for standalone usage.)
@@ -80,6 +83,7 @@ export class CaseSidebar {
         this.slides = slides || [];
         this.activeSlideId = activeSlideId;
         this._render();
+        this._fetchStats();
     }
 
     /**
@@ -182,6 +186,62 @@ export class CaseSidebar {
         });
 
         this.element.appendChild(list);
+    }
+
+    /**
+     * Fetch annotation stats for all slides in parallel and update badges.
+     * @private
+     */
+    async _fetchStats() {
+        if (!this.slides || this.slides.length === 0) return;
+
+        try {
+            const statsPromises = this.slides.map(slide =>
+                apiService.getAnnotationStats(slide.id).catch(() => ({ total: 0 })),
+            );
+            const allStats = await Promise.all(statsPromises);
+
+            this.slides.forEach((slide, i) => {
+                slide._annotationCount = allStats[i]?.total ?? 0;
+            });
+
+            this._updateBadges();
+        } catch {
+            // Non-critical — badges just won't show
+        }
+    }
+
+    /**
+     * Update annotation count badges on slide items and progress header.
+     * @private
+     */
+    _updateBadges() {
+        const items = this.element.querySelectorAll('.case-sidebar__item');
+        items.forEach(item => {
+            const slideId = item.dataset.slideId;
+            const slide = this.slides.find(s => s.id === slideId);
+            if (!slide) return;
+
+            // Remove old badge if exists
+            const oldBadge = item.querySelector('.case-sidebar__badge');
+            if (oldBadge) oldBadge.remove();
+
+            const badge = document.createElement('span');
+            badge.className = 'case-sidebar__badge';
+            badge.textContent = String(slide._annotationCount || 0);
+            if (slide._annotationCount > 0) badge.classList.add('case-sidebar__badge--active');
+            item.appendChild(badge);
+        });
+
+        // Progress header
+        const annotated = this.slides.filter(s => (s._annotationCount || 0) > 0).length;
+        const header = this.element.querySelector('.case-sidebar__count');
+        if (header) {
+            header.textContent = i18nService.t('case.progress', {
+                annotated,
+                total: this.slides.length,
+            });
+        }
     }
 
     /**

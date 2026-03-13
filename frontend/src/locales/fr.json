@@ -82,6 +82,7 @@
   "folder.unknownFormat": "Format inconnu",
   "case.loading": "Chargement des cas...",
   "case.error": "Erreur lors du chargement des cas",
+  "case.progress": "{annotated}/{total} lames annotees",
   "ml.model": "Modele IA",
   "ml.loading": "Chargement...",
   "ml.scope": "Portee",

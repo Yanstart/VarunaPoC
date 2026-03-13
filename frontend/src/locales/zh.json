@@ -82,6 +82,7 @@
   "folder.unknownFormat": "未知格式",
   "case.loading": "正在加载病例...",
   "case.error": "病例加载错误",
+  "case.progress": "{annotated}/{total}张已标注",
   "ml.model": "AI模型",
   "ml.loading": "加载中...",
   "ml.scope": "范围",

@@ -82,6 +82,7 @@
   "folder.unknownFormat": "अज्ञात प्रारूप",
   "case.loading": "केस लोड हो रहे हैं...",
   "case.error": "केस लोडिंग त्रुटि",
+  "case.progress": "{annotated}/{total} स्लाइड एनोटेट",
   "ml.model": "AI मॉडल",
   "ml.loading": "लोड हो रहा है...",
   "ml.scope": "दायरा",

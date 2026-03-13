@@ -82,6 +82,7 @@
   "folder.unknownFormat": "Unknown format",
   "case.loading": "Loading cases...",
   "case.error": "Error loading cases",
+  "case.progress": "{annotated}/{total} slides annotated",
   "ml.model": "AI Model",
   "ml.loading": "Loading...",
   "ml.scope": "Scope",
