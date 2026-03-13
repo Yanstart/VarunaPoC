@@ -6,13 +6,14 @@
 
 import { defineConfig } from 'vite'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     open: true  // Auto-open browser on start
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    target: 'esnext',
+    sourcemap: mode !== 'production'
   }
-})
+}))

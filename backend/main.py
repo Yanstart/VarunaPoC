@@ -139,7 +139,7 @@ else:
 
 
 @asynccontextmanager
-async def lifespan(_app):
+async def lifespan(_app):  # noqa: PLR0915
     """Startup/shutdown events for DB, plugins, and other resources."""
     # --- Startup validation (issue #282) ---
     from pathlib import Path as FsPath
@@ -170,6 +170,19 @@ async def lifespan(_app):
         "configured" if "postgresql" in settings.database_url else "sqlite",
     )
 
+    # --- Redis connectivity check (non-fatal) ---
+    if settings.redis_url:
+        try:
+            import redis as _redis_mod
+
+            _r = _redis_mod.from_url(settings.redis_url, socket_connect_timeout=2)
+            _r.ping()
+            logger.info("Redis reachable at %s", settings.redis_url)
+        except Exception as _redis_exc:
+            logger.warning(
+                "Redis not reachable (%s) — features requiring Redis will use fallbacks", _redis_exc
+            )
+
     # --- Database ---
     try:
         from core.database import init_db
@@ -185,7 +198,17 @@ async def lifespan(_app):
         load_plugin(plugin_name, _app, meta=manifest)
 
     # Feature flag summary — logged once at startup for observability
-    logger.info("Feature flags: %s", feature_registry.get_all())
+    all_flags = feature_registry.get_all()
+    enabled = [k for k, v in all_flags.items() if v]
+    disabled = [k for k, v in all_flags.items() if not v]
+    logger.info("Feature flags enabled: %s", ", ".join(enabled) if enabled else "(none)")
+    logger.info("Feature flags disabled: %s", ", ".join(disabled) if disabled else "(none)")
+    logger.info(
+        "Validated services: slides_path=%s, database=%s, redis=%s",
+        "ok" if slides_path.exists() else "missing",
+        "configured" if "postgresql" in settings.database_url else "sqlite",
+        "configured" if settings.redis_url else "not set",
+    )
 
     yield
 

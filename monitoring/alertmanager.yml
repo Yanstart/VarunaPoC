@@ -16,7 +16,8 @@ global:
   resolve_timeout: 5m
 
 # Notification templates
-templates: []
+templates:
+  - '/etc/alertmanager/alert-templates.tmpl'
 
 # Routing tree
 route:
