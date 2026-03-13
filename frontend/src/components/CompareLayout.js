@@ -79,6 +79,9 @@ class CompareLayout {
          */
         this.activePanelIndex = 0;
 
+        /** @type {Array<Function>} EventBus unsubscribe functions */
+        this._unsubscribers = [];
+
         // Build the layout
         this._build();
     }
@@ -195,12 +198,14 @@ class CompareLayout {
      */
     _setupEventListeners() {
         // Listen for layout changes from manager
-        eventBus.on(Events.LAYOUT_CHANGED, (layout) => {
-            // Sync our layout with manager's layout
-            if (layout.columns !== this.layout.columns || layout.rows !== this.layout.rows) {
-                this.setLayout(layout.columns, layout.rows, false);
-            }
-        });
+        this._unsubscribers.push(
+            eventBus.on(Events.LAYOUT_CHANGED, (layout) => {
+                // Sync our layout with manager's layout
+                if (layout.columns !== this.layout.columns || layout.rows !== this.layout.rows) {
+                    this.setLayout(layout.columns, layout.rows, false);
+                }
+            }),
+        );
     }
 
     /**
@@ -513,6 +518,10 @@ class CompareLayout {
      */
     destroy() {
         console.warn('[CompareLayout] Destroying');
+
+        // Clean up EventBus subscriptions
+        this._unsubscribers.forEach(unsub => unsub());
+        this._unsubscribers = [];
 
         // Destroy sync controls
         if (this.syncControls) {

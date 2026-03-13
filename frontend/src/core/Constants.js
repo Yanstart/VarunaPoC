@@ -28,126 +28,206 @@ export const ViewerStates = Object.freeze({
 });
 
 /**
- * Event names used by EventBus
- * Namespaced to avoid collisions
+ * Event names used by EventBus.
+ *
+ * Each event documents its expected payload shape. Components that emit or
+ * subscribe to an event MUST conform to the documented payload to prevent
+ * silent runtime mismatches.
+ *
  * @readonly
  * @enum {string}
  */
 export const Events = Object.freeze({
-    // Viewer lifecycle events
+    // -- Viewer lifecycle --
+    /** @payload {{ viewerId: string }} */
     VIEWER_CREATED: 'viewer:created',
+    /** @payload {{ viewerId: string }} */
     VIEWER_DESTROYED: 'viewer:destroyed',
+    /** @payload {{ viewerId: string, state: ViewerStates }} */
     VIEWER_STATE_CHANGE: 'viewer:stateChange',
 
-    // Slide events
+    // -- Slide --
+    /** @payload {{ viewerId: string, slideId: string }} */
     SLIDE_LOADING: 'slide:loading',
+    /** @payload {{ viewerId: string, slideId: string }} */
     SLIDE_LOADED: 'slide:loaded',
+    /** @payload {{ viewerId: string }} */
     SLIDE_UNLOADED: 'slide:unloaded',
+    /** @payload {{ viewerId: string, error: string }} */
     SLIDE_ERROR: 'slide:error',
 
-    // Navigation events (for sync)
+    // -- Navigation (sync) --
+    /** @payload {{ viewerId: string, center: {x,y} }} */
     VIEWER_PAN: 'viewer:pan',
+    /** @payload {{ viewerId: string, zoom: number }} */
     VIEWER_ZOOM: 'viewer:zoom',
+    /** @payload {{ viewerId: string, bounds: {x,y,width,height} }} */
     VIEWER_VIEWPORT_CHANGE: 'viewer:viewportChange',
 
-    // Sync events
+    // -- Sync --
+    /** @payload {{ viewerIds: string[] }} */
     SYNC_ENABLED: 'sync:enabled',
+    /** @payload (none) */
     SYNC_DISABLED: 'sync:disabled',
+    /** @payload {{ viewerIds: string[] }} */
     SYNC_VIEWERS_CHANGED: 'sync:viewersChanged',
 
-    // Layout events
+    // -- Layout --
+    /** @payload {{ layout: LayoutPresets, viewerCount: number }} */
     LAYOUT_CHANGED: 'layout:changed',
+    /** @payload {{ viewerId: string, panelIndex: number }} */
     VIEWER_ADDED: 'layout:viewerAdded',
+    /** @payload {{ viewerId: string }} */
     VIEWER_REMOVED: 'layout:viewerRemoved',
 
-    // UI events
+    // -- UI --
+    /** @payload {{ slideId: string, slideName: string }} */
     SLIDE_SELECTED: 'ui:slideSelected',
+    /** @payload {{ path: string }} */
     FOLDER_CHANGED: 'ui:folderChanged',
+    /** @payload {{ page: Pages }} */
     PAGE_CHANGED: 'ui:pageChanged',
 
-    // ML events
+    // -- ML --
+    /** @payload {{ viewerId: string, slideId: string, modelId: string }} */
     ML_PREDICTION_START: 'ml:predictionStart',
+    /** @payload {{ viewerId: string, prediction: string, confidence: number, probabilities: Object }} */
     ML_PREDICTION_COMPLETE: 'ml:predictionComplete',
+    /** @payload {{ viewerId: string, error: string }} */
     ML_PREDICTION_ERROR: 'ml:predictionError',
+    /** @payload {{ viewerId: string }} */
     ML_HEATMAP_LOADING: 'ml:heatmapLoading',
+    /** @payload {{ viewerId: string, imageUrl: string }} */
     ML_HEATMAP_READY: 'ml:heatmapReady',
+    /** @payload {{ viewerId: string, error: string }} */
     ML_HEATMAP_ERROR: 'ml:heatmapError',
+    /** @payload {{ viewerId: string, visible: boolean }} */
     ML_HEATMAP_TOGGLE: 'ml:heatmapToggle',
+    /** @payload {{ viewerId: string, opacity: number }} */
     ML_HEATMAP_OPACITY_CHANGE: 'ml:heatmapOpacityChange',
+    /** @payload {{ modelId: string, modelName: string }} */
     ML_MODEL_LOADED: 'ml:modelLoaded',
+    /** @payload (none) */
     ML_MODEL_UNLOADED: 'ml:modelUnloaded',
+    /** @payload {{ label: string }} */
     ML_WORKER_BUSY: 'ml:workerBusy',
+    /** @payload (none) */
     ML_WORKER_FREE: 'ml:workerFree',
 
-    // Annotation events
+    // -- Annotations --
+    /** @payload {{ annotation: Object, slideId: string }} */
     ANNOTATION_CREATED: 'annotation:created',
+    /** @payload {{ annotation: Object }} */
     ANNOTATION_UPDATED: 'annotation:updated',
+    /** @payload {{ annotationId: string }} */
     ANNOTATION_DELETED: 'annotation:deleted',
+    /** @payload {{ annotationId: string|null }} */
     ANNOTATION_SELECTED: 'annotation:selected',
+    /** @payload {{ slideId: string, annotations: Object[] }} */
     ANNOTATIONS_LOADED: 'annotation:loaded',
+    /** @payload {{ slideId: string, count: number }} */
     ANNOTATION_STATS_UPDATED: 'annotation:statsUpdated',
 
-    // Drawing tool events
+    // -- Drawing tools --
+    /** @payload {{ tool: string }} */
     TOOL_CHANGED: 'tool:changed',
+    /** @payload {{ tool: string }} */
     DRAWING_START: 'drawing:start',
+    /** @payload {{ tool: string }} */
     DRAWING_END: 'drawing:end',
 
-    // Layer events
+    // -- Layers --
+    /** @payload {{ layerId: string, visible: boolean }} */
     LAYER_VISIBILITY_CHANGED: 'layer:visibilityChanged',
+    /** @payload {{ layerId: string, opacity: number }} */
     LAYER_OPACITY_CHANGED: 'layer:opacityChanged',
 
-    // Sync mode events
+    // -- Sync mode --
+    /** @payload {{ mode: SyncConfig.MODES }} */
     SYNC_MODE_CHANGED: 'sync:modeChanged',
 
-    // Detection events
+    // -- Detection --
+    /** @payload {{ viewerId: string }} */
     DETECTION_START: 'detection:start',
+    /** @payload {{ viewerId: string, numRegions: number, regions: Object[] }} */
     DETECTION_COMPLETE: 'detection:complete',
+    /** @payload {{ viewerId: string, error: string }} */
     DETECTION_ERROR: 'detection:error',
+    /** @payload {{ viewerId: string, features: Object[] }} */
     DETECTION_PREVIEW: 'detection:preview',
+    /** @payload {{ viewerId: string, regionIndex: number }} */
     DETECTION_CONFIRM: 'detection:confirm',
+    /** @payload {{ viewerId: string, regionIndex: number }} */
     DETECTION_REJECT: 'detection:reject',
+    /** @payload {{ regionIndex: number }} */
     DETECTION_PREVIEW_CLICKED: 'detection:previewClicked',
+    /** @payload {{ regionIndex: number }} */
     DETECTION_ITEM_CLICKED: 'detection:itemClicked',
+    /** @payload {{ regionIndex: number|null }} */
     DETECTION_HIGHLIGHT: 'detection:highlight',
 
-    // Cell counting events (Wave 4)
+    // -- Cell counting (Wave 4) --
+    /** @payload {{ viewerId: string }} */
     CELL_COUNTING_START: 'cellCounting:start',
+    /** @payload {{ viewerId: string, counts: Object }} */
     CELL_COUNTING_COMPLETE: 'cellCounting:complete',
+    /** @payload {{ viewerId: string, error: string }} */
     CELL_COUNTING_ERROR: 'cellCounting:error',
 
-    // Clustering events (Wave 4)
+    // -- Clustering (Wave 4) --
+    /** @payload {{ viewerId: string }} */
     CLUSTERING_START: 'clustering:start',
+    /** @payload {{ viewerId: string, clusters: Object[] }} */
     CLUSTERING_COMPLETE: 'clustering:complete',
+    /** @payload {{ viewerId: string, error: string }} */
     CLUSTERING_ERROR: 'clustering:error',
+    /** @payload {{ viewerId: string, visible: boolean }} */
     CLUSTERING_OVERLAY_TOGGLE: 'clustering:overlayToggle',
+    /** @payload {{ viewerId: string, opacity: number }} */
     CLUSTERING_OVERLAY_OPACITY: 'clustering:overlayOpacity',
 
-    // Auth events (Phase 3)
+    // -- Auth (Phase 3) --
+    /** @payload {{ user: Object }} */
     AUTH_LOGIN: 'auth:login',
+    /** @payload (none) */
     AUTH_LOGOUT: 'auth:logout',
+    /** @payload {{ accessToken: string }} */
     AUTH_TOKEN_REFRESHED: 'auth:tokenRefreshed',
+    /** @payload {{ error: string }} */
     AUTH_ERROR: 'auth:error',
+    /** @payload {{ roles: string[] }} */
     AUTH_ROLE_CHANGED: 'auth:roleChanged',
 
-    // I18n events (Wave 6)
+    // -- I18n (Wave 6) --
+    /** @payload {{ locale: string }} */
     LOCALE_CHANGED: 'i18n:localeChanged',
 
-    // Case navigation events (Wave 3)
+    // -- Case navigation (Wave 3) --
+    /** @payload {{ caseId: string }} */
     CASE_SELECTED: 'ui:caseSelected',
+    /** @payload {{ slideId: string, caseId: string }} */
     CASE_SLIDE_SWITCH: 'case:slideSwitch',
 
-    // Quality metrics events (Phase 4)
+    // -- Quality metrics (Phase 4) --
+    /** @payload {{ slideId: string }} */
     QUALITY_LOADING: 'quality:loading',
+    /** @payload {{ slideId: string, metrics: Object }} */
     QUALITY_READY: 'quality:ready',
+    /** @payload {{ slideId: string, error: string }} */
     QUALITY_ERROR: 'quality:error',
+    /** @payload {{ visible: boolean }} */
     QUALITY_DISAGREEMENT_TOGGLE: 'quality:disagreementToggle',
 
-    // Drift monitoring events (Wave 4)
+    // -- Drift monitoring (Wave 4) --
+    /** @payload {{ slideId: string }} */
     DRIFT_LOADING: 'drift:loading',
+    /** @payload {{ slideId: string, driftData: Object }} */
     DRIFT_READY: 'drift:ready',
+    /** @payload {{ slideId: string, error: string }} */
     DRIFT_ERROR: 'drift:error',
 
-    // Theme events (Wave 6)
+    // -- Theme (Wave 6) --
+    /** @payload {{ theme: string }} */
     THEME_CHANGED: 'ui:themeChanged',
 });
 

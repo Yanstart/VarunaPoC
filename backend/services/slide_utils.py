@@ -3,8 +3,86 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+# Objective power to MPP lookup table (common scanner defaults)
+OBJECTIVE_TO_MPP: dict[int, float] = {
+    100: 0.10,
+    80: 0.125,
+    60: 0.167,
+    40: 0.25,
+    20: 0.50,
+    10: 1.0,
+    5: 2.0,
+    4: 2.5,
+    2: 5.0,
+    1: 10.0,
+}
+
+
+@dataclass
+class MPPData:
+    """Resolved microns-per-pixel data."""
+
+    mpp_x: float
+    mpp_y: float
+    objective: int | None = None
+    source: str = "openslide"
+
+
+def resolve_slide_mpp(slide_path: str) -> MPPData | None:
+    """Open a slide and resolve its MPP using all available sources.
+
+    Resolution order:
+    1. openslide.mpp-x / openslide.mpp-y (canonical)
+    2. Vendor-specific keys (Aperio, Hamamatsu, TIFF)
+    3. Estimated from openslide.objective-power via lookup table
+
+    Returns:
+        MPPData if resolved, None if no MPP data available.
+    """
+    import openslide
+
+    slide = openslide.OpenSlide(slide_path)
+    try:
+        props = slide.properties
+
+        # Read objective power (may be None)
+        obj_str = props.get("openslide.objective-power")
+        objective = int(float(obj_str)) if obj_str else None
+
+        # 1. Direct MPP from metadata
+        mpp_x_str = props.get("openslide.mpp-x")
+        mpp_y_str = props.get("openslide.mpp-y")
+        if mpp_x_str and mpp_y_str:
+            return MPPData(
+                mpp_x=float(mpp_x_str),
+                mpp_y=float(mpp_y_str),
+                objective=objective,
+                source="openslide",
+            )
+
+        # 2. Vendor-specific fallbacks
+        vendor_result = resolve_mpp_from_properties(dict(props))
+        if vendor_result:
+            mpp_x, mpp_y, source = vendor_result
+            return MPPData(mpp_x=mpp_x, mpp_y=mpp_y, objective=objective, source=source)
+
+        # 3. Estimate from objective power
+        if objective and objective in OBJECTIVE_TO_MPP:
+            estimated = OBJECTIVE_TO_MPP[objective]
+            return MPPData(
+                mpp_x=estimated,
+                mpp_y=estimated,
+                objective=objective,
+                source="estimated_from_objective",
+            )
+
+        return None
+    finally:
+        slide.close()
 
 
 def resolve_mpp_from_properties(

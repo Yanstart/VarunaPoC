@@ -407,87 +407,20 @@ class RetrainingResponse(BaseModel):
 
 
 # Singleton cache: avoid reloading heavy ML models on every request
-_ml_provider_instance = None
-_ml_provider_config_hash = None
-
-
 def get_ml_provider():
-    """
-    Dependency pour récupérer ML provider (singleton).
+    """Dependency: lazily-initialized ML provider singleton.
 
-    Le provider est initialisé une seule fois au premier appel,
-    puis réutilisé. Le modèle/extractor n'est chargé qu'une fois.
+    Delegates to core.container.ServiceContainer for centralized lifecycle.
 
-    Configuration via variables d'environnement:
-        ML_ENABLED=true              # Activer/désactiver ML
-        ML_PROVIDER=slideflow        # "slideflow", "openslide", "mock"
-        ML_MODE=extractor            # "extractor" (Phase 1-2) ou "classifier" (Phase 3)
-        ML_EXTRACTOR=ctranspath      # Nom du feature extractor
-        ML_MODEL_PATH=               # Chemin modèle entraîné (Phase 3)
-        ML_CLASSES=tissue,background # Classes pour classification
-
-    Returns:
-        MLProvider instance configurée selon le mode
+    Configuration via environment variables:
+        ML_ENABLED, ML_PROVIDER, ML_MODE, ML_EXTRACTOR, ML_MODEL_PATH, ML_CLASSES
 
     Raises:
-        HTTPException 503: Si ML features désactivées ou provider indisponible
+        HTTPException 503: If ML features are disabled or provider unavailable.
     """
-    global _ml_provider_instance, _ml_provider_config_hash
-    import os
+    from core.container import ServiceContainer
 
-    ml_enabled = os.getenv("ML_ENABLED", "true").lower() == "true"
-    if not ml_enabled:
-        raise HTTPException(status_code=503, detail="ML features disabled in configuration")
-
-    # Config hash to detect env changes (hot reload)
-    provider_name = os.getenv("ML_PROVIDER", "slideflow")
-    ml_mode = os.getenv("ML_MODE", "extractor")
-    extractor_name = os.getenv("ML_EXTRACTOR", "resnet50_imagenet")
-    model_path = os.getenv("ML_MODEL_PATH", "")
-    config_hash = f"{provider_name}:{ml_mode}:{extractor_name}:{model_path}"
-
-    # Return cached instance if config unchanged
-    if _ml_provider_instance is not None and _ml_provider_config_hash == config_hash:
-        return _ml_provider_instance
-
-    try:
-        provider = get_provider(provider_name)
-
-        # Auto-configure slideflow provider from env
-        if provider_name == "slideflow" and not provider.model_loaded:
-            classes_str = os.getenv("ML_CLASSES", "tissue,background")
-            classes = [c.strip() for c in classes_str.split(",") if c.strip()]
-
-            if ml_mode == "classifier" and model_path:
-                # Phase 3: trained model
-                provider.load_model(
-                    model_path,
-                    {
-                        "model_id": os.getenv("ML_MODEL_ID", "custom_classifier"),
-                        "mode": "classifier",
-                        "classes": classes,
-                        "tile_size": int(os.getenv("ML_TILE_SIZE", "224")),
-                        "num_mc_samples": int(os.getenv("ML_MC_SAMPLES", "10")),
-                    },
-                )
-            else:
-                # Phase 1-2: feature extractor
-                provider.load_model(
-                    f"extractor://{extractor_name}",
-                    {
-                        "model_id": f"{extractor_name}_features",
-                        "mode": "extractor",
-                        "classes": classes,
-                    },
-                )
-
-        _ml_provider_instance = provider
-        _ml_provider_config_hash = config_hash
-        return provider
-
-    except Exception as e:
-        logger.error(f"Failed to initialize ML provider: {e}")
-        raise HTTPException(status_code=503, detail=f"ML provider unavailable: {e!s}")
+    return ServiceContainer.get_ml_provider()
 
 
 def get_tag_extractor():
@@ -503,28 +436,18 @@ def get_tag_router():
     return TagRouter(config_path)
 
 
-from services.cache.memory_cache import MemoryCache
-
-_memory_cache = None
-
-
 def get_memory_cache():
-    global _memory_cache
-    if _memory_cache is None:
-        _memory_cache = MemoryCache(maxsize=512, ttl=300)
-    return _memory_cache
+    """Dependency: in-memory prediction cache singleton."""
+    from core.container import ServiceContainer
 
-
-from services.cache.disk_cache import DiskCache
-
-_disk_cache = None
+    return ServiceContainer.get_memory_cache()
 
 
 def get_disk_cache():
-    global _disk_cache
-    if _disk_cache is None:
-        _disk_cache = DiskCache()
-    return _disk_cache
+    """Dependency: disk-based prediction cache singleton."""
+    from core.container import ServiceContainer
+
+    return ServiceContainer.get_disk_cache()
 
 
 # ============================================================================
@@ -899,7 +822,7 @@ async def get_focus_zones(
     threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum attention score"),
     resolution_level: int = Query(2, ge=0, le=5, description="Heatmap resolution"),
     prediction_class: str = Query("tissue", description="Target class"),
-    disk_cache: DiskCache = Depends(get_disk_cache),
+    disk_cache=Depends(get_disk_cache),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """
@@ -1418,7 +1341,7 @@ async def search_similar(
     index = get_similarity_index()
 
     # Get query embeddings from disk cache
-    disk_cache = DiskCache()
+    disk_cache = get_disk_cache()
     model = os.getenv("ML_EXTRACTOR", "ctranspath")
     embeddings = disk_cache.load_embeddings(slide_id, model)
 
@@ -1578,7 +1501,7 @@ async def reload_models(
 async def get_slide_tags(
     slide_id: str,
     tag_extractor=Depends(get_tag_extractor),
-    memory_cache: MemoryCache = Depends(get_memory_cache),
+    memory_cache=Depends(get_memory_cache),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """
