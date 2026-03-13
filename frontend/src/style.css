@@ -53,3 +53,6 @@
 
 /* 12. Toast notification styles (UX Wave A) */
 @import './css/toast.css';
+
+/* 13. Cell marker overlay styles (UX Wave B) */
+@import './css/cell-markers.css';

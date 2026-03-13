@@ -695,7 +695,8 @@ class ApiService {
         const body = {};
         if (params.region) body.region = params.region;
         if (params.stain) body.stain = params.stain;
-        return this.post(`/api/ml/count/${encodeURIComponent(slideId)}`, body);
+        const qs = params.includePositions ? '?include_positions=true' : '';
+        return this.post(`/api/ml/count/${encodeURIComponent(slideId)}${qs}`, body);
     }
 
     // ==========================================
