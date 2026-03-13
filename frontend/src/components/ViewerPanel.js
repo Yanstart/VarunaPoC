@@ -27,6 +27,7 @@ import { QualityPanel } from './QualityPanel.js';
 import { FocusAssistPanel } from './FocusAssistPanel.js';
 import { SimilarityPanel } from './SimilarityPanel.js';
 import { MLTabsContainer } from './MLTabsContainer.js';
+import { ScaleBar } from './ScaleBar.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { apiService } from '../services/ApiService.js';
 
@@ -196,6 +197,12 @@ class ViewerPanel {
          * @type {HTMLElement|null}
          */
         this.magBar = null;
+
+        /**
+         * Scale bar component
+         * @type {ScaleBar|null}
+         */
+        this.scaleBar = null;
 
         /** @type {Array<Function>} Unsubscribe functions for event listeners */
         this._unsubscribers = [];
@@ -554,6 +561,40 @@ class ViewerPanel {
     }
 
     /**
+     * Fetch MPP from backend and initialize scale bar + ruler measurements
+     * @param {string} slideId
+     * @private
+     */
+    async _initMeasurementTools(slideId) {
+        let mpp = null;
+        try {
+            const resp = await apiService.get(`/api/v1/slides/${slideId}/mpp`);
+            if (resp && resp.mpp_x) {
+                mpp = resp.mpp_x;
+            }
+        } catch (err) {
+            console.warn('[ViewerPanel] MPP fetch failed, falling back to pixel units:', err);
+        }
+
+        // Scale bar
+        if (this.viewer && this.viewer.viewer) {
+            if (this.scaleBar) {
+                this.scaleBar.setMpp(mpp);
+            } else {
+                this.scaleBar = new ScaleBar(this.viewer.viewer, mpp);
+                if (this.scaleBar.element) {
+                    this.viewerContainer.appendChild(this.scaleBar.element);
+                }
+            }
+        }
+
+        // Pass MPP to drawing tools for ruler measurements
+        if (this.drawingTools) {
+            this.drawingTools.setMpp(mpp);
+        }
+    }
+
+    /**
      * Load a slide into this panel
      * @param {string} slideId - Slide ID
      * @param {string} [slideName] - Slide name for display
@@ -621,6 +662,8 @@ class ViewerPanel {
         // Do NOT emit it again here - double emission causes MLPanel.setSlide() to be called
         // twice, resetting prediction state and making heatmap non-reactivable.
 
+        // Fetch MPP and initialize scale bar + measurement tools
+        this._initMeasurementTools(slideId);
 
         // Auto-tag: fetch and display slide tags
         this._loadSlideTags(slideId);
@@ -773,6 +816,12 @@ class ViewerPanel {
         if (this.mlTabsContainer) {
             this.mlTabsContainer.destroy();
             this.mlTabsContainer = null;
+        }
+
+        // Destroy scale bar
+        if (this.scaleBar) {
+            this.scaleBar.destroy();
+            this.scaleBar = null;
         }
 
         // Destroy heatmap overlay

@@ -10,7 +10,8 @@
  * @module services/AuthService
  */
 
-import { API } from '../core/Constants.js';
+import { API, Events } from '../core/Constants.js';
+import { eventBus } from '../core/EventBus.js';
 
 /** @type {AuthService|null} */
 let instance = null;
@@ -370,6 +371,9 @@ class AuthService {
         }
 
         this._startRefreshTimer();
+
+        // Notify components (e.g. OSD viewers) so they can update Authorization headers
+        eventBus.emit(Events.AUTH_TOKEN_REFRESHED, { accessToken: this._accessToken });
     }
 
     _loadTokensFromStorage() {

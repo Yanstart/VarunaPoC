@@ -108,6 +108,7 @@
   "tools.point": "बिंदु (M)",
   "tools.freehand": "फ्रीहैंड (F)",
   "tools.circle": "वृत्त (C)",
+  "tools.ruler": "पैमाना (L)",
   "tools.deleteSelection": "चयन हटाएं (Del)",
   "tools.noLabel": "कोई लेबल नहीं",
   "tools.customLabel": "कस्टम लेबल...",

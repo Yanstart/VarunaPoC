@@ -171,6 +171,15 @@ class ViewerInstance {
         // Bind event handlers
         this._bindEventHandlers();
 
+        // Update OSD auth headers when token is silently refreshed
+        this._boundHandlers.tokenRefreshed = ({ accessToken }) => {
+            if (this._osdViewer && accessToken) {
+                this._osdViewer.ajaxHeaders = { 'Authorization': `Bearer ${accessToken}` };
+                console.info(`[ViewerInstance:${this.id}] Auth headers updated after token refresh`);
+            }
+        };
+        eventBus.on(Events.AUTH_TOKEN_REFRESHED, this._boundHandlers.tokenRefreshed);
+
         // Accessibility: label the navigator mini-map
         if (this._osdViewer.navigator && this._osdViewer.navigator.element) {
             this._osdViewer.navigator.element.setAttribute('aria-label', 'Mini-carte de navigation');
@@ -666,6 +675,11 @@ class ViewerInstance {
             // Destroy OSD instance
             this._osdViewer.destroy();
             this._osdViewer = null;
+        }
+
+        // Remove global event listeners
+        if (this._boundHandlers.tokenRefreshed) {
+            eventBus.off(Events.AUTH_TOKEN_REFRESHED, this._boundHandlers.tokenRefreshed);
         }
 
         // Clear local listeners

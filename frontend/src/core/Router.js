@@ -45,6 +45,7 @@ import { createRecentCases } from '../components/RecentCases.js';
 import { FocusAssistPanel } from '../components/FocusAssistPanel.js';
 import { AutoTagBadge } from '../components/AutoTagBadge.js';
 import { MagnificationBar } from '../components/MagnificationBar.js';
+import { ScaleBar } from '../components/ScaleBar.js';
 import { MLTabsContainer } from '../components/MLTabsContainer.js';
 
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
@@ -361,6 +362,16 @@ export class Router {
             }
         }
 
+        // Scale Bar + MPP for measurement tools
+        if (viewerInstance && viewerInstance.viewer) {
+            this._state.scaleBar = new ScaleBar(viewerInstance.viewer, null);
+            if (this._state.scaleBar.element) {
+                viewerArea.appendChild(this._state.scaleBar.element);
+            }
+            // Fetch MPP asynchronously
+            this._initMppTools(slide.id);
+        }
+
         // Layer Manager (in info panel)
         this._initInfoPanelWidgets(infoDiv);
 
@@ -642,6 +653,12 @@ export class Router {
         if (this._state.clusteringOverlay && this._state.clusteringOverlay.clear) {
             this._state.clusteringOverlay.clear();
         }
+
+        // Re-fetch MPP for measurement tools
+        const viewerInstance = getLegacyViewer();
+        if (viewerInstance) {
+            this._initMppTools(newSlide.id);
+        }
     }
 
     // ==========================================
@@ -734,6 +751,31 @@ export class Router {
     // ==========================================
     // INTERNAL HELPERS
     // ==========================================
+
+    /**
+     * Fetch MPP from backend and initialize scale bar + ruler measurements.
+     * @param {string} slideId
+     * @param {Object} viewerInstance
+     * @private
+     */
+    async _initMppTools(slideId) {
+        let mpp = null;
+        try {
+            const resp = await apiService.get(`/api/v1/slides/${slideId}/mpp`);
+            if (resp && resp.mpp_x) {
+                mpp = resp.mpp_x;
+            }
+        } catch (err) {
+            console.warn('[Router] MPP fetch failed, falling back to pixel units:', err);
+        }
+
+        if (this._state.scaleBar) {
+            this._state.scaleBar.setMpp(mpp);
+        }
+        if (this._state.drawingTools) {
+            this._state.drawingTools.setMpp(mpp);
+        }
+    }
 
     /**
      * Create a theme toggle button (sun/moon icon).
@@ -1199,7 +1241,7 @@ export class Router {
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'clusteringOverlay',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
-            'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
+            'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
             'compareLayout', 'caseSidebar', 'userMenu', 'loginPage',
         ];
 

@@ -8,6 +8,7 @@
  * - Point: Single click marker
  * - Freehand: Draw freely + Douglas-Peucker simplification
  * - Circle: Click center + drag radius
+ * - Ruler: Click two points to measure distance (physical units via MPP)
  *
  * Coordinates: screen px → OSD viewport → slide pixels
  *
@@ -19,7 +20,7 @@ import { Events } from '../core/Constants.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { i18nService } from '../services/I18nService.js';
 
-const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle'];
+const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle', 'ruler'];
 
 /** localStorage key for last-used overflow tool */
 const LAST_TOOL_KEY = 'varuna_last_tool';
@@ -31,6 +32,7 @@ const TOOL_ICONS = {
     point: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>',
     freehand: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17c3-3 6-10 9-10s3 4 6 4 3-2 3-2"/></svg>',
     circle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
+    ruler: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M10 10v4"/><path d="M14 10v4"/><path d="M18 8v8"/></svg>',
 };
 
 /** i18n keys for tool labels */
@@ -41,6 +43,7 @@ const TOOL_LABEL_KEYS = {
     point: 'tools.point',
     freehand: 'tools.freehand',
     circle: 'tools.circle',
+    ruler: 'tools.ruler',
 };
 
 /**
@@ -89,10 +92,16 @@ class DrawingTools {
         this.selectedLabel = null;
         this.customLabelMode = false;
 
+        // MPP (microns per pixel) for measurement tools
+        this._mpp = null;
+
         // Drawing state
         this._drawPoints = [];
         this._drawStartSlide = null;
         this._currentPreview = null;
+
+        // Ruler state
+        this._rulerStart = null;
 
         // DOM
         this.element = null;
@@ -139,7 +148,7 @@ class DrawingTools {
             btn.setAttribute('aria-label', getToolLabels()[tool]);
             btn.setAttribute('aria-pressed', String(tool === this.activeTool));
             // TOOL_ICONS is a static constant defined in this module, not user input — safe static SVG
-            btn.innerHTML = TOOL_ICONS[tool]; // eslint-disable-line -- static SVG constant, not user input
+            btn.innerHTML = TOOL_ICONS[tool];
             btn.addEventListener('click', () => this._setTool(tool));
             this.element.appendChild(btn);
         }
@@ -286,7 +295,7 @@ class DrawingTools {
      */
     _updateLabelSelectorVisibility() {
         if (!this.labelSelector) {return;}
-        const isDrawTool = this.activeTool !== 'select';
+        const isDrawTool = this.activeTool !== 'select' && this.activeTool !== 'ruler';
         this.labelSelector.style.display = isDrawTool ? 'flex' : 'none';
     }
 
@@ -386,6 +395,7 @@ class DrawingTools {
             case 'm': case 'M': this._setTool('point'); break;
             case 'f': case 'F': this._setTool('freehand'); break;
             case 'c': case 'C': this._setTool('circle'); break;
+            case 'l': case 'L': this._setTool('ruler'); break;
             case 'Delete': this._deleteSelected(); break;
             case 'Escape': this._cancelDrawing(); break;
         }
@@ -432,6 +442,15 @@ class DrawingTools {
                 }
                 this._updatePolygonPreview();
                 break;
+            case 'ruler':
+                if (!this.isDrawing) {
+                    this.isDrawing = true;
+                    this._rulerStart = slideCoords;
+                    eventBus.emit(Events.DRAWING_START, { tool: 'ruler' });
+                } else {
+                    this._finishRuler(slideCoords);
+                }
+                break;
         }
     }
 
@@ -450,6 +469,9 @@ class DrawingTools {
             case 'freehand':
                 this._drawPoints.push(slideCoords);
                 this._updateFreehandPreview();
+                break;
+            case 'ruler':
+                this._updateRulerPreview(slideCoords);
                 break;
         }
     }
@@ -711,6 +733,161 @@ class DrawingTools {
     }
 
     // ==========================================
+    // DRAWING: RULER (measurement tool)
+    // ==========================================
+
+    _updateRulerPreview(current) {
+        this._clearPreview();
+        const start = this._rulerStart;
+        if (!start) {return;}
+
+        const group = this.annotationLayer.getPreviewGroup();
+        const strokeWidth = this.annotationLayer._getStrokeWidth();
+
+        // Line
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', start.x);
+        line.setAttribute('y1', start.y);
+        line.setAttribute('x2', current.x);
+        line.setAttribute('y2', current.y);
+        line.setAttribute('stroke', '#ffcc00');
+        line.setAttribute('stroke-width', strokeWidth);
+        line.setAttribute('stroke-dasharray', `${strokeWidth * 3} ${strokeWidth * 2}`);
+        group.appendChild(line);
+
+        // Endpoint circles
+        const endR = this.annotationLayer._getPointRadius() * 0.4;
+        for (const pt of [start, current]) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', pt.x);
+            circle.setAttribute('cy', pt.y);
+            circle.setAttribute('r', endR);
+            circle.setAttribute('fill', '#ffcc00');
+            group.appendChild(circle);
+        }
+
+        // Distance label at midpoint
+        const midX = (start.x + current.x) / 2;
+        const midY = (start.y + current.y) / 2;
+        const distLabel = this._formatDistance(start, current);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX);
+        text.setAttribute('y', midY - strokeWidth * 3);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#ffcc00');
+        text.setAttribute('font-size', strokeWidth * 8);
+        text.setAttribute('font-family', 'JetBrains Mono, monospace');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('stroke', '#000');
+        text.setAttribute('stroke-width', strokeWidth * 0.8);
+        text.setAttribute('paint-order', 'stroke');
+        text.textContent = distLabel;
+        group.appendChild(text);
+
+        this._currentPreview = group;
+    }
+
+    _finishRuler(end) {
+        this.isDrawing = false;
+        this._clearPreview();
+
+        const start = this._rulerStart;
+        if (!start) {return;}
+
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const distPx = Math.sqrt(dx * dx + dy * dy);
+
+        // Ignore tiny measurements
+        if (distPx < 5) {
+            this._rulerStart = null;
+            return;
+        }
+
+        // Draw the permanent ruler on the preview group
+        const group = this.annotationLayer.getPreviewGroup();
+        const strokeWidth = this.annotationLayer._getStrokeWidth();
+
+        // Permanent line
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', start.x);
+        line.setAttribute('y1', start.y);
+        line.setAttribute('x2', end.x);
+        line.setAttribute('y2', end.y);
+        line.setAttribute('stroke', '#ffcc00');
+        line.setAttribute('stroke-width', strokeWidth);
+        line.classList.add('ruler-line');
+        group.appendChild(line);
+
+        // Endpoint circles
+        const endR = this.annotationLayer._getPointRadius() * 0.4;
+        for (const pt of [start, end]) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', pt.x);
+            circle.setAttribute('cy', pt.y);
+            circle.setAttribute('r', endR);
+            circle.setAttribute('fill', '#ffcc00');
+            circle.classList.add('ruler-line');
+            group.appendChild(circle);
+        }
+
+        // Distance label
+        const midX = (start.x + end.x) / 2;
+        const midY = (start.y + end.y) / 2;
+        const distLabel = this._formatDistance(start, end);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX);
+        text.setAttribute('y', midY - strokeWidth * 3);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#ffcc00');
+        text.setAttribute('font-size', strokeWidth * 8);
+        text.setAttribute('font-family', 'JetBrains Mono, monospace');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('stroke', '#000');
+        text.setAttribute('stroke-width', strokeWidth * 0.8);
+        text.setAttribute('paint-order', 'stroke');
+        text.classList.add('ruler-line');
+        text.textContent = distLabel;
+        group.appendChild(text);
+
+        this._rulerStart = null;
+        eventBus.emit(Events.DRAWING_END, { tool: 'ruler' });
+    }
+
+    /**
+     * Format the distance between two points in physical units
+     * @param {{ x: number, y: number }} a - Start point (slide pixels)
+     * @param {{ x: number, y: number }} b - End point (slide pixels)
+     * @returns {string} Formatted distance string
+     * @private
+     */
+    _formatDistance(a, b) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const distPx = Math.sqrt(dx * dx + dy * dy);
+
+        if (this._mpp && this._mpp > 0) {
+            const distUm = distPx * this._mpp;
+            if (distUm >= 1000) {
+                return (distUm / 1000).toFixed(2) + ' mm';
+            }
+            return distUm.toFixed(1) + ' \u00b5m';
+        }
+
+        return Math.round(distPx) + ' px';
+    }
+
+    /**
+     * Set microns-per-pixel value for measurement calculations
+     * @param {number|null} mpp
+     */
+    setMpp(mpp) {
+        this._mpp = mpp;
+    }
+
+    // ==========================================
     // UTILITIES
     // ==========================================
 
@@ -756,6 +933,7 @@ class DrawingTools {
         this.isDrawing = false;
         this._drawPoints = [];
         this._drawStartSlide = null;
+        this._rulerStart = null;
         this._clearPreview();
     }
 

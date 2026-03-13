@@ -108,6 +108,7 @@
   "tools.point": "Point (M)",
   "tools.freehand": "Freehand (F)",
   "tools.circle": "Circle (C)",
+  "tools.ruler": "Ruler (L)",
   "tools.deleteSelection": "Delete selection (Del)",
   "tools.noLabel": "No label",
   "tools.customLabel": "Custom label...",
