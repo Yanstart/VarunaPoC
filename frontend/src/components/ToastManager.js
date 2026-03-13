@@ -59,6 +59,7 @@ class ToastManager {
         // Build container
         this._container = document.createElement('div');
         this._container.className = 'toast-container';
+        this._container.setAttribute('aria-live', 'polite');
         document.body.appendChild(this._container);
 
         this._setupEventListeners();
@@ -194,7 +195,10 @@ class ToastManager {
         el.classList.remove('toast--visible');
         el.classList.add('toast--exit');
 
+        let removed = false;
         const removeFromDOM = () => {
+            if (removed) return;
+            removed = true;
             el.remove();
         };
 
