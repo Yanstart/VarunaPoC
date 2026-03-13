@@ -97,7 +97,15 @@ class HeatmapOverlay {
      * @param {number} [opacity=0.5] - Opacity (0-1)
      */
     async show(slideId, predictionClass, opacity = 0.5) {
-        if (this.isLoading) {return;}
+        if (this.isLoading) {
+            console.warn('[HeatmapOverlay] Heatmap generation already in progress, ignoring request');
+            eventBus.emit(Events.ML_HEATMAP_LOADING, {
+                viewerId: this.viewerId,
+                slideId: slideId,
+                alreadyLoading: true,
+            });
+            return;
+        }
 
         this.slideId = slideId;
         this.predictionClass = predictionClass;
@@ -191,7 +199,7 @@ class HeatmapOverlay {
             height: 100%;
             pointer-events: none;
             opacity: ${this.opacity};
-            z-index: 150;
+            z-index: 250;
             display: none;
             overflow: hidden;
         `;
@@ -281,12 +289,18 @@ class HeatmapOverlay {
 
         // Check if we have base64 image data
         if (this.heatmapData.heatmap_base64) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.onload = () => resolve(img);
                 img.onerror = () => {
-                    console.error('[HeatmapOverlay] Failed to decode base64 image');
-                    resolve(null);
+                    const errorMsg = 'Failed to decode heatmap base64 image';
+                    console.error(`[HeatmapOverlay] ${errorMsg}`);
+                    eventBus.emit(Events.ML_HEATMAP_ERROR, {
+                        viewerId: this.viewerId,
+                        slideId: this.slideId,
+                        error: errorMsg,
+                    });
+                    reject(new Error(errorMsg));
                 };
                 img.src = `data:image/png;base64,${this.heatmapData.heatmap_base64}`;
             });

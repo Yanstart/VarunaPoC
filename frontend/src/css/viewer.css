@@ -11,6 +11,7 @@
 @import './clustering-panel.css';
 @import './quality-panel.css';
 @import './magnification-bar.css';
+@import './scale-bar.css';
 @import './quality-badge.css';
 @import './drift-dashboard.css';
 @import './worklist-view.css';

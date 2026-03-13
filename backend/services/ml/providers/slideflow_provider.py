@@ -476,7 +476,7 @@ class SlideflowProvider:
         )
         return [best_mag]
 
-    def _open_wsi(self, slide_path: str, tile_size: int = 224) -> "sf.WSI":
+    def _open_wsi(self, slide_path: str, tile_size: int = 224) -> "sf.WSI":  # noqa: PLR0915
         """
         Open a WSI with automatic magnification detection.
 
@@ -491,6 +491,7 @@ class SlideflowProvider:
         except ImportError:
             SlideMissingMPPError = None  # noqa: N806
 
+        last_error = None
         for mag in preferred_mags:
             try:
                 wsi = self.sf.WSI(slide_path, tile_px=tile_size, tile_um=mag)
@@ -500,12 +501,9 @@ class SlideflowProvider:
                 )
                 return wsi
             except Exception as e:
-                if SlideMissingMPPError and isinstance(e, SlideMissingMPPError):
-                    continue
-                err_msg = str(e).lower()
-                if "magnification" in err_msg or "mpp" in err_msg or "microns-per-pixel" in err_msg:
-                    continue
-                raise
+                last_error = e
+                logger.debug(f"Failed to open WSI at {mag}: {e}")
+                continue
 
         # Last resort: force MPP and try adaptive magnification
         default_mpp = 0.5  # ~20x, safe default for histology
@@ -515,7 +513,38 @@ class SlideflowProvider:
             import openslide
 
             slide = openslide.open_slide(slide_path)
-            mpp = slide.properties.get("openslide.mpp-x")
+            props = slide.properties
+            mpp = props.get("openslide.mpp-x")
+
+            # Fallback: vendor-specific MPP keys
+            if not mpp:
+                mpp = props.get("aperio.MPP")
+            if not mpp:
+                # Hamamatsu: derive MPP from objective lens magnification
+                source_lens = props.get("hamamatsu.SourceLens")
+                if source_lens:
+                    try:
+                        lens_mag = float(source_lens)
+                        if lens_mag > 0:
+                            # Standard relation: 10/mpp ~ magnification
+                            mpp = str(10.0 / lens_mag)
+                    except (ValueError, ZeroDivisionError):
+                        pass
+            if not mpp:
+                # TIFF: XResolution in pixels per cm → convert to microns per pixel
+                x_res = props.get("tiff.XResolution")
+                res_unit = props.get("tiff.ResolutionUnit")
+                if x_res:
+                    try:
+                        x_res_val = float(x_res)
+                        if x_res_val > 0:
+                            if res_unit in {"centimeter", "3"}:
+                                mpp = str(10000.0 / x_res_val)
+                            elif res_unit in {"inch", "2"}:
+                                mpp = str(25400.0 / x_res_val)
+                    except (ValueError, ZeroDivisionError):
+                        pass
+
             slide.close()
             if mpp:
                 mpp_val = float(mpp)
@@ -1129,7 +1158,7 @@ class SlideflowProvider:
         else:
             return self._heatmap_from_gradcam(slide_path, prediction_class, resolution_level)
 
-    def _heatmap_from_features(
+    def _heatmap_from_features(  # noqa: PLR0915
         self, slide_path: str, prediction_class: str, resolution_level: int
     ) -> HeatmapResult:
         """
@@ -1158,10 +1187,35 @@ class SlideflowProvider:
             else:
                 # Shape (n, dim) → need to reshape to 2D grid
                 norms = np.linalg.norm(raw_features.astype(np.float64), axis=1).astype(np.float32)
-                grid_size = int(np.ceil(np.sqrt(len(norms))))
-                padded = np.zeros(grid_size * grid_size)
-                padded[: len(norms)] = norms
-                feature_norms = padded.reshape(grid_size, grid_size)
+                n = len(norms)
+
+                # Try to use the WSI grid shape if available (Slideflow provides it)
+                grid_shape = None
+                if hasattr(wsi, "grid") and wsi.grid is not None:
+                    try:
+                        grid_shape = wsi.grid.shape[:2]  # (rows, cols)
+                        if grid_shape[0] * grid_shape[1] >= n:
+                            logger.debug(f"Using WSI grid shape: {grid_shape}")
+                        else:
+                            grid_shape = None
+                    except (AttributeError, IndexError):
+                        grid_shape = None
+
+                if grid_shape is None:
+                    # Calculate aspect-ratio-aware grid from slide dimensions
+                    slide_dims = wsi.dimensions if hasattr(wsi, "dimensions") else None
+                    if slide_dims and slide_dims[0] > 0 and slide_dims[1] > 0:
+                        aspect = slide_dims[0] / slide_dims[1]  # width / height
+                        grid_h = max(1, int(np.ceil(np.sqrt(n / aspect))))
+                        grid_w = max(1, int(np.ceil(n / grid_h)))
+                    else:
+                        grid_w = int(np.ceil(np.sqrt(n)))
+                        grid_h = grid_w
+                    grid_shape = (grid_h, grid_w)
+
+                padded = np.zeros(grid_shape[0] * grid_shape[1])
+                padded[:n] = norms
+                feature_norms = padded.reshape(grid_shape[0], grid_shape[1])
 
             # Sanitize any residual NaN/inf from extreme magnitudes
             feature_norms = np.nan_to_num(feature_norms, nan=0.0, posinf=0.0, neginf=0.0).astype(

@@ -464,7 +464,7 @@ class ApiService {
             resolution_level: options.resolutionLevel || 2,
             colormap: options.colormap || 'jet',
         });
-        return this.get(`/api/ml/heatmap/${encodeURIComponent(slideId)}?${params}`);
+        return this.get(`/api/ml/heatmap/${encodeURIComponent(slideId)}?${params}`, { useCache: false });
     }
 
     /**

@@ -187,13 +187,13 @@ class MLPanel {
         this.modelSelect = this.element.querySelector('.ml-panel__model-select');
 
         // Make header clickable for accordion
-        const header = this.element.querySelector('.ml-panel__header');
-        if (header) {
-            header.setAttribute('role', 'button');
-            header.setAttribute('tabindex', '0');
-            header.setAttribute('aria-expanded', String(!this.isCollapsed));
-            header.addEventListener('click', () => this._toggleCollapse());
-            header.addEventListener('keydown', (e) => {
+        const panelHeader = this.element.querySelector('.ml-panel__header');
+        if (panelHeader) {
+            panelHeader.setAttribute('role', 'button');
+            panelHeader.setAttribute('tabindex', '0');
+            panelHeader.setAttribute('aria-expanded', String(!this.isCollapsed));
+            panelHeader.addEventListener('click', () => this._toggleCollapse());
+            panelHeader.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     this._toggleCollapse();
@@ -243,6 +243,18 @@ class MLPanel {
                 opacity: this.heatmapOpacity,
             });
         });
+
+        // Listen for heatmap errors to reset toggle state
+        this._unsubscribers.push(
+            eventBus.on(Events.ML_HEATMAP_ERROR, (data) => {
+                if (data.viewerId === this.viewerId) {
+                    this.heatmapVisible = false;
+                    this.heatmapBtn.classList.remove('is-active');
+                    this.opacityContainer.style.display = 'none';
+                    this._displayError(data.error || 'Heatmap generation failed');
+                }
+            }),
+        );
 
         // Listen for slide loaded events - Store unsubscribe functions
         this._unsubscribers.push(

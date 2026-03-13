@@ -108,6 +108,7 @@
   "tools.point": "Point (M)",
   "tools.freehand": "Main levee (F)",
   "tools.circle": "Cercle (C)",
+  "tools.ruler": "Regle (L)",
   "tools.deleteSelection": "Supprimer la selection (Del)",
   "tools.noLabel": "Sans etiquette",
   "tools.customLabel": "Etiquette personnalisee...",
