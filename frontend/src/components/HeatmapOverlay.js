@@ -293,14 +293,8 @@ class HeatmapOverlay {
                 const img = new Image();
                 img.onload = () => resolve(img);
                 img.onerror = () => {
-                    const errorMsg = 'Failed to decode heatmap base64 image';
-                    console.error(`[HeatmapOverlay] ${errorMsg}`);
-                    eventBus.emit(Events.ML_HEATMAP_ERROR, {
-                        viewerId: this.viewerId,
-                        slideId: this.slideId,
-                        error: errorMsg,
-                    });
-                    reject(new Error(errorMsg));
+                    // Reject only — caller's catch block emits ML_HEATMAP_ERROR
+                    reject(new Error('Failed to decode heatmap base64 image'));
                 };
                 img.src = `data:image/png;base64,${this.heatmapData.heatmap_base64}`;
             });

@@ -760,7 +760,7 @@ async def get_heatmap(
         raise _translate_ml_error(e)
     except Exception as e:
         logger.error(f"Unexpected heatmap error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Heatmap generation failed: {e}")
+        raise HTTPException(status_code=500, detail="Heatmap generation failed unexpectedly")
 
 
 @router.post("/detect/{slide_id}")

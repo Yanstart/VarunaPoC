@@ -108,7 +108,7 @@
   "tools.point": "ポイント (M)",
   "tools.freehand": "フリーハンド (F)",
   "tools.circle": "円 (C)",
-  "tools.ruler": "u30ebu30fcu30e9u30fc (L)",
+  "tools.ruler": "ルーラー (L)",
   "tools.deleteSelection": "選択を削除 (Del)",
   "tools.noLabel": "ラベルなし",
   "tools.customLabel": "カスタムラベル...",

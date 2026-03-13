@@ -369,7 +369,7 @@ export class Router {
                 viewerArea.appendChild(this._state.scaleBar.element);
             }
             // Fetch MPP asynchronously
-            this._initMppTools(slide.id, viewerInstance);
+            this._initMppTools(slide.id);
         }
 
         // Layer Manager (in info panel)
@@ -657,7 +657,7 @@ export class Router {
         // Re-fetch MPP for measurement tools
         const viewerInstance = getLegacyViewer();
         if (viewerInstance) {
-            this._initMppTools(newSlide.id, viewerInstance);
+            this._initMppTools(newSlide.id);
         }
     }
 
@@ -758,7 +758,7 @@ export class Router {
      * @param {Object} viewerInstance
      * @private
      */
-    async _initMppTools(slideId, _viewerInstance) {
+    async _initMppTools(slideId) {
         let mpp = null;
         try {
             const resp = await apiService.get(`/api/v1/slides/${slideId}/mpp`);

@@ -880,59 +880,6 @@ class DrawingTools {
     }
 
     /**
-     * Compute the area and perimeter of a polygon given as [[x,y], ...] ring.
-     * Returns formatted strings using MPP if available.
-     * @param {Array<Array<number>>} ring - Polygon ring coordinates (closed)
-     * @returns {{ area: string, perimeter: string }}
-     */
-    _computePolygonMeasurements(ring) {
-        if (!ring || ring.length < 4) {
-            return { area: '', perimeter: '' };
-        }
-
-        // Perimeter
-        let perimPx = 0;
-        for (let i = 0; i < ring.length - 1; i++) {
-            const dx = ring[i + 1][0] - ring[i][0];
-            const dy = ring[i + 1][1] - ring[i][1];
-            perimPx += Math.sqrt(dx * dx + dy * dy);
-        }
-
-        // Area (shoelace formula)
-        let areaPx2 = 0;
-        for (let i = 0; i < ring.length - 1; i++) {
-            areaPx2 += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
-        }
-        areaPx2 = Math.abs(areaPx2) / 2;
-
-        if (this._mpp && this._mpp > 0) {
-            const perimUm = perimPx * this._mpp;
-            const areaUm2 = areaPx2 * this._mpp * this._mpp;
-
-            let perimStr;
-            if (perimUm >= 1000) {
-                perimStr = (perimUm / 1000).toFixed(2) + ' mm';
-            } else {
-                perimStr = perimUm.toFixed(1) + ' \u00b5m';
-            }
-
-            let areaStr;
-            if (areaUm2 >= 1e6) {
-                areaStr = (areaUm2 / 1e6).toFixed(3) + ' mm\u00b2';
-            } else {
-                areaStr = areaUm2.toFixed(0) + ' \u00b5m\u00b2';
-            }
-
-            return { area: areaStr, perimeter: perimStr };
-        }
-
-        return {
-            area: Math.round(areaPx2) + ' px\u00b2',
-            perimeter: Math.round(perimPx) + ' px',
-        };
-    }
-
-    /**
      * Set microns-per-pixel value for measurement calculations
      * @param {number|null} mpp
      */
