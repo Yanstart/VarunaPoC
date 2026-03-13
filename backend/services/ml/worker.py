@@ -389,13 +389,24 @@ def _init_services(provider, worker_logger):
     clustering_svc = ClusteringService()
     quality_svc = QualityService()
 
-    registry = {
-        "count_cells": lambda slide_path, stain="Ki67", region=None: counting_svc.count_cells(
+    def _count(
+        slide_path,
+        stain="Ki67",
+        region=None,
+        include_positions=False,
+        slide_dimensions=None,
+    ):
+        return counting_svc.count_cells(
             slide_path=slide_path,
             provider=provider,
             stain=stain,
             region=region,
-        ),
+            include_positions=include_positions,
+            slide_dimensions=slide_dimensions,
+        )
+
+    registry = {
+        "count_cells": _count,
         "cluster": lambda slide_path, n_clusters=4: clustering_svc.cluster(
             slide_path=slide_path,
             n_clusters=n_clusters,
