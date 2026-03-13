@@ -1,0 +1,52 @@
+/* HeatmapLegend — color scale for ML heatmap overlay */
+
+.heatmap-legend {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 300;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-bg-elevated, #1e293b);
+    padding: 6px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    font-size: 11px;
+    transition: opacity 0.2s ease;
+}
+
+.heatmap-legend--visible {
+    display: flex;
+}
+
+.heatmap-legend__gradient {
+    width: 120px;
+    height: 10px;
+    border-radius: 3px;
+    background: linear-gradient(
+        90deg,
+        #0000ff 0%,
+        #00ffff 25%,
+        #00ff00 50%,
+        #ffff00 75%,
+        #ff0000 100%
+    );
+}
+
+.heatmap-legend__label {
+    color: var(--color-text-secondary, #94a3b8);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.heatmap-legend__title {
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: var(--color-text-tertiary, #64748b);
+    white-space: nowrap;
+}

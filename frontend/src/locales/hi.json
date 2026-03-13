@@ -153,5 +153,8 @@
   "sync.modeZoom": "ज़ूम",
   "layout.single": "एकल दृश्य",
   "layout.sideBySide": "साथ-साथ",
-  "layout.grid2x2": "ग्रिड 2×2"
+  "layout.grid2x2": "ग्रिड 2×2",
+  "legend.low": "कम",
+  "legend.high": "उच्च",
+  "legend.attention": "ध्यान"
 }

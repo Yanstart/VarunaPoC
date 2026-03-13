@@ -153,5 +153,8 @@
   "sync.modeZoom": "ズーム",
   "layout.single": "単一ビュー",
   "layout.sideBySide": "並列表示",
-  "layout.grid2x2": "グリッド 2×2"
+  "layout.grid2x2": "グリッド 2×2",
+  "legend.low": "低",
+  "legend.high": "高",
+  "legend.attention": "注意"
 }

@@ -153,5 +153,8 @@
   "sync.modeZoom": "缩放",
   "layout.single": "单视图",
   "layout.sideBySide": "并排",
-  "layout.grid2x2": "网格 2×2"
+  "layout.grid2x2": "网格 2×2",
+  "legend.low": "低",
+  "legend.high": "高",
+  "legend.attention": "注意"
 }

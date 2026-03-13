@@ -153,5 +153,8 @@
   "sync.modeZoom": "Zoom",
   "layout.single": "Single view",
   "layout.sideBySide": "Side by side",
-  "layout.grid2x2": "Grid 2×2"
+  "layout.grid2x2": "Grid 2×2",
+  "legend.low": "Low",
+  "legend.high": "High",
+  "legend.attention": "Attention"
 }
