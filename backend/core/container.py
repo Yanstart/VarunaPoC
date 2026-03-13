@@ -15,7 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceContainer:
-    """Thread-safe lazy singleton registry for shared services."""
+    """Lazy singleton registry for shared services.
+
+    Note: not thread-safe. Under ASGI with a single event loop this is fine;
+    concurrent threads would need a ``threading.Lock`` around each getter.
+    """
 
     _ml_provider: Any = None
     _ml_config_hash: str | None = None
