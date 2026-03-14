@@ -48,6 +48,9 @@ class DetectionPanel {
         /** @type {Map<number, string>} Feedback status per detection index */
         this.feedbackStatus = new Map();
 
+        /** @type {Set<number>} Indices of hidden detection zones */
+        this.hiddenZones = new Set();
+
         /** @type {string|null} Selected label ID for classification */
         this.selectedLabelId = null;
 
@@ -352,6 +355,15 @@ class DetectionPanel {
             });
         });
 
+        // Per-zone visibility toggle
+        this.element.querySelectorAll('.detection-item__visibility').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.visibilityIndex);
+                this._toggleZoneVisibility(idx);
+            });
+        });
+
         // Detection item click for bidirectional linking
         this.element.querySelectorAll('.detection-item').forEach((item) => {
             item.addEventListener('click', (e) => {
@@ -459,6 +471,7 @@ class DetectionPanel {
         const isAccepted = this.accepted.has(index);
         const isRejected = this.rejected.has(index);
         const isHighlighted = this.highlightedIndex === index;
+        const isHidden = this.hiddenZones.has(index);
         const confLevel = feature.properties?.confidence >= 0.8 ? 'high'
             : feature.properties?.confidence >= 0.5 ? 'medium' : 'low';
 
@@ -468,7 +481,7 @@ class DetectionPanel {
             : '';
 
         return `
-            <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''} ${isHighlighted ? 'is-highlighted' : ''}"
+            <div class="detection-item ${isAccepted ? 'is-accepted' : ''} ${isRejected ? 'is-rejected' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isHidden ? 'is-hidden-zone' : ''}"
                  data-detection-item-index="${index}">
                 <div class="detection-item__info">
                     <span class="detection-item__label">R\u00e9gion ${index + 1}${this._getConfidenceBadge(feature.properties?.confidence)}${dimensionHtml}</span>
@@ -478,6 +491,13 @@ class DetectionPanel {
                     </span>
                 </div>
                 <div class="detection-item__actions">
+                    <button class="detection-item__visibility ${isHidden ? 'is-hidden' : ''}" data-visibility-index="${index}" title="${isHidden ? 'Afficher' : 'Masquer'}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            ${isHidden
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'}
+                        </svg>
+                    </button>
                     <button class="detection-item__accept ${isAccepted ? 'is-active' : ''}" data-index="${index}" title="Accepter">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"/>
@@ -752,12 +772,32 @@ class DetectionPanel {
         ExportService.download(csv, `${slideName}_detection_${ExportService.dateStamp()}.csv`);
     }
 
+    /**
+     * Toggle visibility of a single detection zone on the overlay.
+     * @param {number} index - Detection zone index
+     * @private
+     */
+    _toggleZoneVisibility(index) {
+        const nowHidden = !this.hiddenZones.has(index);
+        if (nowHidden) {
+            this.hiddenZones.add(index);
+        } else {
+            this.hiddenZones.delete(index);
+        }
+        eventBus.emit(Events.DETECTION_HIGHLIGHT, {
+            regionIndex: index,
+            visible: !nowHidden,
+        });
+        this._renderPreview();
+    }
+
     _resetState() {
         this.detectionResult = null;
         this.measurementResult = null;
         this.feedbackStatus = new Map();
         this.accepted.clear();
         this.rejected.clear();
+        this.hiddenZones.clear();
         this.highlightedIndex = null;
         this._hoverListenersAdded = false;
         annotationStore.clearDetectionPreview();
