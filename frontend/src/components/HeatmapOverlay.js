@@ -82,6 +82,14 @@ class HeatmapOverlay {
             }),
         );
 
+        this._unsubscribers.push(
+            eventBus.on(Events.ML_OVERLAYS_TOGGLE, ({ visible }) => {
+                if (this.overlayElement) {
+                    this.overlayElement.style.display = visible ? '' : 'none';
+                }
+            }),
+        );
+
         // Listen for viewport changes to update overlay position
         if (this.viewer) {
             this.viewer.addHandler('viewport-change', this._boundRender);

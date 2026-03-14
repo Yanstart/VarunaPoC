@@ -70,6 +70,14 @@ export class CellMarkerOverlay {
             }),
         );
 
+        this._unsubscribers.push(
+            eventBus.on(Events.ML_OVERLAYS_TOGGLE, ({ visible }) => {
+                if (this._canvas) {
+                    this._canvas.style.display = visible ? '' : 'none';
+                }
+            }),
+        );
+
         // OSD viewport handlers
         if (this.viewer) {
             this._boundViewportChange = () => this._scheduleRender();

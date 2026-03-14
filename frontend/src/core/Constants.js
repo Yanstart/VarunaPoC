@@ -186,6 +186,10 @@ export const Events = Object.freeze({
     /** @payload {{ opacity: number }} */
     CELL_MARKERS_OPACITY: 'cellCounting:markersOpacity',
 
+    // -- ML overlays global toggle (Wave C) --
+    /** @payload {{ visible: boolean }} */
+    ML_OVERLAYS_TOGGLE: 'ml:overlaysToggle',
+
     // -- Clustering (Wave 4) --
     /** @payload {{ viewerId: string }} */
     CLUSTERING_START: 'clustering:start',

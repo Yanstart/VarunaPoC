@@ -23,6 +23,7 @@ import { apiService } from '../services/ApiService.js';
 import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
+import { ExportService } from '../services/ExportService.js';
 
 class CellCountingPanel {
     /**
@@ -318,6 +319,13 @@ class CellCountingPanel {
         });
         section.appendChild(btn);
 
+        // Export CSV button
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'cell-counting-panel__btn cell-counting-panel__btn--export';
+        exportBtn.textContent = i18nService.t('export.csv');
+        exportBtn.addEventListener('click', () => this._exportCSV());
+        section.appendChild(exportBtn);
+
         this._body.appendChild(section);
     }
 
@@ -397,6 +405,37 @@ class CellCountingPanel {
             this.isCounting = false;
             eventBus.emit(Events.ML_WORKER_FREE);
         }
+    }
+
+    // ==========================================
+    // EXPORT
+    // ==========================================
+
+    _exportCSV() {
+        if (!this.result) return;
+        const r = this.result;
+
+        const headers = ['field', 'value', 'detail'];
+        const rows = [
+            ['total_cells', r.total_cells, ''],
+            ['positive', r.positive, ''],
+            ['negative', r.negative, ''],
+            ['ratio', r.ratio, ''],
+            ['percentage', r.percentage, ''],
+        ];
+
+        // Add cell positions if available
+        if (r.cells && r.cells.length > 0) {
+            rows.push(['', '', '']);
+            rows.push(['cell_x', 'cell_y', 'positive']);
+            for (const cell of r.cells) {
+                rows.push([cell.x, cell.y, cell.positive]);
+            }
+        }
+
+        const csv = ExportService.toCSV(headers, rows);
+        const slideName = this.slideId || 'slide';
+        ExportService.download(csv, `${slideName}_counting_${ExportService.dateStamp()}.csv`);
     }
 
     // ==========================================

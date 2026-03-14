@@ -13,6 +13,8 @@
  */
 
 import { apiService } from '../services/ApiService.js';
+import { eventBus } from '../core/EventBus.js';
+import { Events } from '../core/Constants.js';
 
 class SimilarityPanel {
     /**
@@ -256,7 +258,7 @@ class SimilarityPanel {
 
         // Click to open in new tab
         card.addEventListener('click', () => {
-            window.open('/slide/' + result.slide_id, '_blank');
+            eventBus.emit(Events.CASE_SLIDE_SWITCH, { slideId: result.slide_id });
         });
 
         return card;

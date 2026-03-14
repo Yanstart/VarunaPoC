@@ -29,6 +29,7 @@ import { CompareLayout } from '../components/CompareLayout.js';
 import { MLPanel } from '../components/MLPanel.js';
 import { HeatmapOverlay } from '../components/HeatmapOverlay.js';
 import { CaseSidebar } from '../components/CaseSidebar.js';
+import { MetadataPanel } from '../components/MetadataPanel.js';
 
 import { AnnotationLayer } from '../components/AnnotationLayer.js';
 import { DrawingTools } from '../components/DrawingTools.js';
@@ -443,6 +444,38 @@ export class Router {
         };
         document.addEventListener('keydown', this._state._keyNavHandler);
 
+        this._state._compareSwitchUnsub = eventBus.on(Events.CASE_SLIDE_SWITCH, ({ slideId, compare }) => {
+            if (compare) {
+                this.showComparePage(this._state.selectedSlide);
+            } else if (slideId) {
+                const slides = this._state.caseSlides || [];
+                const target = slides.find(s => s.id === slideId) || { id: slideId };
+                this._handleSlideSwitch(target);
+            }
+        });
+
+        this._state._mlToggleHandler = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
+            if (e.key === 'm' || e.key === 'M') {
+                this._state._mlOverlaysHidden = !this._state._mlOverlaysHidden;
+                eventBus.emit(Events.ML_OVERLAYS_TOGGLE, { visible: !this._state._mlOverlaysHidden });
+
+                // Show/hide ML hidden badge
+                let badge = document.querySelector('.ml-hidden-badge');
+                if (this._state._mlOverlaysHidden) {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'ml-hidden-badge';
+                        badge.textContent = i18nService.t('ml.overlaysHidden');
+                        document.querySelector('.viewer-area')?.appendChild(badge);
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+            }
+        };
+        document.addEventListener('keydown', this._state._mlToggleHandler);
+
         eventBus.emit(Events.PAGE_CHANGED, { page: Pages.VIEWER });
     }
 
@@ -694,7 +727,7 @@ export class Router {
 
         const resetTargets = [
             'mlPanel', 'detectionPanel', 'cellCountingPanel',
-            'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge',
+            'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
         ];
         for (const key of resetTargets) {
             if (this._state[key] && this._state[key].setSlide) {
@@ -772,6 +805,9 @@ export class Router {
             note.appendChild(document.createElement('br'));
             note.appendChild(document.createTextNode(this._t('slide.minimapHint')));
             infoPanel.appendChild(note);
+
+            this._state.metadataPanel = new MetadataPanel(infoPanel);
+            this._state.metadataPanel.setSlide(slide.id);
 
         } catch (err) {
             console.error('[App] Load failed:', err);
@@ -1365,13 +1401,18 @@ export class Router {
         if (this._state._slideNavPrevUnsub) { this._state._slideNavPrevUnsub(); this._state._slideNavPrevUnsub = null; }
         if (this._state._slideNavNextUnsub) { this._state._slideNavNextUnsub(); this._state._slideNavNextUnsub = null; }
         if (this._state._keyNavHandler) { document.removeEventListener('keydown', this._state._keyNavHandler); this._state._keyNavHandler = null; }
+        if (this._state._mlToggleHandler) { document.removeEventListener('keydown', this._state._mlToggleHandler); this._state._mlToggleHandler = null; }
+        const mlBadge = document.querySelector('.ml-hidden-badge');
+        if (mlBadge) mlBadge.remove();
+        this._state._mlOverlaysHidden = false;
+        if (this._state._compareSwitchUnsub) { this._state._compareSwitchUnsub(); this._state._compareSwitchUnsub = null; }
 
         const destroyKeys = [
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'similarityPanel',
             'clusteringOverlay', 'cellMarkerOverlay',
             'mlProgressBar', 'heatmapLegend',
             'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
-            'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge',
+            'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
             'compareLayout', 'caseSidebar', 'userMenu', 'loginPage', 'toastManager',
         ];
