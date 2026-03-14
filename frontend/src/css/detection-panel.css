@@ -234,7 +234,8 @@
 }
 
 .detection-item__accept,
-.detection-item__reject {
+.detection-item__reject,
+.detection-item__visibility {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -261,6 +262,22 @@
     color: #ff6b6b;
     border-color: #ff6b6b;
     background: rgba(255, 107, 107, 0.1);
+}
+
+.detection-item__visibility:hover {
+    color: #64B5F6;
+    border-color: #64B5F6;
+    background: rgba(100, 181, 246, 0.1);
+}
+
+.detection-item__visibility.is-hidden {
+    color: #666;
+    border-color: #333;
+    opacity: 0.6;
+}
+
+.detection-item.is-hidden-zone {
+    opacity: 0.5;
 }
 
 /* Error */

@@ -126,6 +126,16 @@ class AnnotationLayer {
             }),
         );
         this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_HIGHLIGHT, ({ regionIndex, visible }) => {
+                if (visible !== undefined && regionIndex !== null && regionIndex !== undefined) {
+                    const target = this.previewGroup?.querySelector(`[data-detection-index="${regionIndex}"]`);
+                    if (target) {
+                        target.style.display = visible ? '' : 'none';
+                    }
+                }
+            }),
+        );
+        this._unsubscribers.push(
             eventBus.on(Events.QUALITY_DISAGREEMENT_TOGGLE, ({ visible, features }) => {
                 this._renderDisagreements(visible ? features : []);
             }),
