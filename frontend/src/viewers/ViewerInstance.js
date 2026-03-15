@@ -302,7 +302,7 @@ class ViewerInstance {
             if (authService.accessToken) {
                 headers['Authorization'] = `Bearer ${authService.accessToken}`;
             }
-            const response = await fetch(`${API.BASE_URL}/api/slides/${slideId}/dzi.json`, { headers });
+            const response = await fetch(`${API.BASE_URL}/api/v1/slides/${slideId}/dzi.json`, { headers });
 
             if (!response.ok) {
                 throw new Error(`Failed to load DZI metadata: ${response.statusText}`);
@@ -390,7 +390,7 @@ class ViewerInstance {
              */
             getTileUrl: function (level, x, y) {
                 const openslideLevel = metadata.levels - 1 - level;
-                return `${baseUrl}/api/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
+                return `${baseUrl}/api/v1/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
             },
         };
     }

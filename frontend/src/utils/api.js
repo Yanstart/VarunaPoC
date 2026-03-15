@@ -23,7 +23,7 @@ export const API_BASE = envApiUrl || 'http://localhost:8000';
  *   - Retourne toutes lames détectées dans /Slides
  */
 export async function fetchSlides() {
-    const res = await fetch(`${API_BASE}/api/slides/`);
+    const res = await fetch(`${API_BASE}/api/v1/slides/`);
     if (!res.ok) {throw new Error('Failed to fetch slides');}
     return res.json();
 }
@@ -36,11 +36,11 @@ export async function fetchSlides() {
  * @throws {Error} Si requête échoue ou lame introuvable
  *
  * Technical Notes:
- *   - Appelle GET /api/slides/{id}/info
+ *   - Appelle GET /api/v1/slides/{id}/info
  *   - Retourne infos OpenSlide (dimensions, niveaux pyramidaux)
  */
 export async function getSlideInfo(slideId) {
-    const res = await fetch(`${API_BASE}/api/slides/${slideId}/info`);
+    const res = await fetch(`${API_BASE}/api/v1/slides/${slideId}/info`);
     if (!res.ok) {throw new Error('Failed to fetch slide info');}
     return res.json();
 }
@@ -57,7 +57,7 @@ export async function getSlideInfo(slideId) {
  *   - Backend génère JPEG optimisé (~100-500KB)
  */
 export function getOverviewUrl(slideId) {
-    return `${API_BASE}/api/slides/${slideId}/overview`;
+    return `${API_BASE}/api/v1/slides/${slideId}/overview`;
 }
 
 /**
@@ -68,14 +68,14 @@ export function getOverviewUrl(slideId) {
  * @throws {Error} Si requête échoue ou chemin invalide
  *
  * Technical Notes:
- *   - Appelle GET /api/slides/browse?path={path}
+ *   - Appelle GET /api/v1/slides/browse?path={path}
  *   - Lecture non-récursive (un seul niveau de profondeur)
  *   - Sécurité: path traversal bloqué par backend
  *   - Voir docs/Manuel/02-NAVIGATION_DOSSIERS.md
  */
 export async function fetchBrowse(path = '/') {
     const encodedPath = encodeURIComponent(path);
-    const res = await fetch(`${API_BASE}/api/slides/browse?path=${encodedPath}`);
+    const res = await fetch(`${API_BASE}/api/v1/slides/browse?path=${encodedPath}`);
     if (!res.ok) {
         const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
         throw new Error(error.detail || 'Failed to browse directory');

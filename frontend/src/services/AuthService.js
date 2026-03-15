@@ -83,7 +83,7 @@ class AuthService {
             this._loadTokensFromStorage();
 
             // Check backend auth status
-            const response = await fetch(`${API.BASE_URL}/api/auth/me`, {
+            const response = await fetch(`${API.BASE_URL}/api/v1/auth/me`, {
                 headers: this._accessToken
                     ? { 'Authorization': `Bearer ${this._accessToken}` }
                     : {},
