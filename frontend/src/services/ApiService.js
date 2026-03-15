@@ -485,7 +485,7 @@ class ApiService {
             body.num_mc_samples = options.numMcSamples;
         }
 
-        return this.post(`/api/ml/predict/${encodeURIComponent(slideId)}`, body);
+        return this.post(`/api/v1/ml/predict/${encodeURIComponent(slideId)}`, body);
     }
 
     /**
@@ -501,7 +501,7 @@ class ApiService {
             resolution_level: options.resolutionLevel || 2,
             colormap: options.colormap || 'jet',
         });
-        return this.get(`/api/ml/heatmap/${encodeURIComponent(slideId)}?${params}`, { useCache: false });
+        return this.get(`/api/v1/ml/heatmap/${encodeURIComponent(slideId)}?${params}`, { useCache: false });
     }
 
     /**
@@ -511,7 +511,7 @@ class ApiService {
      * @returns {Promise<Object>} Feature extraction result
      */
     async extractFeatures(slideId, options = {}) {
-        return this.post(`/api/ml/features/${encodeURIComponent(slideId)}`, {
+        return this.post(`/api/v1/ml/features/${encodeURIComponent(slideId)}`, {
             tile_size: options.tileSize || 224,
             overlap: options.overlap || 0,
         });
@@ -530,7 +530,7 @@ class ApiService {
             threshold: options.threshold || 0.5,
             prediction_class: options.predictionClass || 'tissue',
         });
-        return this.get(`/api/ml/measure/${encodeURIComponent(slideId)}?${params}`);
+        return this.get(`/api/v1/ml/measure/${encodeURIComponent(slideId)}?${params}`);
     }
 
     /**
@@ -540,7 +540,7 @@ class ApiService {
      * @returns {Promise<Object>} Feedback result
      */
     async submitFeedback(slideId, feedback) {
-        return this.post(`/api/ml/feedback/${encodeURIComponent(slideId)}`, feedback);
+        return this.post(`/api/v1/ml/feedback/${encodeURIComponent(slideId)}`, feedback);
     }
 
     /**
@@ -549,7 +549,7 @@ class ApiService {
      * @returns {Promise<Object>} Tags response with organ, stain, etc.
      */
     async getSlideTags(slideId) {
-        return this.get(`/api/ml/tags/${encodeURIComponent(slideId)}`);
+        return this.get(`/api/v1/ml/tags/${encodeURIComponent(slideId)}`);
     }
 
 
@@ -566,7 +566,7 @@ class ApiService {
             top_n: options.topN || 10,
             threshold: options.threshold || 0.5,
         });
-        return this.get(`/api/ml/focus/${encodeURIComponent(slideId)}?${params}`);
+        return this.get(`/api/v1/ml/focus/${encodeURIComponent(slideId)}?${params}`);
     }
 
     /**
@@ -580,7 +580,7 @@ class ApiService {
         const params = new URLSearchParams();
         if (options.topK) {params.set('top_k', options.topK);}
         const query = params.toString() ? `?${params}` : '';
-        return this.post(`/api/ml/similar/${encodeURIComponent(slideId)}${query}`, {});
+        return this.post(`/api/v1/ml/similar/${encodeURIComponent(slideId)}${query}`, {});
     }
 
     // ==========================================
@@ -713,7 +713,7 @@ class ApiService {
         if (params.region) queryParams.set('region', params.region);
 
         const qs = queryParams.toString();
-        const url = `/api/ml/detect/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`;
+        const url = `/api/v1/ml/detect/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`;
         return this.post(url, {});
     }
 
@@ -734,7 +734,7 @@ class ApiService {
         if (params.region) body.region = params.region;
         if (params.stain) body.stain = params.stain;
         const qs = params.includePositions ? '?include_positions=true' : '';
-        return this.post(`/api/ml/count/${encodeURIComponent(slideId)}${qs}`, body);
+        return this.post(`/api/v1/ml/count/${encodeURIComponent(slideId)}${qs}`, body);
     }
 
     // ==========================================
@@ -760,7 +760,7 @@ class ApiService {
         const queryParams = new URLSearchParams();
         if (params.n_clusters !== undefined) queryParams.set('n_clusters', params.n_clusters);
         const qs = queryParams.toString();
-        return this.post(`/api/ml/cluster/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`, {});
+        return this.post(`/api/v1/ml/cluster/${encodeURIComponent(slideId)}${qs ? '?' + qs : ''}`, {});
     }
 
     // ==========================================
@@ -773,7 +773,7 @@ class ApiService {
      * @returns {Promise<Object>} Quality result with score, label, artifacts
      */
     async getSlideQuality(slideId) {
-        return this.get(`/api/ml/quality/${encodeURIComponent(slideId)}`);
+        return this.get(`/api/v1/ml/quality/${encodeURIComponent(slideId)}`);
     }
 
     // ==========================================
@@ -786,7 +786,7 @@ class ApiService {
      * @returns {Promise<Object>} DriftReportResponse
      */
     async getDriftReport(modelId) {
-        return this.get(`/api/ml/drift/${encodeURIComponent(modelId)}`);
+        return this.get(`/api/v1/ml/drift/${encodeURIComponent(modelId)}`);
     }
 
     /**
@@ -849,7 +849,7 @@ class ApiService {
      * @returns {Promise<Array>} List of annotator info
      */
     async getAnnotators(slideId) {
-        return this.get(`/api/quality/${encodeURIComponent(slideId)}/annotators`, {
+        return this.get(`/api/v1/quality/${encodeURIComponent(slideId)}/annotators`, {
             useCache: false,
         });
     }
@@ -861,7 +861,7 @@ class ApiService {
      * @returns {Promise<Object>} KappaResult
      */
     async computeKappa(slideId, params) {
-        return this.post(`/api/quality/${encodeURIComponent(slideId)}/kappa`, params);
+        return this.post(`/api/v1/quality/${encodeURIComponent(slideId)}/kappa`, params);
     }
 
     /**
@@ -871,7 +871,7 @@ class ApiService {
      * @returns {Promise<Object>} FleissKappaResult
      */
     async computeFleissKappa(slideId, params) {
-        return this.post(`/api/quality/${encodeURIComponent(slideId)}/fleiss`, params);
+        return this.post(`/api/v1/quality/${encodeURIComponent(slideId)}/fleiss`, params);
     }
 
     /**
@@ -881,7 +881,7 @@ class ApiService {
      * @returns {Promise<Object>} ConfusionMatrixResult
      */
     async computeConfusionMatrix(slideId, params) {
-        return this.post(`/api/quality/${encodeURIComponent(slideId)}/confusion-matrix`, params);
+        return this.post(`/api/v1/quality/${encodeURIComponent(slideId)}/confusion-matrix`, params);
     }
 
     /**
@@ -891,7 +891,7 @@ class ApiService {
      * @returns {Promise<Object>} PerLabelMetricsResult
      */
     async computeF1Metrics(slideId, params) {
-        return this.post(`/api/quality/${encodeURIComponent(slideId)}/f1`, params);
+        return this.post(`/api/v1/quality/${encodeURIComponent(slideId)}/f1`, params);
     }
 
     /**
@@ -901,7 +901,7 @@ class ApiService {
      * @returns {Promise<Object>} IoUDistributionResult
      */
     async computeIoUDistribution(slideId, params) {
-        return this.post(`/api/quality/${encodeURIComponent(slideId)}/iou-distribution`, params);
+        return this.post(`/api/v1/quality/${encodeURIComponent(slideId)}/iou-distribution`, params);
     }
 
     /**
@@ -911,7 +911,7 @@ class ApiService {
      * @returns {Promise<Object>} DisagreementHeatmapResult (GeoJSON FeatureCollection)
      */
     async getDisagreements(slideId, params) {
-        return this.post(`/api/quality/${encodeURIComponent(slideId)}/disagreements`, params);
+        return this.post(`/api/v1/quality/${encodeURIComponent(slideId)}/disagreements`, params);
     }
 
     // ==========================================

@@ -251,7 +251,7 @@ class I18nService {
     async _loadTranslations(locale) {
         // Try loading from backend API
         try {
-            const response = await fetch(`${API.BASE_URL}/api/regional/i18n/${locale}`);
+            const response = await fetch(`${API.BASE_URL}/api/v1/regional/i18n/${locale}`);
             if (response.ok) {
                 const data = await response.json();
                 if (data.translations) {

@@ -99,7 +99,7 @@ export async function loadSlideWithTiles(viewer, slideId) {
     try {
         // 1. Fetch DZI metadata
         console.warn(`[Viewer] Loading DZI metadata for slide ${slideId}`);
-        const response = await fetch(`${API_BASE}/api/slides/${slideId}/dzi.json`);
+        const response = await fetch(`${API_BASE}/api/v1/slides/${slideId}/dzi.json`);
 
         if (!response.ok) {
             throw new Error(`Failed to load DZI metadata: ${response.statusText}`);
@@ -135,7 +135,7 @@ export async function loadSlideWithTiles(viewer, slideId) {
 
             getTileUrl: function (level, x, y) {
                 const openslideLevel = dziMetadata.levels - 1 - level;
-                return `${API_BASE}/api/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
+                return `${API_BASE}/api/v1/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
             },
         };
 
