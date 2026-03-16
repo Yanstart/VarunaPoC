@@ -57,7 +57,7 @@ if RATE_LIMITING_ENABLED:
     limiter = Limiter(
         key_func=_get_real_client_ip,
         default_limits=[default_rate],
-        headers_enabled=True,  # Add X-RateLimit-* headers
+        headers_enabled=False,  # Disabled: slowapi requires response: Response param in every endpoint
     )
 else:
     limiter = None
