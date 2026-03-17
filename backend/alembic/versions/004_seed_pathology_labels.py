@@ -46,10 +46,12 @@ def upgrade() -> None:
                 "INSERT INTO annotation_labels (id, name, color, category, sort_order, created_at) "
                 "VALUES (:id, :name, :color, :category, :sort_order, :created_at) "
                 "ON CONFLICT (name) DO NOTHING"
-            ).bindparams(
+            )
+            .bindparams(
                 sa.bindparam("id", type_=sa.Uuid),
                 sa.bindparam("created_at", type_=sa.DateTime(timezone=True)),
-            ).params(
+            )
+            .params(
                 id=uuid.uuid4(),
                 name=label["name"],
                 color=label["color"],
