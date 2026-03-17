@@ -19,6 +19,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
@@ -66,7 +67,7 @@ class ClusteringPanel {
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'clustering-panel__title';
-        titleSpan.textContent = 'Clustering morphologique';
+        titleSpan.textContent = i18nService.t('clustering.title');
 
         const chevron = document.createElement('span');
         chevron.className = 'clustering-panel__chevron';
@@ -116,7 +117,7 @@ class ClusteringPanel {
         const control = document.createElement('div');
         control.className = 'clustering-panel__control';
         const label = document.createElement('label');
-        label.textContent = 'Nombre de clusters';
+        label.textContent = i18nService.t('clustering.numClusters');
         control.appendChild(label);
 
         const input = document.createElement('input');
@@ -168,7 +169,7 @@ class ClusteringPanel {
         loading.appendChild(spinner);
 
         const text = document.createElement('span');
-        text.textContent = 'Clustering en cours...';
+        text.textContent = i18nService.t('clustering.running');
         loading.appendChild(text);
 
         section.appendChild(loading);
@@ -241,7 +242,7 @@ class ClusteringPanel {
         opacitySection.className = 'clustering-panel__opacity';
 
         const opacityLabel = document.createElement('label');
-        opacityLabel.textContent = 'Opacit\u00e9 : ';
+        opacityLabel.textContent = i18nService.t('clustering.opacity');
         const opacityValue = document.createElement('span');
         opacityValue.className = 'clustering-panel__opacity-value';
         opacityValue.textContent = String(this._opacity);
@@ -268,7 +269,7 @@ class ClusteringPanel {
         // Relaunch button
         const btn = document.createElement('button');
         btn.className = 'clustering-panel__btn clustering-panel__btn--secondary';
-        btn.textContent = 'Relancer';
+        btn.textContent = i18nService.t('clustering.rerun');
         btn.addEventListener('click', () => {
             this.result = null;
             this._renderIdle();
@@ -293,12 +294,12 @@ class ClusteringPanel {
         errorDiv.className = 'clustering-panel__error';
 
         const p = document.createElement('p');
-        p.textContent = `Erreur : ${message}`;
+        p.textContent = i18nService.t('generic.error', { message });
         errorDiv.appendChild(p);
 
         const btn = document.createElement('button');
         btn.className = 'clustering-panel__btn clustering-panel__btn--secondary';
-        btn.textContent = 'R\u00e9essayer';
+        btn.textContent = i18nService.t('clustering.retry');
         btn.addEventListener('click', () => this._renderIdle());
         errorDiv.appendChild(btn);
 

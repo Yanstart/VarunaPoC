@@ -13,6 +13,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 
 class DriftDashboard {
     /**
@@ -51,7 +52,7 @@ class DriftDashboard {
 
         const backBtn = document.createElement('button');
         backBtn.className = 'drift-dashboard__back-btn';
-        backBtn.textContent = '\u2190 Retour';
+        backBtn.textContent = i18nService.t('drift.back');
         backBtn.addEventListener('click', () => {
             eventBus.emit(Events.PAGE_CHANGED, { page: 'home' });
         });
@@ -59,12 +60,12 @@ class DriftDashboard {
 
         const title = document.createElement('h1');
         title.className = 'drift-dashboard__title';
-        title.textContent = 'Tableau de bord \u2014 Monitoring ML';
+        title.textContent = i18nService.t('drift.title');
         header.appendChild(title);
 
         this._refreshBtn = document.createElement('button');
         this._refreshBtn.className = 'drift-dashboard__refresh-btn';
-        this._refreshBtn.textContent = 'Rafra\u00eechir';
+        this._refreshBtn.textContent = i18nService.t('drift.refresh');
         this._refreshBtn.addEventListener('click', () => this._loadData());
         header.appendChild(this._refreshBtn);
 
@@ -137,7 +138,7 @@ class DriftDashboard {
         this._clearElement(this._content);
         const loading = document.createElement('div');
         loading.className = 'drift-dashboard__loading';
-        loading.textContent = 'Chargement des rapports de drift...';
+        loading.textContent = i18nService.t('drift.loading');
         this._content.appendChild(loading);
     }
 
@@ -145,7 +146,7 @@ class DriftDashboard {
         this._clearElement(this._content);
         const errorDiv = document.createElement('div');
         errorDiv.className = 'drift-dashboard__error';
-        errorDiv.textContent = 'Erreur : ' + message;
+        errorDiv.textContent = i18nService.t('generic.error', { message });
         this._content.appendChild(errorDiv);
     }
 
@@ -155,7 +156,7 @@ class DriftDashboard {
         if (this.models.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'drift-dashboard__empty';
-            empty.textContent = 'Aucun mod\u00e8le disponible.';
+            empty.textContent = i18nService.t('drift.noModels');
             this._content.appendChild(empty);
             return;
         }
@@ -188,7 +189,7 @@ class DriftDashboard {
         const isLoaded = model.status === 'loaded';
         badge.className = 'drift-dashboard__model-badge drift-dashboard__model-badge--' +
             (isLoaded ? 'loaded' : 'available');
-        badge.textContent = isLoaded ? 'Charg\u00e9' : 'Disponible';
+        badge.textContent = isLoaded ? i18nService.t('drift.modelLoaded') : i18nService.t('drift.modelAvailable');
         headerDiv.appendChild(badge);
 
         card.appendChild(headerDiv);
@@ -204,7 +205,7 @@ class DriftDashboard {
             const statusDiv = document.createElement('div');
             statusDiv.className = 'drift-dashboard__status ' +
                 (report.overall_drifted ? 'drift-dashboard__status--drifted' : 'drift-dashboard__status--ok');
-            statusDiv.textContent = report.overall_drifted ? 'Drift d\u00e9tect\u00e9' : 'Normal';
+            statusDiv.textContent = report.overall_drifted ? i18nService.t('drift.driftDetected') : i18nService.t('drift.driftNormal');
             card.appendChild(statusDiv);
 
             // Recommendation
@@ -215,7 +216,7 @@ class DriftDashboard {
         } else {
             const noData = document.createElement('div');
             noData.className = 'drift-dashboard__recommendation';
-            noData.textContent = 'Aucun rapport de drift disponible.';
+            noData.textContent = i18nService.t('drift.none');
             card.appendChild(noData);
         }
 
@@ -229,7 +230,7 @@ class DriftDashboard {
         // Label
         const label = document.createElement('span');
         label.className = 'drift-dashboard__metric-label';
-        label.textContent = metric.metric_name === 'mmd' ? 'MMD' : 'Statistique KS';
+        label.textContent = metric.metric_name === 'mmd' ? i18nService.t('drift.metricMMD') : i18nService.t('drift.metricKS');
         row.appendChild(label);
 
         // Value

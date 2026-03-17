@@ -8,6 +8,7 @@
  */
 
 import { authService } from '../services/AuthService.js';
+import { i18nService } from '../services/I18nService.js';
 
 export class LoginPage {
     /**
@@ -33,13 +34,12 @@ export class LoginPage {
                         <path d="M8 2h8"/>
                     </svg>
                     <h1 class="login-title">VarunaPoC</h1>
-                    <p class="login-subtitle">Visualiseur de pathologie num\u00e9rique</p>
+                    <p class="login-subtitle">${i18nService.t('app.subtitle')}</p>
                 </div>
 
                 <div class="login-content">
                     <p class="login-description">
-                        Connectez-vous avec votre compte hospitalier pour acc\u00e9der au
-                        visualiseur de lames, aux annotations et aux outils d\u2019analyse IA.
+                        ${i18nService.t('login.desc')}
                     </p>
 
                     <button class="login-button" id="login-btn">
@@ -48,18 +48,18 @@ export class LoginPage {
                             <polyline points="10 17 15 12 10 7"/>
                             <line x1="15" y1="12" x2="3" y2="12"/>
                         </svg>
-                        Se connecter avec le compte hospitalier
+                        ${i18nService.t('login.button')}
                     </button>
 
                     <p class="login-hint">
-                        L\u2019authentification est g\u00e9r\u00e9e par le fournisseur d\u2019identit\u00e9 de votre h\u00f4pital.
+                        ${i18nService.t('login.hint')}
                     </p>
                 </div>
 
                 <div class="login-footer">
                     <span>CHU UCL Namur</span>
                     <span class="login-separator">|</span>
-                    <span>Acc\u00e8s s\u00e9curis\u00e9</span>
+                    <span>${i18nService.t('login.secureAccess')}</span>
                 </div>
             </div>
         `;

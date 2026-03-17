@@ -16,6 +16,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
 import { requestMLWorkerAccess } from '../services/mlWorkerAccess.js';
 
@@ -73,7 +74,7 @@ class FocusAssistPanel {
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'focus-assist-panel__title';
-        titleSpan.textContent = 'Zones d\u2019int\u00e9r\u00eat IA';
+        titleSpan.textContent = i18nService.t('focus.title');
 
         const chevron = document.createElement('span');
         chevron.className = 'focus-assist-panel__chevron';
@@ -140,12 +141,12 @@ class FocusAssistPanel {
 
         const desc = document.createElement('p');
         desc.className = 'focus-assist-panel__desc';
-        desc.textContent = 'Identification automatique des r\u00e9gions d\u2019attention \u00e9lev\u00e9e par analyse IA.';
+        desc.textContent = i18nService.t('focus.desc');
         section.appendChild(desc);
 
         const loadBtn = document.createElement('button');
         loadBtn.className = 'focus-assist-panel__btn focus-assist-panel__btn--primary';
-        loadBtn.textContent = 'Charger les zones';
+        loadBtn.textContent = i18nService.t('focus.load');
         loadBtn.disabled = !this.slideId;
         loadBtn.addEventListener('click', () => this._loadZones());
         section.appendChild(loadBtn);
@@ -174,7 +175,7 @@ class FocusAssistPanel {
         spinner.className = 'focus-assist-panel__spinner';
 
         const text = document.createElement('span');
-        text.textContent = 'Analyse en cours\u2026';
+        text.textContent = i18nService.t('focus.analyzing');
 
         loading.appendChild(spinner);
         loading.appendChild(text);
@@ -207,7 +208,7 @@ class FocusAssistPanel {
 
         const labelSpan = document.createElement('span');
         labelSpan.className = 'focus-assist-panel__count-label';
-        labelSpan.textContent = this.zones.length === 1 ? 'zone d\u2019int\u00e9r\u00eat' : 'zones d\u2019int\u00e9r\u00eat';
+        labelSpan.textContent = this.zones.length === 1 ? i18nService.t('focus.zoneOfInterest') : i18nService.t('focus.zonesOfInterest');
 
         summary.appendChild(countSpan);
         summary.appendChild(labelSpan);
@@ -227,7 +228,7 @@ class FocusAssistPanel {
         // Reload button
         const reloadBtn = document.createElement('button');
         reloadBtn.className = 'focus-assist-panel__btn focus-assist-panel__btn--secondary';
-        reloadBtn.textContent = 'Recharger';
+        reloadBtn.textContent = i18nService.t('focus.reload');
         reloadBtn.addEventListener('click', () => this._loadZones());
         section.appendChild(reloadBtn);
 
@@ -256,7 +257,7 @@ class FocusAssistPanel {
         // Label: "Zone {rank}"
         const label = document.createElement('span');
         label.className = 'focus-assist-panel__zone-label';
-        label.textContent = 'Zone ' + zone.rank;
+        label.textContent = i18nService.t('focus.zone', { rank: zone.rank });
 
         // Score badge
         const badge = this._createScoreBadge(zone.score);
@@ -267,7 +268,7 @@ class FocusAssistPanel {
         // Navigate button (arrow icon)
         const navBtn = document.createElement('button');
         navBtn.className = 'focus-assist-panel__zone-nav';
-        navBtn.title = 'Naviguer vers cette zone';
+        navBtn.title = i18nService.t('focus.navigateToZone');
 
         const arrow = document.createElement('span');
         arrow.textContent = '\u279C';
@@ -332,12 +333,12 @@ class FocusAssistPanel {
         errorDiv.className = 'focus-assist-panel__error';
 
         const errorText = document.createElement('p');
-        errorText.textContent = 'Erreur : ' + message;
+        errorText.textContent = i18nService.t('generic.error', { message });
         errorDiv.appendChild(errorText);
 
         const retryBtn = document.createElement('button');
         retryBtn.className = 'focus-assist-panel__btn focus-assist-panel__btn--secondary';
-        retryBtn.textContent = 'R\u00e9essayer';
+        retryBtn.textContent = i18nService.t('btn.retry');
         retryBtn.addEventListener('click', () => this._renderIdle());
 
         errorDiv.appendChild(retryBtn);
@@ -357,12 +358,12 @@ class FocusAssistPanel {
     async _loadZones() {
         if (!this.slideId || this.isLoading) {return;}
 
-        const canProceed = await requestMLWorkerAccess('Zones d\u2019int\u00e9r\u00eat IA');
+        const canProceed = await requestMLWorkerAccess(i18nService.t('focus.title'));
         if (!canProceed) return;
 
         this.isLoading = true;
         this._renderLoading();
-        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'focusAssist', label: 'Zones d\u2019int\u00e9r\u00eat IA' });
+        eventBus.emit(Events.ML_WORKER_BUSY, { panel: 'focusAssist', label: i18nService.t('focus.title') });
 
         try {
             const response = await apiService.getFocusZones(this.slideId, {

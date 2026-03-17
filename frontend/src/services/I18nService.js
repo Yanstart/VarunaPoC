@@ -19,6 +19,15 @@
 
 import { API } from '../core/Constants.js';
 
+import frLocale from '../locales/fr.json';
+import enLocale from '../locales/en.json';
+import jaLocale from '../locales/ja.json';
+import zhLocale from '../locales/zh.json';
+import hiLocale from '../locales/hi.json';
+import nlLocale from '../locales/nl.json';
+
+const LOCAL_TRANSLATIONS = { fr: frLocale, en: enLocale, ja: jaLocale, zh: zhLocale, hi: hiLocale, nl: nlLocale };
+
 /**
  * Singleton instance
  * @type {I18nService|null}
@@ -29,7 +38,7 @@ let instance = null;
  * Supported locale codes
  * @type {string[]}
  */
-const SUPPORTED_LOCALES = ['fr', 'en', 'ja', 'zh', 'hi'];
+const SUPPORTED_LOCALES = ['fr', 'nl', 'en', 'ja', 'zh', 'hi'];
 
 /**
  * Default locale (French - existing application language)
@@ -249,27 +258,29 @@ class I18nService {
      * @private
      */
     async _loadTranslations(locale) {
-        // Try loading from backend API
+        // Start with statically imported JSON files (complete set)
+        if (LOCAL_TRANSLATIONS[locale]) {
+            this._translations[locale] = { ...LOCAL_TRANSLATIONS[locale] };
+        }
+
+        // Merge backend translations underneath (only fills missing keys)
         try {
             const response = await fetch(`${API.BASE_URL}/api/v1/regional/i18n/${locale}`);
             if (response.ok) {
                 const data = await response.json();
                 if (data.translations) {
-                    this._translations[locale] = data.translations;
-                    return;
+                    this._translations[locale] = {
+                        ...data.translations,
+                        ...this._translations[locale],
+                    };
                 }
             }
         } catch {
-            // Backend not available, fall through to inline
+            // Backend not available — local translations already loaded
         }
 
-        // Try loading from local JSON file
-        try {
-            const module = await import(`../locales/${locale}.json`);
-            this._translations[locale] = module.default || module;
+        if (this._translations[locale]) {
             return;
-        } catch {
-            // JSON file not available, fall through to inline fallback
         }
 
         // Inline fallback for French (essential minimum)

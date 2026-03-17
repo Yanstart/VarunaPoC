@@ -121,7 +121,7 @@ export class CellMarkerOverlay {
 
         const viewport = this.viewer.viewport;
         const zoom = viewport.getZoom(true);
-        const radius = Math.max(2, Math.min(8, zoom * 3));
+        const radius = Math.max(6, Math.min(14, zoom * 8));
 
         this._ctx.globalAlpha = this._opacity;
 
@@ -130,15 +130,30 @@ export class CellMarkerOverlay {
             const vp = tiledImage.imageToViewportCoordinates(cell.x, cell.y);
             const pt = viewport.viewportToViewerElementCoordinates(vp);
 
-            // Skip off-screen cells
-            if (pt.x < -radius || pt.x > w + radius || pt.y < -radius || pt.y > h + radius) {
+            // Skip off-screen cells (with generous margin)
+            if (pt.x < -radius * 2 || pt.x > w + radius * 2 || pt.y < -radius * 2 || pt.y > h + radius * 2) {
                 continue;
             }
 
+            const color = cell.positive ? '#22c55e' : '#3b82f6';
+
+            // Filled circle
             this._ctx.beginPath();
             this._ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-            this._ctx.fillStyle = cell.positive ? '#22c55e' : '#3b82f6';
+            this._ctx.fillStyle = color;
             this._ctx.fill();
+
+            // Contrasting stroke for visibility
+            this._ctx.strokeStyle = '#ffffff';
+            this._ctx.lineWidth = 2;
+            this._ctx.stroke();
+
+            // Outer ring
+            this._ctx.beginPath();
+            this._ctx.arc(pt.x, pt.y, radius + 2, 0, Math.PI * 2);
+            this._ctx.strokeStyle = color;
+            this._ctx.lineWidth = 1.5;
+            this._ctx.stroke();
         }
 
         this._ctx.globalAlpha = 1;

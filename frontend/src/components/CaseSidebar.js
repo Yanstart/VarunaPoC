@@ -126,14 +126,16 @@ export class CaseSidebar {
         const title = document.createElement('div');
         title.className = 'case-sidebar__title';
         const caseName = this.casePath
-            ? this.casePath.split('/').filter(Boolean).pop() || 'Cas'
-            : 'Cas';
-        title.textContent = `Cas: ${caseName}`;
+            ? this.casePath.split('/').filter(Boolean).pop() || i18nService.t('case.prefix')
+            : i18nService.t('case.prefix');
+        title.textContent = `${i18nService.t('case.prefix')}: ${caseName}`;
         header.appendChild(title);
 
         const count = document.createElement('div');
         count.className = 'case-sidebar__count';
-        count.textContent = `${this.slides.length} lame${this.slides.length !== 1 ? 's' : ''}`;
+        count.textContent = this.slides.length !== 1
+            ? i18nService.t('case.slideCountPlural', { count: this.slides.length })
+            : i18nService.t('case.slideCount', { count: this.slides.length });
         header.appendChild(count);
 
         this.element.appendChild(header);

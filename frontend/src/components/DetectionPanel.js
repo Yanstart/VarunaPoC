@@ -115,7 +115,7 @@ class DetectionPanel {
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'detection-panel__title';
-        titleSpan.textContent = 'Détection automatique';
+        titleSpan.textContent = i18nService.t('detection.title');
 
         const chevron = document.createElement('span');
         chevron.className = 'detection-panel__chevron';
@@ -164,9 +164,9 @@ class DetectionPanel {
 
         return `
             <div class="detection-panel__control detection-panel__label-select">
-                <label>Étiquette de classification</label>
+                <label>${i18nService.t('detection.classificationLabel')}</label>
                 <select class="detection-panel__select">
-                    <option value="">-- Sans étiquette --</option>
+                    <option value="">${i18nService.t('detection.noLabel')}</option>
                     ${options}
                 </select>
             </div>
@@ -193,19 +193,19 @@ class DetectionPanel {
     _renderIdle() {
         this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Détection automatique</h4>
+                <h4>${i18nService.t('detection.title')}</h4>
                 <p class="detection-panel__desc">
-                    Détection des régions d'intérêt par analyse IA.
+                    ${i18nService.t('detection.desc')}
                 </p>
 
                 <div class="detection-panel__control">
-                    <label>Seuil : <span class="detection-panel__value">${this.threshold}</span></label>
+                    <label>${i18nService.t('detection.threshold')} : <span class="detection-panel__value">${this.threshold}</span></label>
                     <input type="range" class="detection-panel__slider"
                         min="0.1" max="0.95" step="0.05" value="${this.threshold}">
                 </div>
 
                 <div class="detection-panel__control">
-                    <label>Surface min. : <span class="detection-panel__value">${this.minArea} px</span></label>
+                    <label>${i18nService.t('detection.minArea')} : <span class="detection-panel__value">${this.minArea} px</span></label>
                     <input type="range" class="detection-panel__slider"
                         min="10" max="1000" step="10" value="${this.minArea}">
                 </div>
@@ -213,15 +213,15 @@ class DetectionPanel {
                 ${this._buildLabelSelector()}
 
                 <div class="detection-panel__scope">
-                    <label>Portee</label>
+                    <label>${i18nService.t('detection.scope')}</label>
                     <div class="detection-panel__scope-radios">
                         <label class="detection-panel__scope-option">
                             <input type="radio" name="detect-scope" value="slide" ${this.analysisScope === 'slide' ? 'checked' : ''}>
-                            Lame entiere
+                            ${i18nService.t('detection.scopeSlide')}
                         </label>
                         <label class="detection-panel__scope-option">
                             <input type="radio" name="detect-scope" value="viewport" ${this.analysisScope === 'viewport' ? 'checked' : ''}>
-                            Vue actuelle
+                            ${i18nService.t('detection.scopeViewport')}
                         </label>
                     </div>
                 </div>
@@ -230,7 +230,7 @@ class DetectionPanel {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    Détecter les régions
+                    ${i18nService.t('detection.detect')}
                 </button>
             </div>
         `;
@@ -270,7 +270,7 @@ class DetectionPanel {
     _renderLoading() {
         this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Détection automatique</h4>
+                <h4>${i18nService.t('detection.title')}</h4>
                 <div class="detection-panel__loading">
                     <div class="detection-panel__spinner"></div>
                     <span>Détection en cours...</span>
@@ -297,37 +297,37 @@ class DetectionPanel {
 
         this._body.innerHTML = `
             <div class="detection-panel__section">
-                <h4>Résultats de détection</h4>
+                <h4>${i18nService.t('detection.results')}</h4>
 
                 <div class="detection-panel__count-summary">
                     <div class="count-summary__total">
                         <span class="count-summary__number">${total}</span>
-                        <span class="count-summary__label">régions détectées</span>
+                        <span class="count-summary__label">${i18nService.t('detection.regionsDetected')}</span>
                     </div>
                     <div class="count-summary__breakdown">
                         <div class="count-summary__bar">
                             <div class="count-summary__segment count-summary__segment--high"
                                  style="width: ${total ? (confDist.high / total * 100) : 0}%"
-                                 title="Confiance \u00e9lev\u00e9e (\u22650.8) : ${confDist.high}"></div>
+                                 title="${i18nService.t('detection.confHighTitle')} : ${confDist.high}"></div>
                             <div class="count-summary__segment count-summary__segment--medium"
                                  style="width: ${total ? (confDist.medium / total * 100) : 0}%"
-                                 title="Confiance moyenne (0.5-0.8) : ${confDist.medium}"></div>
+                                 title="${i18nService.t('detection.confMediumTitle')} : ${confDist.medium}"></div>
                             <div class="count-summary__segment count-summary__segment--low"
                                  style="width: ${total ? (confDist.low / total * 100) : 0}%"
-                                 title="Confiance faible (<0.5) : ${confDist.low}"></div>
+                                 title="${i18nService.t('detection.confLowTitle')} : ${confDist.low}"></div>
                         </div>
                         <div class="count-summary__legend">
-                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} élevée</span>
-                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} moyenne</span>
-                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} faible</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--high">${confDist.high} ${i18nService.t('detection.confHigh')}</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--medium">${confDist.medium} ${i18nService.t('detection.confMedium')}</span>
+                            <span class="count-summary__legend-item count-summary__legend-item--low">${confDist.low} ${i18nService.t('detection.confLow')}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="detection-panel__stats">
-                    <span class="stat stat--total">${pendingCount} en attente</span>
-                    <span class="stat stat--accepted">${acceptedCount} acceptée</span>
-                    <span class="stat stat--rejected">${rejectedCount} rejetée</span>
+                    <span class="stat stat--total">${pendingCount} ${i18nService.t('detection.pending')}</span>
+                    <span class="stat stat--accepted">${acceptedCount} ${i18nService.t('detection.accepted')}</span>
+                    <span class="stat stat--rejected">${rejectedCount} ${i18nService.t('detection.rejected')}</span>
                 </div>
 
                 ${this._buildLabelSelector()}
@@ -339,13 +339,13 @@ class DetectionPanel {
                 <div class="detection-panel__actions">
                     <button class="detection-panel__btn detection-panel__btn--confirm"
                         ${acceptedCount === 0 && pendingCount === 0 ? 'disabled' : ''}>
-                        Tout confirmer ${acceptedCount > 0 ? acceptedCount : ''}
+                        ${i18nService.t('detection.confirmAll')} ${acceptedCount > 0 ? acceptedCount : ''}
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--secondary">
-                        Tout accepter
+                        ${i18nService.t('detection.acceptAll')}
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--danger">
-                        Tout rejeter
+                        ${i18nService.t('detection.rejectAll')}
                     </button>
                     <button class="detection-panel__btn detection-panel__btn--export">
                         ${i18nService.t('export.csv')}
@@ -470,15 +470,15 @@ class DetectionPanel {
      */
     _getConfidenceBadge(confidence) {
         if (confidence === null || confidence === undefined) {
-            return '<span class="detection-badge detection-badge--unknown" title="Confiance inconnue">?</span>';
+            return `<span class="detection-badge detection-badge--unknown" title="${i18nService.t('detection.confUnknown')}">?</span>`;
         }
         if (confidence >= 0.8) {
-            return `<span class="detection-badge detection-badge--high" title="Confiance élevée">${Math.round(confidence * 100)}%</span>`;
+            return `<span class="detection-badge detection-badge--high" title="${i18nService.t('detection.confHigh')}">${Math.round(confidence * 100)}%</span>`;
         }
         if (confidence >= 0.5) {
-            return `<span class="detection-badge detection-badge--medium" title="Confiance moyenne">${Math.round(confidence * 100)}%</span>`;
+            return `<span class="detection-badge detection-badge--medium" title="${i18nService.t('detection.confMedium')}">${Math.round(confidence * 100)}%</span>`;
         }
-        return `<span class="detection-badge detection-badge--low" title="Confiance faible">${Math.round(confidence * 100)}%</span>`;
+        return `<span class="detection-badge detection-badge--low" title="${i18nService.t('detection.confLow')}">${Math.round(confidence * 100)}%</span>`;
     }
 
     _renderDetectionItem(feature, index) {
@@ -663,18 +663,18 @@ class DetectionPanel {
         section.className = 'detection-panel__section';
 
         const h4 = document.createElement('h4');
-        h4.textContent = 'Détection automatique';
+        h4.textContent = i18nService.t('detection.title');
         section.appendChild(h4);
 
         const wrapper = document.createElement('div');
         wrapper.className = 'detection-panel__error';
 
         const p = document.createElement('p');
-        p.textContent = `Erreur lors de la détection : ${message}`;
+        p.textContent = i18nService.t('generic.error', { message });
 
         const retryBtn = document.createElement('button');
         retryBtn.className = 'detection-panel__btn detection-panel__btn--secondary';
-        retryBtn.textContent = 'Réessayer';
+        retryBtn.textContent = i18nService.t('detection.retry');
         retryBtn.addEventListener('click', () => this._renderIdle());
 
         wrapper.appendChild(p);

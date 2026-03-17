@@ -67,7 +67,7 @@ class CellCountingPanel {
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'cell-counting-panel__title';
-        titleSpan.textContent = 'Comptage cellulaire';
+        titleSpan.textContent = i18nService.t('counting.title');
 
         const chevron = document.createElement('span');
         chevron.className = 'cell-counting-panel__chevron';
@@ -117,7 +117,7 @@ class CellCountingPanel {
         const control = document.createElement('div');
         control.className = 'cell-counting-panel__control';
         const label = document.createElement('label');
-        label.textContent = 'Coloration';
+        label.textContent = i18nService.t('counting.stain');
         control.appendChild(label);
 
         const select = document.createElement('select');
@@ -142,7 +142,7 @@ class CellCountingPanel {
         const scopeDiv = document.createElement('div');
         scopeDiv.className = 'cell-counting-panel__scope';
         const scopeLabel = document.createElement('label');
-        scopeLabel.textContent = 'Portee';
+        scopeLabel.textContent = i18nService.t('counting.scope');
         scopeDiv.appendChild(scopeLabel);
 
         const scopeRadios = document.createElement('div');
@@ -195,7 +195,7 @@ class CellCountingPanel {
         loading.appendChild(spinner);
 
         const text = document.createElement('span');
-        text.textContent = 'Comptage en cours...';
+        text.textContent = i18nService.t('counting.running');
         loading.appendChild(text);
 
         section.appendChild(loading);
@@ -312,7 +312,7 @@ class CellCountingPanel {
         // Relaunch button
         const btn = document.createElement('button');
         btn.className = 'cell-counting-panel__btn cell-counting-panel__btn--secondary';
-        btn.textContent = 'Relancer';
+        btn.textContent = i18nService.t('counting.rerun');
         btn.addEventListener('click', () => {
             this.result = null;
             this._renderIdle();
@@ -343,12 +343,12 @@ class CellCountingPanel {
         errorDiv.className = 'cell-counting-panel__error';
 
         const p = document.createElement('p');
-        p.textContent = `Erreur : ${message}`;
+        p.textContent = i18nService.t('generic.error', { message });
         errorDiv.appendChild(p);
 
         const btn = document.createElement('button');
         btn.className = 'cell-counting-panel__btn cell-counting-panel__btn--secondary';
-        btn.textContent = 'R\u00e9essayer';
+        btn.textContent = i18nService.t('btn.retry');
         btn.addEventListener('click', () => this._renderIdle());
         errorDiv.appendChild(btn);
 

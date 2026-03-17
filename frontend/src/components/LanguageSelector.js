@@ -18,6 +18,7 @@ import { Events } from '../core/Constants.js';
  */
 const LOCALE_FLAGS = {
     fr: 'FR',
+    nl: 'NL',
     en: 'EN',
     ja: 'JA',
     zh: 'ZH',
@@ -63,7 +64,8 @@ export class LanguageSelector {
             const newLocale = e.target.value;
             try {
                 await i18nService.setLocale(newLocale);
-                eventBus.emit(Events.LOCALE_CHANGED, { locale: newLocale });
+                // Full page reload to apply translations everywhere
+                window.location.reload();
             } catch (err) {
                 console.error('[LanguageSelector] Failed to set locale:', err);
                 select.value = i18nService.getLocale();

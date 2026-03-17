@@ -13,6 +13,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
+import { i18nService } from '../services/I18nService.js';
 
 // ---------------------------------------------------------------------------
 // SVG icon constants (static strings, no user data — safe for innerHTML)
@@ -152,7 +153,7 @@ class ToastManager {
         // Dismiss button
         const btn = document.createElement('button');
         btn.className = 'toast__dismiss';
-        btn.setAttribute('aria-label', 'Fermer');
+        btn.setAttribute('aria-label', i18nService.t('toast.close'));
         btn.textContent = '\u00d7';
         btn.addEventListener('click', () => this._dismiss(id));
         el.appendChild(btn);
