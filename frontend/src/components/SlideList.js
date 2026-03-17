@@ -22,11 +22,14 @@
  *   - Format badge coloré selon type (MRXS, BIF, TIF)
  *   - Phase 1.5: Affiche structure_type, fichiers joints, companion dirs
  */
+import { i18nService } from '../services/I18nService.js';
+
 export function createSlideList(slides, onClick) {
     const container = document.createElement('div');
 
     if (slides.length === 0) {
-        container.innerHTML = '<p class="empty">Aucune lame trouv\u00e9e dans le r\u00e9pertoire /Slides</p>';
+        /* Safe: i18n string is from static locale JSON file */
+        container.innerHTML = `<p class="empty">${i18nService.t('home.noSlidesFound')}</p>`;
         return container;
     }
 
@@ -49,7 +52,7 @@ export function createSlideList(slides, onClick) {
         const formatBadgeClass = slide.is_supported === false ? 'slide-format unsupported' : 'slide-format';
         const formatInfo = `
             <div class="slide-format-info">
-                <span class="${formatBadgeClass}" title="${slide.is_supported === false ? 'Format détecté mais non supporté par cette version OpenSlide' : slide.format}">
+                <span class="${formatBadgeClass}" title="${slide.is_supported === false ? i18nService.t('slide.formatUnsupported') : slide.format}">
                     ${slide.format}
                     ${slide.is_supported === false ? ' ⚠️' : ''}
                 </span>
@@ -62,15 +65,15 @@ export function createSlideList(slides, onClick) {
         // File structure details
         let fileDetails = '';
         if (slide.has_joint_files) {
-            fileDetails += `<span class="file-detail joint-files" title="Fichiers joints">📎 ${slide.joint_files_count}</span>`;
+            fileDetails += `<span class="file-detail joint-files" title="${i18nService.t('slide.jointFiles')}">📎 ${slide.joint_files_count}</span>`;
         }
         if (slide.has_companion_dirs) {
-            fileDetails += `<span class="file-detail companion-dirs" title="Companion directories">📁 ${slide.companion_dirs_count}</span>`;
+            fileDetails += `<span class="file-detail companion-dirs" title="${i18nService.t('slide.companionDirs')}">📁 ${slide.companion_dirs_count}</span>`;
         }
 
         // Add unsupported notice
         if (slide.is_supported === false) {
-            fileDetails += `<span class="file-detail unsupported-notice" title="${slide.notes}">⚠️ Non supporté</span>`;
+            fileDetails += `<span class="file-detail unsupported-notice" title="${slide.notes}">${i18nService.t('slide.unsupported')}</span>`;
         }
 
         // Build metadata section
@@ -79,14 +82,14 @@ export function createSlideList(slides, onClick) {
             metaInfo = `
                 <div class="slide-body">
                     <div class="slide-meta">
-                        <span class="slide-meta-label">Format:</span>
+                        <span class="slide-meta-label">${i18nService.t('slide.format')}:</span>
                         <span class="slide-meta-value"><code>${slide.format_string}</code></span>
 
-                        <span class="slide-meta-label">Structure:</span>
+                        <span class="slide-meta-label">${i18nService.t('slide.structure')}:</span>
                         <span class="slide-meta-value">${getStructureLabel(slide.structure_type)}</span>
 
                         ${slide.path ? `
-                            <span class="slide-meta-label">Chemin:</span>
+                            <span class="slide-meta-label">${i18nService.t('slide.path')}:</span>
                             <span class="slide-meta-value" style="word-break: break-all; font-size: 10px;">${slide.path.replace(/\\/g, '/')}</span>
                         ` : ''}
                     </div>
@@ -151,12 +154,12 @@ function getStructureIcon(structureType) {
 function getStructureLabel(structureType) {
     switch (structureType) {
         case 'single-file':
-            return 'Fichier unique';
+            return i18nService.t('slide.singleFile');
         case 'multi-file':
-            return 'Multi-fichiers';
+            return i18nService.t('slide.multiFile');
         case 'with-companion-dir':
-            return 'Avec dossier companion';
+            return i18nService.t('slide.withCompanion');
         default:
-            return 'Inconnu';
+            return i18nService.t('slide.unknown');
     }
 }

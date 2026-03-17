@@ -358,7 +358,7 @@ class MLPanel {
     async _runPrediction() {
         if (!this.slideId || this.isLoading) {return;}
 
-        const canProceed = await requestMLWorkerAccess('Analyse IA');
+        const canProceed = await requestMLWorkerAccess(i18nService.t('ml.workerLabel'));
         if (!canProceed) return;
 
         this.isLoading = true;

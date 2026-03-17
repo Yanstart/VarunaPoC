@@ -11,27 +11,32 @@
  */
 
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * Status configuration for display.
  * @type {Object<string, {label: string, cssClass: string}>}
  */
-const STATUS_CONFIG = {
-    pending: { label: 'En attente', cssClass: 'worklist-view__status--pending' },
-    in_progress: { label: 'En cours', cssClass: 'worklist-view__status--in_progress' },
-    completed: { label: 'Termine', cssClass: 'worklist-view__status--completed' },
-};
+function getStatusConfig() {
+    return {
+        pending: { label: i18nService.t('worklist.statusPending'), cssClass: 'worklist-view__status--pending' },
+        in_progress: { label: i18nService.t('worklist.statusInProgress'), cssClass: 'worklist-view__status--in_progress' },
+        completed: { label: i18nService.t('worklist.statusCompleted'), cssClass: 'worklist-view__status--completed' },
+    };
+}
 
 /**
  * Filter tab definitions.
  * @type {Array<{key: string, label: string}>}
  */
-const FILTER_TABS = [
-    { key: 'all', label: 'Tous' },
-    { key: 'pending', label: 'En attente' },
-    { key: 'in_progress', label: 'En cours' },
-    { key: 'completed', label: 'Termines' },
-];
+function getFilterTabs() {
+    return [
+        { key: 'all', label: i18nService.t('worklist.all') },
+        { key: 'pending', label: i18nService.t('worklist.statusPending') },
+        { key: 'in_progress', label: i18nService.t('worklist.statusInProgress') },
+        { key: 'completed', label: i18nService.t('worklist.statusCompletedPlural') },
+    ];
+}
 
 /**
  * Format an ISO date string to a human-readable relative date.
@@ -46,10 +51,10 @@ function formatDate(isoDate) {
         const diffMs = now - date;
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 0) return "Aujourd'hui";
-        if (diffDays === 1) return 'Hier';
-        if (diffDays < 7) return `Il y a ${diffDays} jours`;
-        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        if (diffDays === 0) return i18nService.t('worklist.today');
+        if (diffDays === 1) return i18nService.t('worklist.yesterday');
+        if (diffDays < 7) return i18nService.t('worklist.daysAgo', { days: diffDays });
+        return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     } catch {
         return isoDate;
     }
@@ -72,14 +77,14 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
 
     const title = document.createElement('h2');
     title.className = 'worklist-view__title';
-    title.textContent = 'Mes cas';
+    title.textContent = i18nService.t('case.myCases');
     header.appendChild(title);
 
     if (onViewToggle) {
         const backBtn = document.createElement('button');
         backBtn.className = 'worklist-view__back-btn';
-        backBtn.textContent = 'Vue cas';
-        backBtn.title = 'Retour a la vue par cas';
+        backBtn.textContent = i18nService.t('case.caseView');
+        backBtn.title = i18nService.t('worklist.backToCases');
         backBtn.addEventListener('click', () => {
             localStorage.setItem('varuna_home_view', 'cases');
             onViewToggle('cases');
@@ -107,7 +112,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
     // ---- Build tabs ----
     const tabElements = {};
 
-    FILTER_TABS.forEach(tabDef => {
+    getFilterTabs().forEach(tabDef => {
         const tab = document.createElement('button');
         tab.className = 'worklist-view__tab';
         tab.dataset.filter = tabDef.key;
@@ -144,7 +149,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
      * Update tab active states and count badges.
      */
     function updateActiveTab() {
-        FILTER_TABS.forEach(tabDef => {
+        getFilterTabs().forEach(tabDef => {
             const tab = tabElements[tabDef.key];
             if (tabDef.key === activeFilter) {
                 tab.classList.add('worklist-view__tab--active');
@@ -170,7 +175,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
         cardsArea.textContent = '';
         const loading = document.createElement('div');
         loading.className = 'worklist-view__loading';
-        loading.textContent = 'Chargement de la liste de travail...';
+        loading.textContent = i18nService.t('worklist.loading');
         cardsArea.appendChild(loading);
 
         try {
@@ -188,7 +193,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
             cardsArea.textContent = '';
             const errorEl = document.createElement('div');
             errorEl.className = 'worklist-view__error';
-            errorEl.textContent = 'Erreur lors du chargement de la liste de travail';
+            errorEl.textContent = i18nService.t('worklist.loadError');
             cardsArea.appendChild(errorEl);
         }
     }
@@ -206,7 +211,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
         if (filtered.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'worklist-view__empty';
-            empty.textContent = 'Aucun cas dans cette categorie';
+            empty.textContent = i18nService.t('case.noneInCategory');
             cardsArea.appendChild(empty);
             return;
         }
@@ -241,7 +246,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
         badges.className = 'worklist-view__card-badges';
 
         // Status badge
-        const statusConfig = STATUS_CONFIG[item.status] || { label: item.status, cssClass: '' };
+        const statusConfig = getStatusConfig()[item.status] || { label: item.status, cssClass: '' };
         const statusBadge = document.createElement('span');
         statusBadge.className = 'worklist-view__status ' + statusConfig.cssClass;
         statusBadge.textContent = statusConfig.label;
@@ -251,7 +256,7 @@ export function createWorklistView(onSlideSelect, onViewToggle) {
         if (item.is_new) {
             const newBadge = document.createElement('span');
             newBadge.className = 'worklist-view__badge-new';
-            newBadge.textContent = 'Nouveau';
+            newBadge.textContent = i18nService.t('case.new');
             badges.appendChild(newBadge);
         }
 

@@ -13,6 +13,7 @@
  */
 
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * Extract stain type from a slide filename.
@@ -79,7 +80,7 @@ function buildHeader(onViewToggle) {
 
     const subtitle = document.createElement('p');
     subtitle.className = 'subtitle';
-    subtitle.textContent = 'Visualiseur de pathologie num\u00e9rique';
+    subtitle.textContent = i18nService.t('app.subtitle');
     titleBlock.appendChild(subtitle);
 
     header.appendChild(titleBlock);
@@ -95,7 +96,7 @@ function buildHeader(onViewToggle) {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.id = 'case-search-input';
-    searchInput.placeholder = 'Rechercher un cas...';
+    searchInput.placeholder = i18nService.t('case.searchPlaceholder');
     searchBox.appendChild(searchInput);
 
     toolbar.appendChild(searchBox);
@@ -104,7 +105,7 @@ function buildHeader(onViewToggle) {
     const openLocalBtn = document.createElement('button');
     openLocalBtn.className = 'open-local-btn';
     openLocalBtn.id = 'case-open-local-btn';
-    openLocalBtn.textContent = 'Ouvrir fichier local';
+    openLocalBtn.textContent = i18nService.t('case.openLocal');
     toolbar.appendChild(openLocalBtn);
 
     // Hidden file input
@@ -120,8 +121,8 @@ function buildHeader(onViewToggle) {
     if (onViewToggle) {
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'view-toggle-btn';
-        toggleBtn.textContent = 'Explorateur';
-        toggleBtn.title = 'Basculer vers la vue explorateur de fichiers';
+        toggleBtn.textContent = i18nService.t('case.explorer');
+        toggleBtn.title = i18nService.t('case.switchExplorer');
         toggleBtn.addEventListener('click', () => {
             localStorage.setItem('varuna_home_view', 'explorer');
             onViewToggle('explorer');
@@ -170,7 +171,7 @@ export function createCaseBrowser(onSlideSelect, onCaseSelect, onViewToggle) {
         grid.textContent = '';
         const loading = document.createElement('div');
         loading.className = 'case-browser__loading';
-        loading.textContent = 'Chargement des cas...';
+        loading.textContent = i18nService.t('case.loading');
         grid.appendChild(loading);
 
         try {
@@ -215,7 +216,7 @@ export function createCaseBrowser(onSlideSelect, onCaseSelect, onViewToggle) {
                     .map(s => extractStain(s.name))
                     .filter(Boolean);
                 allCases.push({
-                    name: 'Lames non classees',
+                    name: i18nService.t('case.uncategorized'),
                     path: '/',
                     slides: rootSlides,
                     stains: [...new Set(rootStains)],
@@ -230,7 +231,7 @@ export function createCaseBrowser(onSlideSelect, onCaseSelect, onViewToggle) {
             grid.textContent = '';
             const errorEl = document.createElement('div');
             errorEl.className = 'case-browser__error';
-            errorEl.textContent = 'Erreur lors du chargement des cas';
+            errorEl.textContent = i18nService.t('case.error');
             grid.appendChild(errorEl);
         }
     }
@@ -246,7 +247,7 @@ export function createCaseBrowser(onSlideSelect, onCaseSelect, onViewToggle) {
         if (cases.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'case-browser__empty';
-            empty.textContent = 'Aucun cas trouve';
+            empty.textContent = i18nService.t('case.noneFound');
             grid.appendChild(empty);
             return;
         }
@@ -278,7 +279,7 @@ export function createCaseBrowser(onSlideSelect, onCaseSelect, onViewToggle) {
         metaEl.className = 'case-card__meta';
         const slideCount = caseData.slides.length;
         const stainList = caseData.stains.map(normalizeStainDisplay).join(', ');
-        metaEl.textContent = `${slideCount} lame${slideCount !== 1 ? 's' : ''}` +
+        metaEl.textContent = (slideCount !== 1 ? i18nService.t('case.slideCountPlural', { count: slideCount }) : i18nService.t('case.slideCount', { count: slideCount })) +
             (stainList ? ` \u2014 ${stainList}` : '');
         card.appendChild(metaEl);
 
@@ -327,7 +328,7 @@ export function createCaseBrowser(onSlideSelect, onCaseSelect, onViewToggle) {
             if (caseData.slides.length > maxPreview) {
                 const more = document.createElement('div');
                 more.className = 'case-card__slide-item';
-                more.textContent = `+ ${caseData.slides.length - maxPreview} autre(s)`;
+                more.textContent = i18nService.t('case.moreSlides', { count: caseData.slides.length - maxPreview });
                 preview.appendChild(more);
             }
 

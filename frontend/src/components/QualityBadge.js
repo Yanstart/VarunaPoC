@@ -9,6 +9,7 @@
 
 import { apiService } from '../services/ApiService.js';
 import { Events } from '../core/Constants.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * QualityBadge component
@@ -48,7 +49,7 @@ export class QualityBadge {
         this.el = document.createElement('span');
         this.el.className = 'quality-badge';
         this.el.setAttribute('role', 'status');
-        this.el.setAttribute('aria-label', '\u00c9valuation de qualit\u00e9 en cours');
+        this.el.setAttribute('aria-label', i18nService.t('quality.evaluating'));
 
         // Dot indicator
         this._dot = document.createElement('span');
@@ -58,7 +59,7 @@ export class QualityBadge {
         // Text label
         this._label = document.createElement('span');
         this._label.className = 'quality-badge__label';
-        this._label.textContent = 'Qualit\u00e9 : cliquez pour \u00e9valuer';
+        this._label.textContent = i18nService.t('quality.clickToEvaluate');
         this.el.appendChild(this._label);
 
         // Tooltip (hidden by default)
@@ -86,7 +87,7 @@ export class QualityBadge {
         if (this._destroyed || this._loading) return;
 
         this._loading = true;
-        this._label.textContent = 'Qualit\u00e9 : \u00e9valuation...';
+        this._label.textContent = i18nService.t('quality.evaluating');
 
         if (this.eventBus) {
             this.eventBus.emit(Events.QUALITY_LOADING, { slideId });
@@ -103,7 +104,7 @@ export class QualityBadge {
             if (data.overall_score < 0.5 && this.eventBus) {
                 this.eventBus.emit(Events.TOAST_SHOW, {
                     type: 'warning',
-                    message: `Qualit\u00e9 faible (${Math.round(data.overall_score * 100)}%) \u2014 r\u00e9sultats ML possiblement affect\u00e9s`,
+                    message: i18nService.t('quality.lowWarning', { pct: Math.round(data.overall_score * 100) }),
                 });
             }
 
@@ -144,13 +145,13 @@ export class QualityBadge {
 
         // Update badge class
         this.el.className = `quality-badge quality-badge--${variant}`;
-        this.el.setAttribute('aria-label', `Qualit\u00e9 : ${quality_label} (${pct}%)`);
+        this.el.setAttribute('aria-label', i18nService.t('quality.label', { label: quality_label, pct }));
 
         // Update dot
         this._dot.className = `quality-badge__dot quality-badge__dot--${variant}`;
 
         // Update label text using textContent (safe from XSS)
-        this._label.textContent = `Qualit\u00e9 : ${quality_label} (${pct}%)`;
+        this._label.textContent = i18nService.t('quality.label', { label: quality_label, pct });
 
         // Build tooltip content using DOM methods
         this._buildTooltipContent(data);
@@ -173,7 +174,7 @@ export class QualityBadge {
         // Title
         const title = document.createElement('div');
         title.className = 'quality-badge__tooltip-title';
-        title.textContent = `Qualit\u00e9 : ${quality_label} (${pct}%)`;
+        title.textContent = i18nService.t('quality.label', { label: quality_label, pct });
         this._tooltip.appendChild(title);
 
         // Recommendation
@@ -186,7 +187,7 @@ export class QualityBadge {
         if (artifacts && artifacts.length > 0) {
             const artifactTitle = document.createElement('div');
             artifactTitle.className = 'quality-badge__tooltip-section';
-            artifactTitle.textContent = `Artefacts (${artifacts.length}):`;
+            artifactTitle.textContent = i18nService.t('quality.artifacts', { count: artifacts.length });
             this._tooltip.appendChild(artifactTitle);
 
             const list = document.createElement('ul');
@@ -205,7 +206,7 @@ export class QualityBadge {
         if (processing_time_ms !== undefined) {
             const timeEl = document.createElement('div');
             timeEl.className = 'quality-badge__tooltip-time';
-            timeEl.textContent = `Temps: ${Math.round(processing_time_ms)} ms`;
+            timeEl.textContent = i18nService.t('quality.processingTime', { ms: Math.round(processing_time_ms) });
             this._tooltip.appendChild(timeEl);
         }
     }
@@ -217,8 +218,8 @@ export class QualityBadge {
     _renderError() {
         this.el.className = 'quality-badge quality-badge--poor';
         this._dot.className = 'quality-badge__dot quality-badge__dot--poor';
-        this._label.textContent = 'Qualit\u00e9 : erreur';
-        this.el.setAttribute('aria-label', '\u00c9chec de l\u2019\u00e9valuation de qualit\u00e9');
+        this._label.textContent = i18nService.t('quality.error');
+        this.el.setAttribute('aria-label', i18nService.t('quality.evaluationFailed'));
     }
 
     /**
@@ -270,7 +271,7 @@ export class QualityBadge {
         // Reset to loading state
         this.el.className = 'quality-badge';
         this._dot.className = 'quality-badge__dot';
-        this._label.textContent = 'Qualit\u00e9 : \u00e9valuation...';
+        this._label.textContent = i18nService.t('quality.evaluating');
 
         // Auto-trigger quality assessment
         if (slideId) {

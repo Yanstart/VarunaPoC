@@ -30,6 +30,7 @@ import { MLTabsContainer } from './MLTabsContainer.js';
 import { ScaleBar } from './ScaleBar.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * ViewerPanel class - Panel wrapper for a single viewer
@@ -58,7 +59,7 @@ class ViewerPanel {
          * @type {Object}
          */
         this.options = {
-            title: 'Visualiseur de lame',
+            title: i18nService.t('viewer.title'),
             showHeader: true,
             showClose: true,
             onSlideSelect: null,
@@ -262,24 +263,24 @@ class ViewerPanel {
         // Select slide button
         const selectBtn = document.createElement('button');
         selectBtn.className = 'viewer-panel-action';
-        selectBtn.title = 'Sélectionner une lame';
-        selectBtn.setAttribute('aria-label', 'Sélectionner une lame');
+        selectBtn.title = i18nService.t('viewer.selectSlide');
+        selectBtn.setAttribute('aria-label', i18nService.t('viewer.selectSlide'));
         selectBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
         selectBtn.addEventListener('click', () => this._onSelectSlide());
 
         // Reset view button
         const resetBtn = document.createElement('button');
         resetBtn.className = 'viewer-panel-action';
-        resetBtn.title = 'Réinitialiser la vue';
-        resetBtn.setAttribute('aria-label', 'Réinitialiser la vue');
+        resetBtn.title = i18nService.t('viewer.resetView');
+        resetBtn.setAttribute('aria-label', i18nService.t('viewer.resetView'));
         resetBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
         resetBtn.addEventListener('click', () => this.resetView());
 
         // ML Analysis button
         const mlBtn = document.createElement('button');
         mlBtn.className = 'viewer-panel-action viewer-panel-action--ml';
-        mlBtn.title = 'Analyse IA';
-        mlBtn.setAttribute('aria-label', 'Analyse IA');
+        mlBtn.title = i18nService.t('viewer.aiAnalysis');
+        mlBtn.setAttribute('aria-label', i18nService.t('viewer.aiAnalysis'));
         mlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
         mlBtn.addEventListener('click', () => this._toggleMLPanel());
 
@@ -291,8 +292,8 @@ class ViewerPanel {
         if (this.options.showClose) {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'viewer-panel-action';
-            closeBtn.title = 'Fermer le panneau';
-            closeBtn.setAttribute('aria-label', 'Fermer le panneau');
+            closeBtn.title = i18nService.t('viewer.closePanel');
+            closeBtn.setAttribute('aria-label', i18nService.t('viewer.closePanel'));
             closeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
             closeBtn.addEventListener('click', () => this._onClose());
             actions.appendChild(closeBtn);
@@ -315,10 +316,11 @@ class ViewerPanel {
         // Add empty state
         const emptyState = document.createElement('div');
         emptyState.className = 'viewer-empty-state';
+        // Note: i18n strings are safe (from static JSON locale files, not user input)
         emptyState.innerHTML = `
             <div class="viewer-empty-icon">+</div>
-            <div class="viewer-empty-text">Aucune lame chargée</div>
-            <button class="viewer-empty-action">Sélectionner une lame</button>
+            <div class="viewer-empty-text">${i18nService.t('viewer.noSlideLoaded')}</div>
+            <button class="viewer-empty-action">${i18nService.t('viewer.selectSlideBtn')}</button>
         `;
 
         const selectBtn = emptyState.querySelector('.viewer-empty-action');

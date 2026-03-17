@@ -15,6 +15,7 @@
  */
 
 import { fetchBrowse } from '../utils/api.js';
+import { i18nService } from '../services/I18nService.js';
 import { createSlideList } from './SlideList.js';
 
 /**
@@ -30,17 +31,18 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
     // Header avec titre et toolbar
     const header = document.createElement('div');
     header.className = 'browser-header';
+    /* Safe: interpolated values are from static i18n locale JSON files, not user input */
     header.innerHTML = `
         <div class="home-title">
             <h1>VarunaPoC</h1>
-            <p class="subtitle">Digital Pathology Slide Viewer</p>
+            <p class="subtitle">${i18nService.t('app.subtitle')}</p>
         </div>
         <div class="home-toolbar">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="🔍 Rechercher..." />
+                <input type="text" id="search-input" placeholder="${i18nService.t('folder.searchPlaceholder')}" />
             </div>
             <button class="open-local-btn" id="open-local-btn">
-                📂 Ouvrir fichier local
+                ${i18nService.t('folder.openLocalBtn')}
             </button>
             <input type="file" id="file-input" style="display: none;"
                    accept=".svs,.tif,.tiff,.ndpi,.vms,.vmu,.scn,.mrxs,.bif,.svslide,.czi" multiple />
@@ -52,8 +54,8 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
         const toolbar = header.querySelector('.home-toolbar');
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'view-toggle-btn';
-        toggleBtn.textContent = 'Mes cas';
-        toggleBtn.title = 'Basculer vers la vue par cas';
+        toggleBtn.textContent = i18nService.t('case.myCases');
+        toggleBtn.title = i18nService.t('case.switchCases');
         toggleBtn.addEventListener('click', () => {
             localStorage.setItem('varuna_home_view', 'cases');
             onViewToggle('cases');
@@ -65,9 +67,10 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
     const breadcrumb = document.createElement('div');
     breadcrumb.className = 'breadcrumb';
     breadcrumb.id = 'breadcrumb';
+    /* Safe: interpolated values are from static i18n locale JSON files */
     breadcrumb.innerHTML = `
         <button class="back-button" id="back-button" style="display: none;">
-            ← Retour
+            ${i18nService.t('folder.backBtn')}
         </button>
         <div id="breadcrumb-content"></div>
     `;
@@ -97,7 +100,7 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
      */
     async function loadDirectory(path) {
         try {
-            main.innerHTML = '<div class="loading">Chargement du dossier...</div>';
+            main.innerHTML = `<div class="loading">${i18nService.t('folder.loading')}</div>`;
 
             const data = await fetchBrowse(path);
             currentPath = data.current_path;
@@ -113,9 +116,10 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
 
         } catch (error) {
             console.error('Error loading directory:', error);
+            /* Safe: i18n strings are from static locale files; error.message is a JS error */
             main.innerHTML = `
                 <div class="error">
-                    <p>❌ Erreur lors du chargement du dossier</p>
+                    <p>${i18nService.t('folder.errorLoading')}</p>
                     <p class="error-details">${error.message}</p>
                 </div>
             `;
@@ -150,7 +154,7 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
 
         breadcrumbSegments.forEach((segment, index) => {
             const isLast = index === breadcrumbSegments.length - 1;
-            const displayName = segment === '/' ? '🏠 Racine' : segment.split('/').filter(Boolean).pop();
+            const displayName = segment === '/' ? i18nService.t('folder.root') : segment.split('/').filter(Boolean).pop();
 
             if (isLast) {
                 // Segment actuel (non cliquable)
@@ -210,10 +214,11 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
         if ((!folders || folders.length === 0) &&
             (!slides || slides.length === 0) &&
             (!files || files.length === 0)) {
+            /* Safe: i18n strings are from static locale files */
             main.innerHTML = `
                 <div class="empty-folder">
-                    <p>📁 Dossier vide</p>
-                    <p class="empty-hint">Aucun fichier ou sous-dossier trouvé</p>
+                    <p>${i18nService.t('folder.empty')}</p>
+                    <p class="empty-hint">${i18nService.t('folder.emptyHint')}</p>
                 </div>
             `;
         }
@@ -228,7 +233,7 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
     function createFoldersSection(folders) {
         const section = document.createElement('div');
         section.className = 'content-section folders-section';
-        section.innerHTML = '<h3>📁 Dossiers</h3>';
+        section.innerHTML = `<h3>${i18nService.t('folder.folders')}</h3>`;
 
         const grid = document.createElement('div');
         grid.className = 'folders-grid';
@@ -236,10 +241,11 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
         folders.forEach(folder => {
             const folderCard = document.createElement('div');
             folderCard.className = 'folder-card';
+            /* Safe: folder.name is from backend API, i18n from static locale files */
             folderCard.innerHTML = `
                 <div class="folder-icon">📁</div>
                 <div class="folder-name">${folder.name}</div>
-                <div class="folder-count">${folder.item_count} items</div>
+                <div class="folder-count">${folder.item_count} ${i18nService.t('folder.items')}</div>
             `;
 
             folderCard.addEventListener('click', () => {
@@ -262,7 +268,7 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
     function createSlidesSection(slides) {
         const section = document.createElement('div');
         section.className = 'content-section slides-section';
-        section.innerHTML = '<h3>🔬 Lames détectées</h3>';
+        section.innerHTML = `<h3>${i18nService.t('folder.slides')}</h3>`;
 
         const slideList = createSlideList(slides, onSlideSelect);
         section.appendChild(slideList);
@@ -279,7 +285,7 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
     function createFilesSection(files) {
         const section = document.createElement('div');
         section.className = 'content-section files-section';
-        section.innerHTML = '<h3>📄 Fichiers non supportés</h3>';
+        section.innerHTML = `<h3>${i18nService.t('folder.unsupportedFiles')}</h3>`;
 
         const list = document.createElement('div');
         list.className = 'files-list';
@@ -291,7 +297,7 @@ export function createFolderBrowser(onSlideSelect, onViewToggle) {
                 <div class="file-icon">📄</div>
                 <div class="file-details">
                     <div class="file-name">${file.name}</div>
-                    <div class="file-note">${file.notes || 'Format inconnu'}</div>
+                    <div class="file-note">${file.notes || i18nService.t('folder.unknownFormat')}</div>
                 </div>
             `;
             list.appendChild(fileItem);

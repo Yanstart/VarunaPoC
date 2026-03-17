@@ -16,6 +16,7 @@
  */
 
 import { createSlideList } from './SlideList.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * Crée la page d'accueil.
@@ -34,14 +35,14 @@ export function createHomePage(slides, onSlideSelect) {
     header.innerHTML = `
         <div class="home-title">
             <h1>VarunaPoC</h1>
-            <p class="subtitle">Visualiseur de pathologie num\u00e9rique</p>
+            <p class="subtitle">${i18nService.t('app.subtitle')}</p>
         </div>
         <div class="home-toolbar">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="🔍 Rechercher une lame..." />
+                <input type="text" id="search-input" placeholder="${i18nService.t('home.searchPlaceholder')}" />
             </div>
             <button class="open-local-btn" id="open-local-btn">
-                📂 Ouvrir fichier local
+                ${i18nService.t('home.openLocal')}
             </button>
             <input type="file" id="file-input" style="display: none;" accept=".svs,.tif,.tiff,.ndpi,.vms,.vmu,.scn,.mrxs,.bif,.svslide,.czi" multiple />
         </div>
@@ -51,13 +52,12 @@ export function createHomePage(slides, onSlideSelect) {
     // Section principale avec liste
     const main = document.createElement('div');
     main.className = 'home-main';
+    // i18n values are from static locale JSON files, not user input
     main.innerHTML = `
         <div class="home-section-header">
-            <h2>Lames détectées</h2>
+            <h2>${i18nService.t('home.detectedSlides')}</h2>
             <p class="section-description">
-                Scan récursif de <code>/Slides</code> •
-                Validation OpenSlide •
-                Structures multi-fichiers supportées
+                ${i18nService.t('home.detectedDesc')}
             </p>
         </div>
         <div id="slide-list-container" class="slide-list-container"></div>
@@ -152,22 +152,23 @@ function updateHomeStats(filtered, total) {
     const multiFile = filtered.filter(s => s.structure_type === 'multi-file').length;
     const withCompanion = filtered.filter(s => s.structure_type === 'with-companion-dir').length;
 
+    // i18n values are from static locale JSON files, not user input
     statsDiv.innerHTML = `
         <div class="stat-row">
             <span class="stat-item primary">
-                <strong>${filtered.length}</strong> / ${total.length} lames
+                <strong>${i18nService.t('home.slidesCount', { filtered: filtered.length, total: total.length })}</strong>
             </span>
             ${unsupported > 0 ? `
                 <span class="stat-item warning">
-                    ⚠️ ${unsupported} non supportées
+                    ${i18nService.t('home.unsupported', { count: unsupported })}
                 </span>
             ` : ''}
         </div>
         ${filtered.length > 0 ? `
             <div class="stat-row structure-stats">
-                <span class="stat-badge" title="Fichier unique">📄 ${singleFile}</span>
-                <span class="stat-badge" title="Multi-fichiers">📚 ${multiFile}</span>
-                <span class="stat-badge" title="Avec dossier companion">🗂️ ${withCompanion}</span>
+                <span class="stat-badge" title="${i18nService.t('slide.singleFile')}">📄 ${singleFile}</span>
+                <span class="stat-badge" title="${i18nService.t('slide.multiFile')}">📚 ${multiFile}</span>
+                <span class="stat-badge" title="${i18nService.t('slide.withCompanion')}">🗂️ ${withCompanion}</span>
             </div>
         ` : ''}
     `;

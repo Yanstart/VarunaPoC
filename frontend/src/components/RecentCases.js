@@ -10,6 +10,7 @@
  */
 
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 
 /**
  * Format an ISO datetime string to a human-readable relative time.
@@ -26,12 +27,12 @@ function formatRelativeTime(isoDatetime) {
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffMinutes < 1) return "A l'instant";
-        if (diffMinutes < 60) return `Il y a ${diffMinutes} min`;
-        if (diffHours < 24) return `Il y a ${diffHours}h`;
-        if (diffDays === 1) return 'Hier';
-        if (diffDays < 7) return `Il y a ${diffDays} jours`;
-        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        if (diffMinutes < 1) return i18nService.t('time.justNow');
+        if (diffMinutes < 60) return i18nService.t('time.minutesAgo', { minutes: diffMinutes });
+        if (diffHours < 24) return i18nService.t('time.hoursAgo', { hours: diffHours });
+        if (diffDays === 1) return i18nService.t('time.yesterday');
+        if (diffDays < 7) return i18nService.t('time.daysAgo', { days: diffDays });
+        return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     } catch {
         return isoDatetime;
     }
@@ -50,7 +51,7 @@ export function createRecentCases(onSlideSelect) {
     // Title
     const title = document.createElement('div');
     title.className = 'recent-cases__title';
-    title.textContent = 'Cas recents';
+    title.textContent = i18nService.t('case.recent');
     container.appendChild(title);
 
     // Scrollable row
@@ -69,7 +70,7 @@ export function createRecentCases(onSlideSelect) {
 
         const loadingEl = document.createElement('div');
         loadingEl.className = 'recent-cases__loading';
-        loadingEl.textContent = 'Chargement...';
+        loadingEl.textContent = i18nService.t('generic.loading');
         scrollRow.appendChild(loadingEl);
 
         try {
@@ -81,7 +82,7 @@ export function createRecentCases(onSlideSelect) {
             if (items.length === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'recent-cases__empty';
-                empty.textContent = 'Aucun cas recent';
+                empty.textContent = i18nService.t('case.noneRecent');
                 scrollRow.appendChild(empty);
                 return;
             }
@@ -95,7 +96,7 @@ export function createRecentCases(onSlideSelect) {
             scrollRow.textContent = '';
             const errorEl = document.createElement('div');
             errorEl.className = 'recent-cases__error';
-            errorEl.textContent = 'Erreur de chargement';
+            errorEl.textContent = i18nService.t('generic.errorLoading');
             scrollRow.appendChild(errorEl);
         }
     }
@@ -127,8 +128,8 @@ export function createRecentCases(onSlideSelect) {
         const countEl = document.createElement('div');
         countEl.className = 'recent-cases__count';
         countEl.textContent = item.view_count === 1
-            ? '1 consultation'
-            : `${item.view_count} consultations`;
+            ? i18nService.t('case.viewCount', { count: item.view_count })
+            : i18nService.t('case.viewCountPlural', { count: item.view_count });
         card.appendChild(countEl);
 
         // Click handler

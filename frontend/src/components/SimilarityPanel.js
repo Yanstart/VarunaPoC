@@ -13,6 +13,7 @@
  */
 
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 
@@ -63,7 +64,7 @@ class SimilarityPanel {
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'similarity-panel__title';
-        titleSpan.textContent = 'Lames similaires';
+        titleSpan.textContent = i18nService.t('similarity.title');
 
         const chevron = document.createElement('span');
         chevron.className = 'similarity-panel__chevron';
@@ -130,12 +131,12 @@ class SimilarityPanel {
 
         const desc = document.createElement('p');
         desc.className = 'similarity-panel__desc';
-        desc.textContent = 'Recherche de lames similaires par analyse vectorielle.';
+        desc.textContent = i18nService.t('similarity.desc');
         section.appendChild(desc);
 
         const searchBtn = document.createElement('button');
         searchBtn.className = 'similarity-panel__btn similarity-panel__btn--primary';
-        searchBtn.textContent = 'Rechercher';
+        searchBtn.textContent = i18nService.t('similarity.search');
         searchBtn.disabled = !this.slideId;
         searchBtn.addEventListener('click', () => this._loadSimilar());
         section.appendChild(searchBtn);
@@ -164,7 +165,7 @@ class SimilarityPanel {
         spinner.className = 'similarity-panel__spinner';
 
         const text = document.createElement('span');
-        text.textContent = 'Recherche en cours\u2026';
+        text.textContent = i18nService.t('similarity.searching');
 
         loading.appendChild(spinner);
         loading.appendChild(text);
@@ -197,7 +198,7 @@ class SimilarityPanel {
 
         const labelSpan = document.createElement('span');
         labelSpan.className = 'similarity-panel__count-label';
-        labelSpan.textContent = this.results.length === 1 ? 'lame similaire' : 'lames similaires';
+        labelSpan.textContent = this.results.length === 1 ? i18nService.t('similarity.similarSlide') : i18nService.t('similarity.similarSlides');
 
         summary.appendChild(countSpan);
         summary.appendChild(labelSpan);
@@ -217,7 +218,7 @@ class SimilarityPanel {
         // Reload button
         const reloadBtn = document.createElement('button');
         reloadBtn.className = 'similarity-panel__btn similarity-panel__btn--secondary';
-        reloadBtn.textContent = 'Rechercher';
+        reloadBtn.textContent = i18nService.t('similarity.search');
         reloadBtn.addEventListener('click', () => this._loadSimilar());
         section.appendChild(reloadBtn);
 
@@ -307,12 +308,12 @@ class SimilarityPanel {
         errorDiv.className = 'similarity-panel__error';
 
         const errorText = document.createElement('p');
-        errorText.textContent = 'Erreur : ' + message;
+        errorText.textContent = i18nService.t('generic.error', { message });
         errorDiv.appendChild(errorText);
 
         const retryBtn = document.createElement('button');
         retryBtn.className = 'similarity-panel__btn similarity-panel__btn--secondary';
-        retryBtn.textContent = 'R\u00e9essayer';
+        retryBtn.textContent = i18nService.t('btn.retry');
         retryBtn.addEventListener('click', () => this._renderIdle());
 
         errorDiv.appendChild(retryBtn);
@@ -344,7 +345,7 @@ class SimilarityPanel {
             this._renderResults();
         } catch (err) {
             console.error('[SimilarityPanel] Failed to load similar slides:', err);
-            this._renderError(err.message || 'Erreur inconnue');
+            this._renderError(err.message || i18nService.t('error.generic'));
         } finally {
             this.isLoading = false;
         }

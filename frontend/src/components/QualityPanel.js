@@ -10,6 +10,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { i18nService } from '../services/I18nService.js';
 
 class QualityPanel {
     /**
@@ -77,17 +78,18 @@ class QualityPanel {
     _render() {
         const hasAnnotators = this.annotators.length >= 2;
 
+        // Safe: all interpolated values are from static i18n locale JSON files
         this.element.innerHTML = `
             <div class="quality-panel__header">
-                <span class="quality-panel__title">Métriques de qualité</span>
+                <span class="quality-panel__title">${i18nService.t('quality.metricsTitle')}</span>
                 <span class="quality-panel__toggle">&#9660;</span>
             </div>
             <div class="quality-panel__body">
                 ${!hasAnnotators
         ? `<div class="quality-panel__empty">
                         ${this.annotators.length === 0
-        ? 'Aucun annotateur sur cette lame'
-        : 'Au moins 2 annotateurs requis'}
+        ? i18nService.t('quality.noAnnotators')
+        : i18nService.t('quality.minAnnotators')}
                        </div>`
         : this._renderContent()
 }
@@ -152,7 +154,7 @@ class QualityPanel {
                 </div>
             </div>
             <button class="quality-panel__compute-btn" ${this.isLoading ? 'disabled' : ''}>
-                ${this.isLoading ? 'Calcul en cours...' : 'Calculer les métriques'}
+                ${this.isLoading ? i18nService.t('quality.computing') : i18nService.t('quality.computeMetrics')}
             </button>
             ${this.kappaResult ? this._renderKappa() : ''}
             ${this.confusionResult ? this._renderConfusionMatrix() : ''}
@@ -168,15 +170,15 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Score Kappa</div>
+                <div class="quality-panel__section-title">${i18nService.t('quality.kappaScore')}</div>
                 <div class="quality-panel__kappa quality-panel__kappa--${cssClass}">
                     <span class="quality-panel__kappa-value">${r.kappa.toFixed(3)}</span>
                     <span class="quality-panel__kappa-label">${r.interpretation}</span>
                 </div>
                 <div class="quality-panel__match-info">
-                    Appari\u00e9s : <span>${r.n_matched}</span> |
-                    Non appari\u00e9s A : <span>${r.n_unmatched_a}</span> |
-                    Non appari\u00e9s B : <span>${r.n_unmatched_b}</span>
+                    ${i18nService.t('quality.matched')} : <span>${r.n_matched}</span> |
+                    ${i18nService.t('quality.unmatchedA')} : <span>${r.n_unmatched_a}</span> |
+                    ${i18nService.t('quality.unmatchedB')} : <span>${r.n_unmatched_b}</span>
                 </div>
             </div>
         `;
@@ -197,7 +199,7 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Matrice de confusion</div>
+                <div class="quality-panel__section-title">${i18nService.t('quality.confusionMatrix')}</div>
                 <table class="quality-panel__matrix">
                     <tr><th></th>${headerCells}</tr>
                     ${rows}
@@ -221,7 +223,7 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">M\u00e9triques par \u00e9tiquette</div>
+                <div class="quality-panel__section-title">${i18nService.t('quality.metricsPerLabel')}</div>
                 <div class="quality-panel__f1-row" style="color: #666; font-size: 10px;">
                     <span class="quality-panel__f1-label">Label</span>
                     <span class="quality-panel__f1-value">P</span>
@@ -245,7 +247,7 @@ class QualityPanel {
 
         return `
             <div class="quality-panel__section">
-                <div class="quality-panel__section-title">Distribution IoU</div>
+                <div class="quality-panel__section-title">${i18nService.t('quality.iouDistribution')}</div>
                 <div class="quality-panel__histogram">${bars}</div>
                 <div class="quality-panel__hist-labels">
                     <span>0.0</span>
@@ -253,8 +255,8 @@ class QualityPanel {
                     <span>1.0</span>
                 </div>
                 <div class="quality-panel__iou-stats">
-                    <span>Moyenne : <span class="quality-panel__iou-stat-value">${r.mean.toFixed(3)}</span></span>
-                    <span>M\u00e9diane : <span class="quality-panel__iou-stat-value">${r.median.toFixed(3)}</span></span>
+                    <span>${i18nService.t('quality.iouMean')} : <span class="quality-panel__iou-stat-value">${r.mean.toFixed(3)}</span></span>
+                    <span>${i18nService.t('quality.iouMedian')} : <span class="quality-panel__iou-stat-value">${r.median.toFixed(3)}</span></span>
                 </div>
             </div>
         `;
@@ -267,7 +269,7 @@ class QualityPanel {
                     <input type="checkbox"
                            class="quality-panel__disagree-checkbox"
                            ${this.showDisagreements ? 'checked' : ''}>
-                    Superposition des désaccords
+                    ${i18nService.t('quality.disagreementOverlay')}
                 </label>
             </div>
         `;
