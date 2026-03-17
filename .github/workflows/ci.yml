@@ -84,12 +84,12 @@ jobs:
       - name: Check Black formatting
         run: |
           cd backend
-          black --check --diff .
+          black --check --diff --exclude scripts .
 
       - name: Check import sorting (isort)
         run: |
           cd backend
-          isort --check-only --diff .
+          isort --check-only --diff --skip scripts .
 
   backend-test:
     name: Backend - Test

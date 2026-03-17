@@ -44,7 +44,7 @@ slideflow==3.0.2
 pyvips==3.1.0
 transformers==5.0.0
 timm==1.0.3
-imghdr-lts==1.0.0
+imghdr-lts==1.0.0; python_version >= "3.13"
 
 # ML: Optimized inference (ML_BACKEND=auto|pytorch|onnx|openvino)
 onnxruntime==1.18.0
