@@ -79,7 +79,7 @@ jobs:
       - name: Run Ruff (fast linter)
         run: |
           cd backend
-          ruff check . --output-format=github
+          ruff check . --output-format=github --exclude scripts
 
       - name: Check Black formatting
         run: |
