@@ -13,6 +13,7 @@ Chaque fichier `.md` definit un agent avec son role, ses outils disponibles, et 
 ```
 agents/
   chief-architect.md          # Orchestrateur principal
+  pathologist-advisor.md      # Expert clinique - point de vue utilisateur final
   backend-tech-lead.md        # FastAPI, OpenSlide, tiles
   frontend-tech-lead.md       # Vite, Vanilla JS, OpenSeadragon
   infrastructure-architect.md # Docker, CI/CD, deploiement
@@ -22,3 +23,6 @@ agents/
   performance-engineer.md     # Optimisation, coordonnees, cache
   security-architect.md       # HIPAA/GDPR, authentification, chiffrement
 ```
+
+## Regle d'or
+**Tout feature touchant le workflow pathologiste DOIT etre valide par `pathologist-advisor` AVANT implementation.** Les agents techniques l'interviewent pour comprendre les besoins reels.
