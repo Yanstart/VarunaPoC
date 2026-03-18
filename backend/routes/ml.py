@@ -1646,8 +1646,6 @@ async def set_device(
 ):
     """Toggle ML device at runtime (auto/cuda/cpu). Restarts ML worker."""
     if device not in ("auto", "cuda", "cpu"):
-        from fastapi import HTTPException
-
         raise HTTPException(400, f"Invalid device: {device}. Use auto, cuda, or cpu.")
 
     if device == "cuda":
@@ -1655,12 +1653,8 @@ async def set_device(
             import torch
 
             if not torch.cuda.is_available():
-                from fastapi import HTTPException
-
                 raise HTTPException(400, "CUDA requested but no GPU detected.")
         except ImportError:
-            from fastapi import HTTPException
-
             raise HTTPException(400, "CUDA requested but PyTorch not installed.")
 
     old_device = os.environ.get("ML_DEVICE", "auto")
@@ -1675,6 +1669,11 @@ async def set_device(
     else:
         os.environ["ML_ADAPTIVE_STRIDE"] = "auto"
         os.environ.pop("ML_MAX_TILES", None)
+
+    # Invalidate cached provider singleton (device changed)
+    from core.container import ServiceContainer
+
+    ServiceContainer.reset()
 
     global _ml_worker
     if _ml_worker and _ml_worker.is_alive():

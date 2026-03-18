@@ -21,6 +21,7 @@ Usage:
     result = provider.predict("path/to/slide.mrxs")
 """
 
+import inspect
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Protocol, Tuple
 
@@ -476,9 +477,7 @@ def get_provider(provider_name: str, device: str = "auto") -> MLProvider:
     }
 
     if provider_name not in providers:
-        raise ValueError(
-            f"Unknown provider: {provider_name}. " f"Available: {list(providers.keys())}"
-        )
+        raise ValueError(f"Unknown provider: {provider_name}. Available: {list(providers.keys())}")
 
     # Dynamic import
     module_path, class_name = providers[provider_name].rsplit(".", 1)
@@ -486,8 +485,6 @@ def get_provider(provider_name: str, device: str = "auto") -> MLProvider:
     provider_class = getattr(module, class_name)
 
     # Pass device to providers that support it
-    import inspect
-
     sig = inspect.signature(provider_class.__init__)
     if "device" in sig.parameters:
         return provider_class(device=device)
