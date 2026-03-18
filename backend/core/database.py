@@ -24,14 +24,22 @@ DATABASE_URL = os.getenv(
     "postgresql+asyncpg://varuna:varuna_dev@localhost:5433/varuna",  # pragma: allowlist secret
 )
 
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=os.getenv("DB_ECHO", "false").lower() == "true",
-    pool_size=5,
-    max_overflow=10,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-)
+_engine_kwargs = {
+    "echo": os.getenv("DB_ECHO", "false").lower() == "true",
+}
+
+if "sqlite" in DATABASE_URL:
+    from sqlalchemy.pool import StaticPool
+
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+    _engine_kwargs["poolclass"] = StaticPool
+else:
+    _engine_kwargs["pool_size"] = 5
+    _engine_kwargs["max_overflow"] = 10
+    _engine_kwargs["pool_pre_ping"] = True
+    _engine_kwargs["pool_recycle"] = 3600
+
+engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
