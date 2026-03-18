@@ -80,6 +80,7 @@ class DetectionPanel {
             eventBus.on(Events.DETECTION_PREVIEW_CLICKED, ({ index }) => {
                 this._highlightDetectionItem(index);
                 this._scrollToDetectionItem(index);
+                this._navigateToZone(index);
             }),
         );
 
@@ -390,6 +391,7 @@ class DetectionPanel {
                 const idx = parseInt(item.dataset.detectionItemIndex);
                 if (!isNaN(idx)) {
                     this._highlightDetectionItem(idx);
+                    this._navigateToZone(idx);
                     eventBus.emit(Events.DETECTION_ITEM_CLICKED, { index: idx });
                 }
             });
@@ -768,6 +770,36 @@ class DetectionPanel {
         if (item) {
             item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+    }
+
+    /**
+     * Navigate the viewer to a detection zone's bounding box.
+     * @param {number} index - Detection zone index
+     * @private
+     */
+    _navigateToZone(index) {
+        if (!this.detectionResult?.geojson?.features) return;
+        const feature = this.detectionResult.geojson.features[index];
+        if (!feature?.geometry?.coordinates?.[0]) return;
+
+        // Extract bounding box from polygon ring
+        const ring = feature.geometry.coordinates[0];
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const [x, y] of ring) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+        }
+
+        const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+
+        // Navigate viewer
+        if (this._viewerInstance?.fitImageBounds) {
+            this._viewerInstance.fitImageBounds(bounds);
+        }
+
+        eventBus.emit(Events.DETECTION_NAVIGATE, { regionIndex: index, bounds });
     }
 
     _exportCSV() {
