@@ -148,6 +148,57 @@ class AnnotationLayer {
                 }
             }),
         );
+
+        // Centralized click handler via OSD — replaces per-element pointer-events.
+        // SVG elements stay pointer-events:none so OSD receives all mouse events
+        // (pan/zoom works). On click, we convert coords and hit-test SVG shapes.
+        this._boundCanvasClick = (event) => {
+            const tiledImage = this.viewer.world.getItemAt(0);
+            if (!tiledImage) {return;}
+
+            // Convert click position to image pixel coordinates
+            const viewportPoint = this.viewer.viewport.pointFromPixel(event.position);
+            const imagePoint = tiledImage.viewportToImageCoordinates(viewportPoint);
+
+            // Create SVG point for hit-testing
+            const svgPoint = this.svg.createSVGPoint();
+            svgPoint.x = imagePoint.x;
+            svgPoint.y = imagePoint.y;
+
+            // 1) Test detection previews first (higher priority, on top)
+            const previews = this.previewGroup.querySelectorAll('.detection-preview');
+            for (const polygon of previews) {
+                if (polygon.style.display === 'none') {continue;}
+                try {
+                    if (polygon.isPointInFill(svgPoint) || polygon.isPointInStroke(svgPoint)) {
+                        const index = parseInt(polygon.dataset.detectionIndex);
+                        this._highlightDetectionPreview(index);
+                        eventBus.emit(Events.DETECTION_PREVIEW_CLICKED, { index });
+                        event.preventDefaultAction = true;
+                        return;
+                    }
+                } catch (_) { /* isPointInFill not supported — skip */ }
+            }
+
+            // 2) Test annotation shapes
+            const shapes = this.annoGroup.querySelectorAll('[data-annotation-id]');
+            for (const shape of shapes) {
+                try {
+                    // For <g> elements (MultiPolygon), test children
+                    const targets = shape.tagName === 'g'
+                        ? shape.querySelectorAll('polygon, circle, rect')
+                        : [shape];
+                    for (const target of targets) {
+                        if (target.isPointInFill?.(svgPoint) || target.isPointInStroke?.(svgPoint)) {
+                            annotationStore.selectAnnotation(shape.dataset.annotationId);
+                            event.preventDefaultAction = true;
+                            return;
+                        }
+                    }
+                } catch (_) { /* skip */ }
+            }
+        };
+        this.viewer.addHandler('canvas-click', this._boundCanvasClick);
     }
 
     _extractSlideDimensions() {
@@ -241,18 +292,10 @@ class AnnotationLayer {
 
         if (el) {
             el.dataset.annotationId = anno.id;
-            el.style.pointerEvents = 'visiblePainted';
-            el.style.cursor = 'pointer';
 
             if (isSelected) {
                 el.classList.add('annotation--selected');
             }
-
-            // Click to select
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                annotationStore.selectAnnotation(anno.id);
-            });
         }
 
         return el;
@@ -356,15 +399,6 @@ class AnnotationLayer {
             polygon.setAttribute('stroke-opacity', '0.8');
             polygon.classList.add('detection-preview');
             polygon.dataset.detectionIndex = i;
-            polygon.style.pointerEvents = 'visiblePainted';
-            polygon.style.cursor = 'pointer';
-
-            // Click handler: emit event for bidirectional linking
-            polygon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._highlightDetectionPreview(i);
-                eventBus.emit(Events.DETECTION_PREVIEW_CLICKED, { index: i });
-            });
 
             this.previewGroup.appendChild(polygon);
         }
@@ -515,6 +549,10 @@ class AnnotationLayer {
         if (this.viewer) {
             this.viewer.removeHandler('viewport-change', this._boundUpdate);
             this.viewer.removeHandler('resize', this._boundUpdate);
+        }
+
+        if (this.viewer && this._boundCanvasClick) {
+            this.viewer.removeHandler('canvas-click', this._boundCanvasClick);
         }
 
         // Properly unsubscribe from all event listeners

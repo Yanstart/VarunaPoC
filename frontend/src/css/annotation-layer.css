@@ -16,10 +16,6 @@
     transition: stroke-opacity 0.15s ease;
 }
 
-.annotation-shape:hover {
-    stroke-opacity: 1;
-    filter: brightness(1.2);
-}
 
 .annotation--selected {
     stroke-width: inherit;
