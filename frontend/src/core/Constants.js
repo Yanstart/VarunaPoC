@@ -193,8 +193,6 @@ export const Events = Object.freeze({
     DETECTION_REJECT_CURRENT: 'detection:rejectCurrent',
     /** @payload {} */
     DETECTION_NEXT: 'detection:next',
-    /** @payload {{ level: number }} */
-    VIEWER_ZOOM_PRESET: 'viewer:zoomPreset',
 
     // -- Cell counting (Wave 4) --
     /** @payload {{ viewerId: string }} */
