@@ -99,6 +99,29 @@ class DetectionPanel {
                 }
             }),
         );
+
+        // Keyboard-driven validation (V=validate, X=reject, Tab=next)
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_VALIDATE_CURRENT, () => {
+                if (this.highlightedIndex !== null) {
+                    this._toggleAccept(this.highlightedIndex);
+                    this._goToNextDetection();
+                }
+            }),
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_REJECT_CURRENT, () => {
+                if (this.highlightedIndex !== null) {
+                    this._toggleReject(this.highlightedIndex);
+                    this._goToNextDetection();
+                }
+            }),
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_NEXT, () => {
+                this._goToNextDetection();
+            }),
+        );
     }
 
     setSlide(slideId) {
@@ -801,6 +824,31 @@ class DetectionPanel {
         }
 
         eventBus.emit(Events.DETECTION_NAVIGATE, { regionIndex: index, bounds });
+    }
+
+    /**
+     * Move to the next visible detection zone (skip hidden/rejected).
+     * @private
+     */
+    _goToNextDetection() {
+        if (!this.detectionResult?.geojson?.features) return;
+        const total = this.detectionResult.geojson.features.length;
+        if (total === 0) return;
+
+        let next = (this.highlightedIndex ?? -1) + 1;
+        let attempts = 0;
+        while (attempts < total) {
+            if (next >= total) next = 0;
+            if (!this.hiddenZones.has(next) && !this.rejected.has(next)) break;
+            next++;
+            attempts++;
+        }
+        if (attempts >= total) return;
+
+        this._highlightDetectionItem(next);
+        this._scrollToDetectionItem(next);
+        this._navigateToZone(next);
+        eventBus.emit(Events.DETECTION_ITEM_CLICKED, { index: next });
     }
 
     _exportCSV() {
