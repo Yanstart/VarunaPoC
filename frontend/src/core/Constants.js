@@ -173,6 +173,8 @@ export const Events = Object.freeze({
     DETECTION_ITEM_CLICKED: 'detection:itemClicked',
     /** @payload {{ regionIndex: number|null, visible?: boolean }} */
     DETECTION_HIGHLIGHT: 'detection:highlight',
+    /** @payload {{ regionIndex: number, bounds: {x,y,width,height} }} */
+    DETECTION_NAVIGATE: 'detection:navigate',
 
     // -- Cell counting (Wave 4) --
     /** @payload {{ viewerId: string }} */
