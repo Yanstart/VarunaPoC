@@ -59,6 +59,7 @@ class AnnotationCreate(BaseModel):
     confidence: float | None = Field(None, ge=0.0, le=1.0)
     properties: Dict[str, Any] | None = None
     created_by: str | None = None
+    notes: str | None = Field(None, max_length=2000)
 
 
 class AnnotationUpdate(BaseModel):
@@ -68,6 +69,9 @@ class AnnotationUpdate(BaseModel):
     label_id: UUID | None = None
     confidence: float | None = Field(None, ge=0.0, le=1.0)
     properties: Dict[str, Any] | None = None
+    notes: str | None = Field(None, max_length=2000)
+    status: str | None = Field(None, pattern=r"^(pending|validated|rejected)$")
+    validated_by: str | None = None
 
 
 class AnnotationResponse(BaseModel):
@@ -80,6 +84,10 @@ class AnnotationResponse(BaseModel):
     label: LabelResponse | None = None
     confidence: float | None
     properties: Dict[str, Any] | None
+    notes: str | None
+    status: str
+    validated_by: str | None
+    validated_at: datetime | None
     created_by: str | None
     created_at: datetime
     updated_at: datetime

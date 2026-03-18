@@ -42,6 +42,12 @@ class Annotation(Base):
     )
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     properties: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", server_default=text("'pending'")
+    )  # pending, validated, rejected
+    validated_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -62,6 +68,5 @@ class Annotation(Base):
 
     def __repr__(self):
         return (
-            f"<Annotation(id='{self.id}', slide='{self.slide_id}', "
-            f"type='{self.annotation_type}')>"
+            f"<Annotation(id='{self.id}', slide='{self.slide_id}', type='{self.annotation_type}')>"
         )
