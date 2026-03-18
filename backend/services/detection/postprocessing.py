@@ -61,7 +61,7 @@ def heatmap_to_contours(
             continue
 
         # Mean confidence within the region
-        mean_confidence = float(region.mean_intensity)
+        mean_confidence = float(region.intensity_mean)
 
         # Find contour for this specific label
         region_mask = (labeled == region.label).astype(float)
