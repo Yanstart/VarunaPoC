@@ -143,3 +143,20 @@
 .drawing-tools__custom-input:focus {
     border-color: #4a9eff;
 }
+
+/* Arrow text input — shown inline after arrow end point is set */
+.drawing-tools__arrow-text {
+    position: absolute;
+    left: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 180px;
+    padding: 4px 8px;
+    background: var(--color-bg-elevated, #1a1f2e);
+    color: var(--color-text-primary, #e2e8f0);
+    border: 1px solid var(--color-accent, #3b82f6);
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 400;
+    outline: none;
+}

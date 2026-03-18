@@ -20,7 +20,7 @@ import { Events } from '../core/Constants.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { i18nService } from '../services/I18nService.js';
 
-const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle', 'ruler'];
+const TOOLS = ['select', 'rectangle', 'polygon', 'point', 'freehand', 'circle', 'ruler', 'arrow'];
 
 /** localStorage key for last-used overflow tool */
 const LAST_TOOL_KEY = 'varuna_last_tool';
@@ -33,6 +33,7 @@ const TOOL_ICONS = {
     freehand: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17c3-3 6-10 9-10s3 4 6 4 3-2 3-2"/></svg>',
     circle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
     ruler: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M10 10v4"/><path d="M14 10v4"/><path d="M18 8v8"/></svg>',
+    arrow: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>',
 };
 
 /** i18n keys for tool labels */
@@ -44,6 +45,7 @@ const TOOL_LABEL_KEYS = {
     freehand: 'tools.freehand',
     circle: 'tools.circle',
     ruler: 'tools.ruler',
+    arrow: 'tools.arrow',
 };
 
 /**
@@ -105,6 +107,10 @@ class DrawingTools {
 
         // Overlay visibility toggle state (H key)
         this._overlaysVisible = true;
+
+        // Arrow state
+        this._arrowStart = null;
+        this._arrowTextInput = null;
 
         // DOM
         this.element = null;
@@ -298,7 +304,7 @@ class DrawingTools {
      */
     _updateLabelSelectorVisibility() {
         if (!this.labelSelector) {return;}
-        const isDrawTool = this.activeTool !== 'select' && this.activeTool !== 'ruler';
+        const isDrawTool = this.activeTool !== 'select' && this.activeTool !== 'ruler' && this.activeTool !== 'arrow';
         this.labelSelector.style.display = isDrawTool ? 'flex' : 'none';
     }
 
@@ -397,6 +403,10 @@ class DrawingTools {
             case 'r': case 'R': this._setTool('rectangle'); break;
             case 'p': case 'P': this._setTool('polygon'); break;
             case 'm': case 'M': this._setTool('point'); break;
+            case 'f': case 'F':
+                if (e.ctrlKey || e.metaKey) break;
+                this._setTool('arrow');
+                break;
             case 'c': case 'C': this._setTool('circle'); break;
             case 'l': case 'L': this._setTool('ruler'); break;
             case 'Delete': case 'Backspace': this._deleteSelected(); break;
@@ -417,11 +427,11 @@ class DrawingTools {
                 }
                 break;
             case 'v': case 'V':
-                if (e.ctrlKey || e.metaKey) break; // Allow Ctrl+V paste
+                if (e.ctrlKey || e.metaKey) break;
                 eventBus.emit(Events.DETECTION_VALIDATE_CURRENT);
                 break;
             case 'x': case 'X':
-                if (e.ctrlKey || e.metaKey) break; // Allow Ctrl+X cut
+                if (e.ctrlKey || e.metaKey) break;
                 eventBus.emit(Events.DETECTION_REJECT_CURRENT);
                 break;
             case 'Tab':
@@ -490,6 +500,15 @@ class DrawingTools {
                     this._finishRuler(slideCoords);
                 }
                 break;
+            case 'arrow':
+                if (!this.isDrawing) {
+                    this.isDrawing = true;
+                    this._arrowStart = slideCoords;
+                    eventBus.emit(Events.DRAWING_START, { tool: 'arrow' });
+                } else {
+                    this._finishArrow(slideCoords);
+                }
+                break;
         }
     }
 
@@ -511,6 +530,9 @@ class DrawingTools {
                 break;
             case 'ruler':
                 this._updateRulerPreview(slideCoords);
+                break;
+            case 'arrow':
+                this._updateArrowPreview(slideCoords);
                 break;
         }
     }
@@ -899,6 +921,105 @@ class DrawingTools {
         eventBus.emit(Events.DRAWING_END, { tool: 'ruler' });
     }
 
+    // ==========================================
+    // DRAWING: ARROW (annotation with text label)
+    // ==========================================
+
+    _updateArrowPreview(current) {
+        this._clearPreview();
+        const start = this._arrowStart;
+        if (!start) {return;}
+
+        const color = (this.selectedLabel && this.selectedLabel.color) ? this.selectedLabel.color : '#ff4444';
+        const strokeWidth = this.annotationLayer._getStrokeWidth();
+        const group = this.annotationLayer.getPreviewGroup();
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', start.x);
+        line.setAttribute('y1', start.y);
+        line.setAttribute('x2', current.x);
+        line.setAttribute('y2', current.y);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', strokeWidth);
+        line.setAttribute('stroke-dasharray', `${strokeWidth * 3} ${strokeWidth * 2}`);
+        group.appendChild(line);
+
+        this._currentPreview = line;
+    }
+
+    _finishArrow(end) {
+        this.isDrawing = false;
+        this._clearPreview();
+
+        const start = this._arrowStart;
+        if (!start) {return;}
+
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const distPx = Math.sqrt(dx * dx + dy * dy);
+
+        // Ignore tiny arrows
+        if (distPx < 5) {
+            this._arrowStart = null;
+            return;
+        }
+
+        // Show inline text input appended to the toolbar element
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'drawing-tools__arrow-text';
+        input.placeholder = 'Label...';
+        this._arrowTextInput = input;
+        this.element.appendChild(input);
+        input.focus();
+
+        const commit = async () => {
+            const text = input.value.trim();
+            input.remove();
+            this._arrowTextInput = null;
+
+            await annotationStore.createAnnotation({
+                geometry: {
+                    type: 'LineString',
+                    coordinates: [[start.x, start.y], [end.x, end.y]],
+                },
+                geometry_type: 'arrow',
+                annotation_type: 'manual',
+                label_id: this.selectedLabel ? this.selectedLabel.id : undefined,
+                properties: { text },
+            });
+
+            this._arrowStart = null;
+            eventBus.emit(Events.DRAWING_END, { tool: 'arrow' });
+        };
+
+        const cancel = () => {
+            input.remove();
+            this._arrowTextInput = null;
+            this._arrowStart = null;
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancel();
+            }
+            // Prevent keyboard shortcuts from firing while typing
+            e.stopPropagation();
+        });
+
+        // Commit on blur (user clicks away)
+        input.addEventListener('blur', () => {
+            // Only commit if still attached (not already handled by keydown)
+            if (this._arrowTextInput === input) {
+                commit();
+            }
+        });
+    }
+
     /**
      * Format the distance between two points in physical units
      * @param {{ x: number, y: number }} a - Start point (slide pixels)
@@ -977,6 +1098,11 @@ class DrawingTools {
         this._drawPoints = [];
         this._drawStartSlide = null;
         this._rulerStart = null;
+        this._arrowStart = null;
+        if (this._arrowTextInput) {
+            this._arrowTextInput.remove();
+            this._arrowTextInput = null;
+        }
         this._clearPreview();
     }
 

@@ -297,6 +297,9 @@ class AnnotationLayer {
             case 'MultiPolygon':
                 el = this._createMultiPolygon(geom.coordinates, color, opacity);
                 break;
+            case 'LineString':
+                el = this._createArrow(geom.coordinates, color, opacity, anno.properties?.text);
+                break;
             default:
                 el = this._createPolygon(geom.coordinates, color, opacity);
         }
@@ -354,6 +357,88 @@ class AnnotationLayer {
         circle.classList.add('annotation-shape');
 
         return circle;
+    }
+
+    /**
+     * Create an arrow annotation (SVG group with line + arrowhead + text)
+     * @param {Array} coordinates - [[x1,y1],[x2,y2]]
+     * @param {string} color
+     * @param {number} opacity
+     * @param {string} [text]
+     * @returns {SVGGElement}
+     * @private
+     */
+    _createArrow(coordinates, color, opacity, text) {
+        if (!coordinates || coordinates.length < 2) {return null;}
+
+        const [[x1, y1], [x2, y2]] = coordinates;
+        const strokeWidth = this._getStrokeWidth();
+        const markerId = this._ensureArrowMarker(color);
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('annotation-shape', 'annotation-arrow');
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', strokeWidth);
+        line.setAttribute('stroke-opacity', opacity);
+        line.setAttribute('marker-end', `url(#${markerId})`);
+        g.appendChild(line);
+
+        if (text) {
+            const svgText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            svgText.setAttribute('x', x2);
+            svgText.setAttribute('y', y2 - strokeWidth * 4);
+            svgText.setAttribute('text-anchor', 'middle');
+            svgText.setAttribute('fill', color);
+            svgText.setAttribute('font-size', strokeWidth * 8);
+            svgText.setAttribute('font-family', 'JetBrains Mono, monospace');
+            svgText.classList.add('annotation-arrow__text');
+            // Use textContent — safe, no innerHTML with user data
+            svgText.textContent = text;
+            g.appendChild(svgText);
+        }
+
+        return g;
+    }
+
+    /**
+     * Ensure an arrowhead marker for the given color exists in SVG defs.
+     * Returns the marker id.
+     * @param {string} color
+     * @returns {string} marker id
+     * @private
+     */
+    _ensureArrowMarker(color) {
+        // Create a stable id from the color string (strip non-alphanumeric)
+        const safeColor = color.replace(/[^a-zA-Z0-9]/g, '');
+        const markerId = `arrow-marker-${safeColor}`;
+
+        const defs = this.svg.querySelector('defs');
+        if (defs.querySelector(`#${markerId}`)) {
+            return markerId;
+        }
+
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', markerId);
+        marker.setAttribute('markerWidth', '8');
+        marker.setAttribute('markerHeight', '8');
+        marker.setAttribute('refX', '6');
+        marker.setAttribute('refY', '3');
+        marker.setAttribute('orient', 'auto');
+        marker.setAttribute('markerUnits', 'strokeWidth');
+
+        const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        triangle.setAttribute('points', '0 0, 6 3, 0 6');
+        triangle.setAttribute('fill', color);
+        marker.appendChild(triangle);
+
+        defs.appendChild(marker);
+        return markerId;
     }
 
     _getStrokeWidth() {
