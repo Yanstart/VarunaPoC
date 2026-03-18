@@ -1417,6 +1417,7 @@ export class Router {
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
             'compareLayout', 'caseSidebar', 'userMenu', 'loginPage', 'toastManager',
+            'annotationNotes',
         ];
 
         for (const key of destroyKeys) {

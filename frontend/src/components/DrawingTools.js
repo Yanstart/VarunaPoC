@@ -417,9 +417,11 @@ class DrawingTools {
                 }
                 break;
             case 'v': case 'V':
+                if (e.ctrlKey || e.metaKey) break; // Allow Ctrl+V paste
                 eventBus.emit(Events.DETECTION_VALIDATE_CURRENT);
                 break;
             case 'x': case 'X':
+                if (e.ctrlKey || e.metaKey) break; // Allow Ctrl+X cut
                 eventBus.emit(Events.DETECTION_REJECT_CURRENT);
                 break;
             case 'Tab':

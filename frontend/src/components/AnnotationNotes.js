@@ -336,15 +336,14 @@ export class AnnotationNotes {
 
     async _onValidate() {
         if (!this._currentId) {return;}
-        // Save any pending notes first
-        await this._saveNotes();
-        await annotationStore.updateAnnotation(this._currentId, { status: 'validated' });
+        const notes = this._notesInput?.value?.trim() || null;
+        await annotationStore.validateAnnotation(this._currentId, notes);
     }
 
     async _onReject() {
         if (!this._currentId) {return;}
-        await this._saveNotes();
-        await annotationStore.updateAnnotation(this._currentId, { status: 'rejected' });
+        const notes = this._notesInput?.value?.trim() || null;
+        await annotationStore.rejectAnnotation(this._currentId, notes);
     }
 
     async _onNotesSave() {

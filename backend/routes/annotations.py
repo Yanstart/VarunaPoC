@@ -165,12 +165,13 @@ async def update_annotation(
     return AnnotationResponse(**result)
 
 
-@router.patch("/{slide_id}/{annotation_id}/validate")
+@router.patch("/{slide_id}/{annotation_id}/validate", response_model=AnnotationResponse)
 async def validate_annotation(
     slide_id: str,
     annotation_id: UUID,
     notes: str | None = Query(None, max_length=2000),
     current_user: CurrentUser = Depends(require_role("MEDECIN")),
+    tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
     """Mark an annotation as validated by the current pathologist."""
@@ -178,6 +179,7 @@ async def validate_annotation(
         select(Annotation).where(
             Annotation.id == annotation_id,
             Annotation.slide_id == slide_id,
+            Annotation.tenant_id == tenant_id,
         )
     )
     annotation = result.scalar_one_or_none()
@@ -195,12 +197,13 @@ async def validate_annotation(
     return annotation
 
 
-@router.patch("/{slide_id}/{annotation_id}/reject")
+@router.patch("/{slide_id}/{annotation_id}/reject", response_model=AnnotationResponse)
 async def reject_annotation(
     slide_id: str,
     annotation_id: UUID,
     notes: str | None = Query(None, max_length=2000),
     current_user: CurrentUser = Depends(require_role("MEDECIN")),
+    tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
     """Mark an annotation as rejected (false positive)."""
@@ -208,6 +211,7 @@ async def reject_annotation(
         select(Annotation).where(
             Annotation.id == annotation_id,
             Annotation.slide_id == slide_id,
+            Annotation.tenant_id == tenant_id,
         )
     )
     annotation = result.scalar_one_or_none()
