@@ -1,7 +1,7 @@
 """Add tenant_id column to annotations, labels, corrections, quality_reports
 
-Revision ID: 006
-Revises: 005
+Revision ID: 007
+Revises: 006
 Create Date: 2026-03-11
 
 Multi-tenancy scaffolding: adds tenant_id to all annotation-related tables.
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "006"
-down_revision: Union[str, None] = "005"
+revision: str = "007"
+down_revision: Union[str, None] = "006"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

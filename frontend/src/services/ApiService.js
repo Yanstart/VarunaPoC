@@ -443,6 +443,15 @@ class ApiService {
     }
 
     /**
+     * Toggle ML device (auto/cuda/cpu)
+     * @param {string} device - "auto", "cuda", or "cpu"
+     * @returns {Promise<Object>} New device config
+     */
+    async setMLDevice(device) {
+        return this.post(`/api/v1/ml/device?device=${encodeURIComponent(device)}`);
+    }
+
+    /**
      * List available ML models
      * @returns {Promise<Array>} List of models
      */
