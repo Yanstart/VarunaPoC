@@ -103,6 +103,9 @@ class DrawingTools {
         // Ruler state
         this._rulerStart = null;
 
+        // Overlay visibility toggle state (H key)
+        this._overlaysVisible = true;
+
         // DOM
         this.element = null;
         this.overflowMenu = null;
@@ -385,19 +388,53 @@ class DrawingTools {
     }
 
     _handleKeyDown(e) {
-        // Only handle if viewer page is active
-        if (!this.element || !this.element.parentNode) {return;}
+        if (!this.element || !this.element.parentNode) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         switch (e.key) {
-            case 'v': case 'V': this._setTool('select'); break;
+            case 's': case 'S': this._setTool('select'); break;
+            case 'd': case 'D': this._setTool('freehand'); break;
             case 'r': case 'R': this._setTool('rectangle'); break;
             case 'p': case 'P': this._setTool('polygon'); break;
             case 'm': case 'M': this._setTool('point'); break;
-            case 'f': case 'F': this._setTool('freehand'); break;
             case 'c': case 'C': this._setTool('circle'); break;
             case 'l': case 'L': this._setTool('ruler'); break;
-            case 'Delete': this._deleteSelected(); break;
-            case 'Escape': this._cancelDrawing(); break;
+            case 'Delete': case 'Backspace': this._deleteSelected(); break;
+            case 'Escape':
+                this._cancelDrawing();
+                this._setTool('select');
+                break;
+            case 'z': case 'Z':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    annotationStore.undo();
+                }
+                break;
+            case 'y': case 'Y':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    annotationStore.redo();
+                }
+                break;
+            case 'v': case 'V':
+                eventBus.emit(Events.DETECTION_VALIDATE_CURRENT);
+                break;
+            case 'x': case 'X':
+                eventBus.emit(Events.DETECTION_REJECT_CURRENT);
+                break;
+            case 'Tab':
+                e.preventDefault();
+                eventBus.emit(Events.DETECTION_NEXT);
+                break;
+            case 'h': case 'H':
+                this._overlaysVisible = !this._overlaysVisible;
+                eventBus.emit(Events.ML_OVERLAYS_TOGGLE, { visible: this._overlaysVisible });
+                break;
+            case '1': eventBus.emit(Events.VIEWER_ZOOM_PRESET, { level: 1 }); break;
+            case '2': eventBus.emit(Events.VIEWER_ZOOM_PRESET, { level: 2 }); break;
+            case '3': eventBus.emit(Events.VIEWER_ZOOM_PRESET, { level: 3 }); break;
+            case '4': eventBus.emit(Events.VIEWER_ZOOM_PRESET, { level: 4 }); break;
+            case '5': eventBus.emit(Events.VIEWER_ZOOM_PRESET, { level: 5 }); break;
         }
     }
 

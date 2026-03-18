@@ -63,6 +63,8 @@ export const Events = Object.freeze({
     VIEWER_ZOOM: 'viewer:zoom',
     /** @payload {{ viewerId: string, bounds: {x,y,width,height} }} */
     VIEWER_VIEWPORT_CHANGE: 'viewer:viewportChange',
+    /** @payload {{ level: number }} — keyboard shortcut: jump to zoom preset 1-5 */
+    VIEWER_ZOOM_PRESET: 'viewer:zoomPreset',
 
     // -- Sync --
     /** @payload {{ viewerIds: string[] }} */
