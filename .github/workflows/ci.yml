@@ -182,9 +182,13 @@ jobs:
         run: |
           CONTAINER="ci-backend-${{ github.run_id }}"
           docker rm -f "$CONTAINER" 2>/dev/null || true
-          docker run -d --name "$CONTAINER" varuna-backend:ci-test
+          docker run -d --name "$CONTAINER" \
+            -e AUTH_ENABLED=false \
+            -e DATABASE_URL=sqlite+aiosqlite:///./test.db \
+            -e SLIDES_REPOSITORY_PATH=/tmp \
+            varuna-backend:ci-test
           for i in $(seq 1 30); do
-            if docker exec "$CONTAINER" curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+            if docker exec "$CONTAINER" curl -sf http://localhost:8000/api/v1/health > /dev/null 2>&1; then
               echo "Backend container healthy (attempt $i)"
               exit 0
             fi
