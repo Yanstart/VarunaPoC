@@ -117,6 +117,82 @@ async def get_annotation_stats(
     return await annotation_service.get_annotation_stats(db, slide_id, tenant_id=tenant_id)
 
 
+@router.get("/{slide_id}/report")
+async def get_annotation_report(
+    slide_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+    tenant_id: str = Depends(get_current_tenant),
+):
+    """
+    Detailed annotation report: validation stats, contributor list, timeline.
+    """
+    result = await db.execute(
+        select(Annotation).where(
+            Annotation.slide_id == slide_id,
+            Annotation.tenant_id == tenant_id,
+        )
+    )
+    annotations = result.scalars().all()
+
+    contributors = {}
+    validation_stats = {"pending": 0, "validated": 0, "rejected": 0}
+    ai_corrections = {"total_ai": 0, "validated": 0, "rejected": 0}
+    timeline = []
+
+    for a in annotations:
+        author = a.created_by or "anonymous"
+        if author not in contributors:
+            contributors[author] = {"annotations": 0, "validations": 0, "rejections": 0}
+        contributors[author]["annotations"] += 1
+
+        status = getattr(a, "status", "pending")
+        if status in validation_stats:
+            validation_stats[status] += 1
+
+        validator = getattr(a, "validated_by", None)
+        if validator:
+            if validator not in contributors:
+                contributors[validator] = {"annotations": 0, "validations": 0, "rejections": 0}
+            if status == "validated":
+                contributors[validator]["validations"] += 1
+            elif status == "rejected":
+                contributors[validator]["rejections"] += 1
+
+        if a.annotation_type in ("auto", "auto_confirmed"):
+            ai_corrections["total_ai"] += 1
+            if status == "validated":
+                ai_corrections["validated"] += 1
+            elif status == "rejected":
+                ai_corrections["rejected"] += 1
+
+        validated_at = getattr(a, "validated_at", None)
+        timeline.append(
+            {
+                "id": str(a.id),
+                "type": a.annotation_type,
+                "status": status,
+                "created_by": a.created_by,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "validated_by": validator,
+                "validated_at": validated_at.isoformat() if validated_at else None,
+                "label": a.label.name if a.label else None,
+                "notes": getattr(a, "notes", None),
+            }
+        )
+
+    timeline.sort(key=lambda x: x["created_at"] or "", reverse=True)
+
+    return {
+        "slide_id": slide_id,
+        "total": len(annotations),
+        "validation": validation_stats,
+        "ai_corrections": ai_corrections,
+        "contributors": contributors,
+        "timeline": timeline[:50],
+    }
+
+
 @router.get("/{slide_id}/export", response_model=GeoJSONFeatureCollection)
 async def export_annotations(
     slide_id: str,

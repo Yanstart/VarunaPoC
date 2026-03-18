@@ -726,6 +726,15 @@ class ApiService {
         });
     }
 
+    /**
+     * Get detailed annotation report for a slide
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} Report with validation stats, contributors, AI corrections, timeline
+     */
+    async getAnnotationReport(slideId) {
+        return this.get(`/api/v1/annotations/${slideId}/report`);
+    }
+
     // ==========================================
     // LABELS API
     // ==========================================
