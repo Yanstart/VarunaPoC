@@ -6,16 +6,19 @@ including spatial queries, batch operations, and GeoJSON export.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.database import get_db
 from core.tenant import get_current_tenant
+from models.annotation import Annotation
 from rate_limiting import annotation_write_rate, limit
 from schemas.annotation import (
     AnnotationBatchCreate,
@@ -160,6 +163,66 @@ async def update_annotation(
     if not result:
         raise HTTPException(status_code=404, detail="Annotation not found")
     return AnnotationResponse(**result)
+
+
+@router.patch("/{slide_id}/{annotation_id}/validate")
+async def validate_annotation(
+    slide_id: str,
+    annotation_id: UUID,
+    notes: str | None = Query(None, max_length=2000),
+    current_user: CurrentUser = Depends(require_role("MEDECIN")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark an annotation as validated by the current pathologist."""
+    result = await db.execute(
+        select(Annotation).where(
+            Annotation.id == annotation_id,
+            Annotation.slide_id == slide_id,
+        )
+    )
+    annotation = result.scalar_one_or_none()
+    if not annotation:
+        raise HTTPException(404, "Annotation not found")
+
+    annotation.status = "validated"
+    annotation.validated_by = current_user.username
+    annotation.validated_at = datetime.now(UTC)
+    if notes is not None:
+        annotation.notes = notes
+
+    await db.commit()
+    await db.refresh(annotation)
+    return annotation
+
+
+@router.patch("/{slide_id}/{annotation_id}/reject")
+async def reject_annotation(
+    slide_id: str,
+    annotation_id: UUID,
+    notes: str | None = Query(None, max_length=2000),
+    current_user: CurrentUser = Depends(require_role("MEDECIN")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark an annotation as rejected (false positive)."""
+    result = await db.execute(
+        select(Annotation).where(
+            Annotation.id == annotation_id,
+            Annotation.slide_id == slide_id,
+        )
+    )
+    annotation = result.scalar_one_or_none()
+    if not annotation:
+        raise HTTPException(404, "Annotation not found")
+
+    annotation.status = "rejected"
+    annotation.validated_by = current_user.username
+    annotation.validated_at = datetime.now(UTC)
+    if notes is not None:
+        annotation.notes = notes
+
+    await db.commit()
+    await db.refresh(annotation)
+    return annotation
 
 
 @router.delete("/{slide_id}/{annotation_id}", status_code=204)
