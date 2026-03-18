@@ -149,10 +149,21 @@ class AnnotationLayer {
             }),
         );
 
+        // Skip hit-testing while drawing annotations
+        this._isDrawing = false;
+        this._unsubscribers.push(
+            eventBus.on(Events.DRAWING_START, () => { this._isDrawing = true; }),
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.DRAWING_END, () => { this._isDrawing = false; }),
+        );
+
         // Centralized click handler via OSD — replaces per-element pointer-events.
         // SVG elements stay pointer-events:none so OSD receives all mouse events
         // (pan/zoom works). On click, we convert coords and hit-test SVG shapes.
         this._boundCanvasClick = (event) => {
+            if (this._isDrawing) { return; }
+
             const tiledImage = this.viewer.world.getItemAt(0);
             if (!tiledImage) {return;}
 

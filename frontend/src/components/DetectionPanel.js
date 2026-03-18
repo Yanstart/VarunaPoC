@@ -793,6 +793,7 @@ class DetectionPanel {
         }
 
         const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+        if (bounds.width < 1 || bounds.height < 1) return;
 
         // Navigate viewer
         if (this._viewerInstance?.fitImageBounds) {
