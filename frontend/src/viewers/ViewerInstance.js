@@ -541,6 +541,41 @@ class ViewerInstance {
     }
 
     /**
+     * Fit viewport to bounds expressed in slide pixel coordinates.
+     * Converts image pixels to OSD viewport coords via tiledImage.
+     * @param {{x: number, y: number, width: number, height: number}} bounds - Image pixel bounds
+     * @param {number} [padding=0.2] - Fractional padding around bounds (0.2 = 20%)
+     */
+    fitImageBounds(bounds, padding = 0.2) {
+        if (!this._osdViewer || !this._osdViewer.viewport) return;
+
+        const tiledImage = this._osdViewer.world.getItemAt(0);
+        if (!tiledImage) return;
+
+        // Convert image pixel corners to viewport coordinates
+        const topLeft = tiledImage.imageToViewportCoordinates(bounds.x, bounds.y);
+        const bottomRight = tiledImage.imageToViewportCoordinates(
+            bounds.x + bounds.width,
+            bounds.y + bounds.height,
+        );
+
+        // Add padding
+        const vw = bottomRight.x - topLeft.x;
+        const vh = bottomRight.y - topLeft.y;
+        const padX = vw * padding;
+        const padY = vh * padding;
+
+        const rect = new OpenSeadragon.Rect(
+            topLeft.x - padX,
+            topLeft.y - padY,
+            vw + padX * 2,
+            vh + padY * 2,
+        );
+
+        this._osdViewer.viewport.fitBounds(rect);
+    }
+
+    /**
      * Get current zoom level
      * @returns {number} Current zoom
      */
