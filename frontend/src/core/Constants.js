@@ -135,6 +135,16 @@ export const Events = Object.freeze({
     ANNOTATIONS_LOADED: 'annotation:loaded',
     /** @payload {{ slideId: string, count: number }} */
     ANNOTATION_STATS_UPDATED: 'annotation:statsUpdated',
+    /** @payload {{ annotation: Object }} */
+    ANNOTATION_VALIDATED: 'annotation:validated',
+    /** @payload {{ annotation: Object }} */
+    ANNOTATION_REJECTED: 'annotation:rejected',
+    /** @payload {{ annotation: Object }} */
+    ANNOTATION_NOTES_CHANGED: 'annotation:notesChanged',
+    /** @payload {{ action: Object }} */
+    UNDO: 'history:undo',
+    /** @payload {{ action: Object }} */
+    REDO: 'history:redo',
 
     // -- Drawing tools --
     /** @payload {{ tool: string }} */
@@ -175,6 +185,14 @@ export const Events = Object.freeze({
     DETECTION_HIGHLIGHT: 'detection:highlight',
     /** @payload {{ regionIndex: number, bounds: {x,y,width,height} }} */
     DETECTION_NAVIGATE: 'detection:navigate',
+    /** @payload {} */
+    DETECTION_VALIDATE_CURRENT: 'detection:validateCurrent',
+    /** @payload {} */
+    DETECTION_REJECT_CURRENT: 'detection:rejectCurrent',
+    /** @payload {} */
+    DETECTION_NEXT: 'detection:next',
+    /** @payload {{ level: number }} */
+    VIEWER_ZOOM_PRESET: 'viewer:zoomPreset',
 
     // -- Cell counting (Wave 4) --
     /** @payload {{ viewerId: string }} */

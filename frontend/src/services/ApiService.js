@@ -142,6 +142,28 @@ class ApiService {
     }
 
     /**
+     * Make a PUT request
+     * @param {string} endpoint - API endpoint
+     * @param {Object} body - Request body
+     * @returns {Promise<any>} Response data
+     */
+    async put(endpoint, body = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        return this._fetchWithBody(url, 'PUT', body);
+    }
+
+    /**
+     * Make a PATCH request
+     * @param {string} endpoint - API endpoint
+     * @param {Object} body - Request body
+     * @returns {Promise<any>} Response data
+     */
+    async patch(endpoint, body = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        return this._fetchWithBody(url, 'PATCH', body);
+    }
+
+    /**
      * Internal fetch with error handling (GET)
      * @param {string} url - Full URL
      * @returns {Promise<any>} Response data
@@ -636,6 +658,38 @@ class ApiService {
         if (!response.ok && response.status !== 204) {
             throw new ApiError(`Delete failed: ${response.status}`, response.status);
         }
+    }
+
+    /**
+     * Validate an annotation (mark as confirmed by pathologist)
+     * @param {string} slideId
+     * @param {string} annotationId
+     * @param {string|null} notes - Optional validation notes
+     */
+    async validateAnnotation(slideId, annotationId, notes = null) {
+        const params = notes ? `?notes=${encodeURIComponent(notes)}` : '';
+        return this.patch(`/api/v1/annotations/${slideId}/${annotationId}/validate${params}`);
+    }
+
+    /**
+     * Reject an annotation (mark as false positive)
+     * @param {string} slideId
+     * @param {string} annotationId
+     * @param {string|null} notes - Optional rejection reason
+     */
+    async rejectAnnotation(slideId, annotationId, notes = null) {
+        const params = notes ? `?notes=${encodeURIComponent(notes)}` : '';
+        return this.patch(`/api/v1/annotations/${slideId}/${annotationId}/reject${params}`);
+    }
+
+    /**
+     * Update annotation notes
+     * @param {string} slideId
+     * @param {string} annotationId
+     * @param {string} notes
+     */
+    async updateAnnotationNotes(slideId, annotationId, notes) {
+        return this.put(`/api/v1/annotations/${slideId}/${annotationId}`, { notes });
     }
 
     /**
