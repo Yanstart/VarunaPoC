@@ -26,8 +26,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Install Python dependencies
+# Note: slideflow pulls smac->pyrfr which fails to compile with modern GCC.
+# Install slideflow without deps first, then install requirements normally
+# (pyrfr/smac are only used for hyperparameter tuning, not needed here).
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir slideflow==3.0.2 --no-deps && \
+    grep -v '^slideflow' requirements.txt | pip install --no-cache-dir -r /dev/stdin
 
 # Remove build dependencies to reduce image size
 RUN apt-get purge -y --auto-remove \
