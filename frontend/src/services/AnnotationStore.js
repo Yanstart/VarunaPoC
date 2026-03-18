@@ -51,6 +51,13 @@ class AnnotationStore {
         /** @type {Object|null} Cached annotation statistics */
         this.stats = null;
 
+        /** @type {Array<Object>} Undo history stack */
+        this._undoStack = [];
+        /** @type {Array<Object>} Redo history stack */
+        this._redoStack = [];
+        /** @type {number} Max history size */
+        this._maxHistory = 50;
+
         instance = this;
     }
 
@@ -72,6 +79,8 @@ class AnnotationStore {
         this.annotations.clear();
         this.selectedId = null;
         this.detectionPreview = [];
+        this._undoStack = [];
+        this._redoStack = [];
 
         await this.loadAnnotations();
         await this.loadLabels();
@@ -85,6 +94,136 @@ class AnnotationStore {
         this.selectedId = null;
         this.slideId = null;
         this.detectionPreview = [];
+        this._undoStack = [];
+        this._redoStack = [];
+    }
+
+    // ==========================================
+    // UNDO / REDO
+    // ==========================================
+
+    _pushHistory(type, annotation, previousState = null) {
+        this._undoStack.push({ type, annotation: { ...annotation }, previousState });
+        if (this._undoStack.length > this._maxHistory) this._undoStack.shift();
+        this._redoStack = [];
+    }
+
+    async undo() {
+        const action = this._undoStack.pop();
+        if (!action) return;
+        try {
+            if (action.type === 'create') {
+                await apiService.deleteAnnotation(this.slideId, action.annotation.id);
+                this.annotations.delete(action.annotation.id);
+                eventBus.emit(Events.ANNOTATION_DELETED, { annotationId: action.annotation.id });
+            } else if (action.type === 'delete') {
+                const restored = await apiService.createAnnotation(this.slideId, {
+                    geometry: action.annotation.geometry,
+                    geometry_type: action.annotation.geometry_type,
+                    annotation_type: action.annotation.annotation_type,
+                    label_id: action.annotation.label_id,
+                    confidence: action.annotation.confidence,
+                    properties: action.annotation.properties,
+                    notes: action.annotation.notes,
+                });
+                this.annotations.set(restored.id, restored);
+                eventBus.emit(Events.ANNOTATION_CREATED, { annotation: restored });
+            } else if (action.type === 'update' && action.previousState) {
+                const restored = await apiService.updateAnnotation(
+                    this.slideId, action.annotation.id, action.previousState,
+                );
+                this.annotations.set(restored.id, restored);
+                eventBus.emit(Events.ANNOTATION_UPDATED, { annotation: restored });
+            }
+            this._redoStack.push(action);
+            eventBus.emit(Events.UNDO, { action });
+        } catch (err) {
+            console.error('[AnnotationStore] Undo failed:', err);
+            this._undoStack.push(action);
+        }
+    }
+
+    async redo() {
+        const action = this._redoStack.pop();
+        if (!action) return;
+        try {
+            if (action.type === 'create') {
+                const restored = await apiService.createAnnotation(this.slideId, {
+                    geometry: action.annotation.geometry,
+                    geometry_type: action.annotation.geometry_type,
+                    annotation_type: action.annotation.annotation_type,
+                    label_id: action.annotation.label_id,
+                    confidence: action.annotation.confidence,
+                    properties: action.annotation.properties,
+                    notes: action.annotation.notes,
+                });
+                this.annotations.set(restored.id, restored);
+                eventBus.emit(Events.ANNOTATION_CREATED, { annotation: restored });
+            } else if (action.type === 'delete') {
+                await apiService.deleteAnnotation(this.slideId, action.annotation.id);
+                this.annotations.delete(action.annotation.id);
+                eventBus.emit(Events.ANNOTATION_DELETED, { annotationId: action.annotation.id });
+            } else if (action.type === 'update') {
+                const updated = await apiService.updateAnnotation(
+                    this.slideId, action.annotation.id, action.annotation,
+                );
+                this.annotations.set(updated.id, updated);
+                eventBus.emit(Events.ANNOTATION_UPDATED, { annotation: updated });
+            }
+            this._undoStack.push(action);
+            eventBus.emit(Events.REDO, { action });
+        } catch (err) {
+            console.error('[AnnotationStore] Redo failed:', err);
+            this._redoStack.push(action);
+        }
+    }
+
+    get canUndo() { return this._undoStack.length > 0; }
+    get canRedo() { return this._redoStack.length > 0; }
+
+    // ==========================================
+    // VALIDATION (AI CORRECTION)
+    // ==========================================
+
+    async validateAnnotation(annotationId, notes = null) {
+        if (!this.slideId) return null;
+        try {
+            const annotation = await apiService.validateAnnotation(this.slideId, annotationId, notes);
+            this.annotations.set(annotation.id, annotation);
+            eventBus.emit(Events.ANNOTATION_VALIDATED, { annotation });
+            eventBus.emit(Events.ANNOTATION_UPDATED, { annotation });
+            return annotation;
+        } catch (err) {
+            console.error('[AnnotationStore] Validation failed:', err);
+            return null;
+        }
+    }
+
+    async rejectAnnotation(annotationId, notes = null) {
+        if (!this.slideId) return null;
+        try {
+            const annotation = await apiService.rejectAnnotation(this.slideId, annotationId, notes);
+            this.annotations.set(annotation.id, annotation);
+            eventBus.emit(Events.ANNOTATION_REJECTED, { annotation });
+            eventBus.emit(Events.ANNOTATION_UPDATED, { annotation });
+            return annotation;
+        } catch (err) {
+            console.error('[AnnotationStore] Rejection failed:', err);
+            return null;
+        }
+    }
+
+    async updateNotes(annotationId, notes) {
+        if (!this.slideId) return null;
+        try {
+            const annotation = await apiService.updateAnnotationNotes(this.slideId, annotationId, notes);
+            this.annotations.set(annotation.id, annotation);
+            eventBus.emit(Events.ANNOTATION_NOTES_CHANGED, { annotation });
+            return annotation;
+        } catch (err) {
+            console.error('[AnnotationStore] Notes update failed:', err);
+            return null;
+        }
     }
 
     // ==========================================
@@ -119,6 +258,7 @@ class AnnotationStore {
                 label_id: data.label_id || this.activeLabel,
             });
             this.annotations.set(annotation.id, annotation);
+            this._pushHistory('create', annotation);
             eventBus.emit(Events.ANNOTATION_CREATED, { annotation });
             eventBus.emit(Events.TOAST_SHOW, {
                 type: 'success',
@@ -141,10 +281,12 @@ class AnnotationStore {
         if (!this.slideId) {return null;}
 
         try {
+            const prev = this.annotations.get(annotationId);
             const annotation = await apiService.updateAnnotation(
                 this.slideId, annotationId, data,
             );
             this.annotations.set(annotation.id, annotation);
+            if (prev) this._pushHistory('update', annotation, prev);
             eventBus.emit(Events.ANNOTATION_UPDATED, { annotation });
             return annotation;
         } catch (err) {
@@ -161,8 +303,10 @@ class AnnotationStore {
         if (!this.slideId) {return false;}
 
         try {
+            const snapshot = this.annotations.get(annotationId);
             await apiService.deleteAnnotation(this.slideId, annotationId);
             this.annotations.delete(annotationId);
+            if (snapshot) this._pushHistory('delete', snapshot);
             if (this.selectedId === annotationId) {
                 this.selectedId = null;
             }
