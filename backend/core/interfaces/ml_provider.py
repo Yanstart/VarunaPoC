@@ -455,22 +455,19 @@ class MLProvider(Protocol):
 # ============================================================================
 
 
-def get_provider(provider_name: str) -> MLProvider:
+def get_provider(provider_name: str, device: str = "auto") -> MLProvider:
     """
     Factory pour instancier provider ML.
 
     Args:
         provider_name: "slideflow", "torchvision", "huggingface", "mock"
+        device: "auto" (detect GPU), "cuda", or "cpu"
 
     Returns:
         Instance de MLProvider
 
     Raises:
         ValueError: Si provider inconnu
-
-    Examples:
-        >>> provider = get_provider("slideflow")
-        >>> provider.load_model(...)
     """
     providers = {
         "slideflow": "services.ml.providers.slideflow_provider.SlideflowProvider",
@@ -479,11 +476,19 @@ def get_provider(provider_name: str) -> MLProvider:
     }
 
     if provider_name not in providers:
-        raise ValueError(f"Unknown provider: {provider_name}. Available: {list(providers.keys())}")
+        raise ValueError(
+            f"Unknown provider: {provider_name}. " f"Available: {list(providers.keys())}"
+        )
 
     # Dynamic import
     module_path, class_name = providers[provider_name].rsplit(".", 1)
     module = __import__(module_path, fromlist=[class_name])
     provider_class = getattr(module, class_name)
 
+    # Pass device to providers that support it
+    import inspect
+
+    sig = inspect.signature(provider_class.__init__)
+    if "device" in sig.parameters:
+        return provider_class(device=device)
     return provider_class()

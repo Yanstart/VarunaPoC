@@ -326,16 +326,19 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-xs);
+    overflow: hidden;
 }
 
 .ml-panel__metric {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--spacing-sm);
+    padding: var(--spacing-sm) 2px;
     background: var(--color-surface-elevated);
     border-radius: var(--radius-sm);
     text-align: center;
+    overflow: hidden;
+    min-width: 0;
 }
 
 .ml-panel__metric-label {
@@ -343,13 +346,21 @@
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .ml-panel__metric-value {
-    font-size: var(--font-size-md);
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-text-primary);
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .ml-panel__metric-value--uncertainty {
@@ -475,6 +486,37 @@
 
 .ml-panel__model-select:disabled {
     opacity: 0.5;
+}
+
+.ml-panel__device {
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ml-panel__device-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #aaa);
+    white-space: nowrap;
+}
+
+.ml-panel__device-select {
+    padding: 3px 6px;
+    background: var(--bg-secondary, #2a2a2a);
+    color: var(--text-primary, #eee);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.ml-panel__device-status {
+    font-size: 0.7rem;
+    color: var(--text-secondary, #aaa);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Quality warning banner */

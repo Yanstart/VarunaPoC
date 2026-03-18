@@ -68,15 +68,24 @@ class DiskCache:
         fd, tmp_path = tempfile.mkstemp(suffix=".npy", dir=str(path.parent))
         try:
             np.save(tmp_path, data)
+            # Close fd before rename (required on Windows)
+            os.close(fd)
+            fd = -1
             Path(tmp_path).replace(path)
             logger.debug("Cached %s: %s (%s)", data_type, path, data.shape)
+        except PermissionError:
+            # Windows: target file locked by antivirus/indexer — skip caching
+            logger.warning("Cache write skipped (file locked): %s", path)
+            with contextlib.suppress(OSError):
+                Path(tmp_path).unlink()
         except Exception:
-            if Path(tmp_path).exists():
+            with contextlib.suppress(OSError):
                 Path(tmp_path).unlink()
             raise
         finally:
-            with contextlib.suppress(OSError):
-                os.close(fd)
+            if fd >= 0:
+                with contextlib.suppress(OSError):
+                    os.close(fd)
 
     def _load(self, slide_id: str, model: str, data_type: str) -> np.ndarray | None:
         """Load numpy array from disk."""
