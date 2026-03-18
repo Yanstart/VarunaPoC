@@ -1,0 +1,221 @@
+/**
+ * AnnotationNotes — Inline notes popover for selected annotation
+ *
+ * Displays annotation metadata, notes textarea, and validation
+ * actions when an annotation is selected on the slide viewer.
+ */
+
+/* Container — hidden by default, absolute positioned in viewer area */
+.annotation-notes {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 310;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    width: 280px;
+    padding: 10px;
+    background: rgba(26, 26, 26, 0.97);
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    pointer-events: auto;
+    font-size: 12px;
+    color: var(--color-text-primary, #e0e0e0);
+}
+
+.annotation-notes--visible {
+    display: flex;
+}
+
+/* ==========================================
+ * HEADER ROW — badges in a single flex row
+ * ========================================== */
+
+.annotation-notes__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* Type badge (AI / AI+ / manual) */
+.annotation-notes__badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.annotation-notes__badge--ai {
+    background: rgba(255, 152, 0, 0.18);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 152, 0, 0.35);
+}
+
+.annotation-notes__badge--ai-plus {
+    background: rgba(156, 39, 176, 0.18);
+    color: #ba68c8;
+    border: 1px solid rgba(156, 39, 176, 0.35);
+}
+
+.annotation-notes__badge--manual {
+    background: rgba(74, 158, 255, 0.15);
+    color: #6bb0ff;
+    border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+/* Confidence percentage */
+.annotation-notes__confidence {
+    font-size: 11px;
+    color: var(--color-text-secondary, #a0a0a0);
+}
+
+/* ==========================================
+ * STATUS BADGE
+ * ========================================== */
+
+.annotation-notes__status {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.annotation-notes__status--pending {
+    background: rgba(120, 120, 120, 0.2);
+    color: #aaaaaa;
+    border: 1px solid rgba(120, 120, 120, 0.3);
+}
+
+.annotation-notes__status--validated {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.annotation-notes__status--rejected {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ==========================================
+ * LABEL ROW
+ * ========================================== */
+
+.annotation-notes__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-primary, #e0e0e0);
+}
+
+.annotation-notes__label-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.annotation-notes__label-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==========================================
+ * INFO LINE — created_by / created_at / validated_by
+ * ========================================== */
+
+.annotation-notes__info {
+    font-size: 11px;
+    color: var(--color-text-muted, #a0a0a0);
+    line-height: 1.5;
+}
+
+/* ==========================================
+ * TEXTAREA — notes input
+ * ========================================== */
+
+.annotation-notes__input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 64px;
+    padding: 6px 8px;
+    background: rgba(13, 13, 13, 0.8);
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: var(--color-text-primary, #e0e0e0);
+    font-family: var(--font-family, system-ui, sans-serif);
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.annotation-notes__input:focus {
+    border-color: var(--color-primary, #4a9eff);
+}
+
+.annotation-notes__input::placeholder {
+    color: #555;
+}
+
+/* ==========================================
+ * ACTION BUTTONS
+ * ========================================== */
+
+.annotation-notes__actions {
+    display: flex;
+    gap: 6px;
+}
+
+.annotation-notes__btn {
+    flex: 1;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.annotation-notes__btn:hover {
+    opacity: 0.85;
+}
+
+.annotation-notes__btn:active {
+    transform: scale(0.97);
+}
+
+.annotation-notes__btn--validate {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.annotation-notes__btn--validate:hover {
+    background: #22c55e;
+}
+
+.annotation-notes__btn--reject {
+    background: #b91c1c;
+    color: #ffffff;
+}
+
+.annotation-notes__btn--reject:hover {
+    background: #ef4444;
+}

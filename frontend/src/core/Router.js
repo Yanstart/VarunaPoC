@@ -51,6 +51,7 @@ import { ScaleBar } from '../components/ScaleBar.js';
 import { MLTabsContainer } from '../components/MLTabsContainer.js';
 import { MLProgressBar } from '../components/MLProgressBar.js';
 import { HeatmapLegend } from '../components/HeatmapLegend.js';
+import { AnnotationNotes } from '../components/AnnotationNotes.js';
 import { CellMarkerOverlay } from '../components/CellMarkerOverlay.js';
 import { getToastManager } from '../components/ToastManager.js';
 
@@ -290,6 +291,7 @@ export class Router {
         mlPanelContainer.id = 'ml-panel-container';
         this._state.mlProgressBar = new MLProgressBar(viewerArea);
         this._state.heatmapLegend = new HeatmapLegend(viewerArea);
+        this._state.annotationNotes = new AnnotationNotes(viewerArea);
         viewerArea.appendChild(viewerDiv);
         viewerArea.appendChild(mlPanelContainer);
 

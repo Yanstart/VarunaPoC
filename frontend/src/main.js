@@ -84,6 +84,9 @@ const appState = {
     /** Case navigation */
     caseSidebar: null,
     currentCase: null,
+
+    /** Annotation notes popover */
+    annotationNotes: null,
 };
 
 // ==========================================
