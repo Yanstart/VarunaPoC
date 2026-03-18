@@ -568,17 +568,17 @@ class TestWebSocketSecurityEndpoint:
 
         call_count = 0
 
-        async def _receive_bytes():
+        async def _receive():
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return oversized_payload
+                return {"type": "websocket.receive", "bytes": oversized_payload}
             if call_count == 2:
-                return normal_payload
+                return {"type": "websocket.receive", "bytes": normal_payload}
             raise WebSocketDisconnect
 
         ws = self._make_mock_ws(token=None)
-        ws.receive_bytes = _receive_bytes
+        ws.receive = _receive
 
         original_manager = ws_module.manager
         ws_module.manager = ws_module.ConnectionManager()
@@ -599,11 +599,11 @@ class TestWebSocketSecurityEndpoint:
 
         msg = _json.dumps({"type": "cursor_move", "position": {"x": 0, "y": 0}}).encode()
 
-        async def _receive_bytes():
-            return msg
+        async def _receive():
+            return {"type": "websocket.receive", "bytes": msg}
 
         ws = self._make_mock_ws(token=None)
-        ws.receive_bytes = _receive_bytes
+        ws.receive = _receive
 
         limiter = MagicMock()
         # First call allowed so connect succeeds; subsequent calls denied

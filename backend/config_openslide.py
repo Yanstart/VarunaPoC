@@ -48,6 +48,7 @@ def _configure_windows():
 # Linux: openslide-bin + libvips compatibility
 # ============================================
 
+
 def _configure_linux():
     """Ensure libvips loads OpenSlide 4.0 from the openslide-bin wheel.
 
