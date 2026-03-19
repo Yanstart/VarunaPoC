@@ -65,3 +65,6 @@
 
 /* 16. Reporting Panel styles */
 @import './css/reporting-panel.css';
+
+/* 17. AI Contribution Dashboard styles */
+@import './css/dashboard-panel.css';

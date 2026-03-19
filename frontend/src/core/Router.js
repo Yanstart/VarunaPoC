@@ -55,6 +55,7 @@ import { HeatmapLegend } from '../components/HeatmapLegend.js';
 import { AnnotationNotes } from '../components/AnnotationNotes.js';
 import { CellMarkerOverlay } from '../components/CellMarkerOverlay.js';
 import { getToastManager } from '../components/ToastManager.js';
+import { DashboardPanel } from '../components/DashboardPanel.js';
 
 import { initViewer, loadSlideWithTiles, getLegacyViewer } from '../components/Viewer.js';
 
@@ -731,7 +732,7 @@ export class Router {
         const resetTargets = [
             'mlPanel', 'detectionPanel', 'cellCountingPanel',
             'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
-            'reportingPanel',
+            'reportingPanel', 'dashboardPanel',
         ];
         for (const key of resetTargets) {
             if (this._state[key] && this._state[key].setSlide) {
@@ -812,6 +813,8 @@ export class Router {
 
             this._state.metadataPanel = new MetadataPanel(infoPanel);
             this._state.metadataPanel.setSlide(slide.id);
+
+            this._state.dashboardPanel = new DashboardPanel(infoPanel, { slideId: slide.id });
 
         } catch (err) {
             console.error('[App] Load failed:', err);
@@ -1425,6 +1428,7 @@ export class Router {
             'mlProgressBar', 'heatmapLegend',
             'countingPanel', 'reportingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
+            'dashboardPanel',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
             'compareLayout', 'caseSidebar', 'userMenu', 'loginPage', 'toastManager',
             'annotationNotes',

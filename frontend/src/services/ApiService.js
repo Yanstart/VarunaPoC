@@ -978,6 +978,19 @@ class ApiService {
     }
 
     // ==========================================
+    // ANNOTATION REPORT API
+    // ==========================================
+
+    /**
+     * Get AI correction report for a slide
+     * @param {string} slideId
+     * @returns {Promise<{ai_corrections: {total_ai: number, validated: number, rejected: number}, validation: {pending: number, validated: number, rejected: number}}>}
+     */
+    async getAnnotationReport(slideId) {
+        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}/report`, { useCache: false });
+    }
+
+    // ==========================================
     // WORKLIST & HISTORY API (Wave 4)
     // ==========================================
 

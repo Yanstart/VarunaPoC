@@ -1,0 +1,194 @@
+/**
+ * DashboardPanel Styles
+ * AI Contribution Dashboard - dark theme, motivational feel
+ */
+
+.dashboard-panel {
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+}
+
+/* ---- Header ---- */
+
+.dashboard-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s ease;
+}
+
+.dashboard-panel__header:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-panel__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+    letter-spacing: 0.02em;
+}
+
+.dashboard-panel__chevron {
+    font-size: 10px;
+    color: #666;
+    transition: color 0.15s ease;
+}
+
+.dashboard-panel__header:hover .dashboard-panel__chevron {
+    color: #999;
+}
+
+/* ---- Content wrapper ---- */
+
+.dashboard-panel__content {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ---- Hero stat ---- */
+
+.dashboard-panel__hero {
+    text-align: center;
+    padding: 12px 8px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+.dashboard-panel__hero-number {
+    font-size: 48px;
+    font-weight: 700;
+    color: #e0e0e0;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.dashboard-panel__hero-label {
+    font-size: 11px;
+    color: #777;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.dashboard-panel__hero-subtitle {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.5;
+}
+
+.dashboard-panel__hero-validated {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.dashboard-panel__hero-rejected {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* ---- Accuracy bar ---- */
+
+.dashboard-panel__accuracy {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.dashboard-panel__accuracy-label {
+    font-size: 11px;
+    color: #888;
+}
+
+.dashboard-panel__accuracy-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #f59e0b;
+    line-height: 1;
+}
+
+.dashboard-panel__accuracy-value--empty {
+    font-size: 18px;
+    color: #555;
+}
+
+.dashboard-panel__accuracy-track {
+    height: 6px;
+    background: #2a2a2a;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dashboard-panel__accuracy-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    min-width: 0;
+}
+
+/* ---- Session counters ---- */
+
+.dashboard-panel__session {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-panel__session-title {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.dashboard-panel__session-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dashboard-panel__session-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.dashboard-panel__session-count {
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: right;
+}
+
+.dashboard-panel__session-count--validated {
+    color: #22c55e;
+}
+
+.dashboard-panel__session-count--rejected {
+    color: #ef4444;
+}
+
+/* ---- Motivation text ---- */
+
+.dashboard-panel__motivation {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    font-style: italic;
+    line-height: 1.4;
+    padding-top: 4px;
+    border-top: 1px solid #2a2a2a;
+}
