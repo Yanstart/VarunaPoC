@@ -35,6 +35,9 @@ class AnnotationLayer {
         /** @type {Array<Function>} Unsubscribe functions for event listeners */
         this._unsubscribers = [];
 
+        this._quizMode = false;
+        this._revealedAnnotations = new Set();
+
         this._boundUpdate = this._updateViewBox.bind(this);
         this._create();
         this._setupEventListeners();
@@ -201,6 +204,13 @@ class AnnotationLayer {
                         : [shape];
                     for (const target of targets) {
                         if (target.isPointInFill?.(svgPoint) || target.isPointInStroke?.(svgPoint)) {
+                            // Quiz mode: reveal before selecting
+                            if (this._quizMode && !this._revealedAnnotations.has(shape.dataset.annotationId)) {
+                                this._revealedAnnotations.add(shape.dataset.annotationId);
+                                this.render();
+                                event.preventDefaultAction = true;
+                                return;
+                            }
                             annotationStore.selectAnnotation(shape.dataset.annotationId);
                             event.preventDefaultAction = true;
                             return;
@@ -210,6 +220,15 @@ class AnnotationLayer {
             }
         };
         this.viewer.addHandler('canvas-click', this._boundCanvasClick);
+
+        // Quiz mode toggle
+        this._unsubscribers.push(
+            eventBus.on(Events.QUIZ_MODE_TOGGLE, ({ enabled }) => {
+                this._quizMode = enabled;
+                this._revealedAnnotations.clear();
+                this.render();
+            }),
+        );
     }
 
     _extractSlideDimensions() {
@@ -278,9 +297,14 @@ class AnnotationLayer {
     }
 
     _createAnnotationElement(anno) {
-        const color = anno.label?.color || annotationStore.getLabelColor(anno.label_id) || '#FF0000';
+        let color = anno.label?.color || annotationStore.getLabelColor(anno.label_id) || '#FF0000';
         const opacity = annotationStore.getLayerOpacity(anno.label_id || anno.annotation_type);
         const isSelected = anno.id === annotationStore.selectedId;
+
+        // Quiz mode: mask label colors until revealed
+        if (this._quizMode && !this._revealedAnnotations.has(anno.id)) {
+            color = '#6b7280'; // neutral gray
+        }
 
         const geom = anno.geometry;
         if (!geom) {return null;}

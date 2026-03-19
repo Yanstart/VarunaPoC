@@ -102,6 +102,9 @@ class DrawingTools {
         this._drawStartSlide = null;
         this._currentPreview = null;
 
+        // Quiz mode state
+        this._quizMode = false;
+
         // Ruler state
         this._rulerStart = null;
 
@@ -437,6 +440,16 @@ class DrawingTools {
             case 'Tab':
                 e.preventDefault();
                 eventBus.emit(Events.DETECTION_NEXT);
+                break;
+            case 'q': case 'Q':
+                if (e.ctrlKey || e.metaKey) break;
+                this._quizMode = !this._quizMode;
+                eventBus.emit(Events.QUIZ_MODE_TOGGLE, { enabled: this._quizMode });
+                eventBus.emit(Events.TOAST_SHOW, {
+                    type: 'info',
+                    message: this._quizMode ? 'Quiz mode ON' : 'Quiz mode OFF',
+                    duration: 2000,
+                });
                 break;
             case 'h': case 'H':
                 this._overlaysVisible = !this._overlaysVisible;

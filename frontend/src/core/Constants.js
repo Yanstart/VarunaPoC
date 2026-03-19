@@ -151,6 +151,8 @@ export const Events = Object.freeze({
     // -- Drawing tools --
     /** @payload {{ tool: string }} */
     TOOL_CHANGED: 'tool:changed',
+    /** @payload {{ enabled: boolean }} */
+    QUIZ_MODE_TOGGLE: 'quiz:toggle',
     /** @payload {{ tool: string }} */
     DRAWING_START: 'drawing:start',
     /** @payload {{ tool: string }} */
