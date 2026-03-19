@@ -201,10 +201,10 @@ class AnnotationStore {
         }
     }
 
-    async rejectAnnotation(annotationId, notes = null) {
+    async rejectAnnotation(annotationId, notes = null, rejectionReason = null) {
         if (!this.slideId) return null;
         try {
-            const annotation = await apiService.rejectAnnotation(this.slideId, annotationId, notes);
+            const annotation = await apiService.rejectAnnotation(this.slideId, annotationId, notes, rejectionReason);
             this.annotations.set(annotation.id, annotation);
             eventBus.emit(Events.ANNOTATION_REJECTED, { annotation });
             eventBus.emit(Events.ANNOTATION_UPDATED, { annotation });

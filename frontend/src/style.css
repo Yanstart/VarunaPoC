@@ -68,3 +68,6 @@
 
 /* 17. AI Contribution Dashboard styles */
 @import './css/dashboard-panel.css';
+
+/* 18. Rejection Reason Picker */
+@import './css/rejection-picker.css';

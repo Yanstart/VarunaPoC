@@ -451,7 +451,11 @@ class DrawingTools {
                 break;
             case 'x': case 'X':
                 if (e.ctrlKey || e.metaKey) break;
-                eventBus.emit(Events.DETECTION_REJECT_CURRENT);
+                if (e.shiftKey) {
+                    eventBus.emit(Events.DETECTION_REJECT_WITH_REASON);
+                } else {
+                    eventBus.emit(Events.DETECTION_REJECT_CURRENT);
+                }
                 break;
             case 'Tab':
                 if (this._hasActiveDetections) {

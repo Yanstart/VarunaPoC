@@ -18,6 +18,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { apiService } from '../services/ApiService.js';
+import { showRejectionReasonPicker } from './RejectionReasonPicker.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { i18nService } from '../services/I18nService.js';
 import { userFriendlyMLError } from '../services/mlErrors.js';
@@ -120,6 +121,24 @@ class DetectionPanel {
         this._unsubscribers.push(
             eventBus.on(Events.DETECTION_NEXT, () => {
                 this._goToNextDetection();
+            }),
+        );
+
+        // Shift+X: reject with reason picker
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_REJECT_WITH_REASON, async () => {
+                if (this.highlightedIndex === null) return;
+                const idx = this.highlightedIndex;
+                // Find the detection item element as anchor for the picker
+                const item = this.element?.querySelector(`[data-detection-item-index="${idx}"]`);
+                const anchor = item || this.element;
+                const reason = await showRejectionReasonPicker(anchor, { position: 'below' });
+                if (reason) {
+                    // Submit feedback with rejection reason to backend
+                    this._submitFeedbackWithReason(idx, reason);
+                    this._toggleReject(idx);
+                    this._goToNextDetection();
+                }
             }),
         );
     }
@@ -760,6 +779,32 @@ class DetectionPanel {
         }
 
         this._renderPreview();
+    }
+
+    /**
+     * Submit a rejection with a structured reason via the ML feedback API.
+     * @param {number} index - Detection index
+     * @param {string} reason - Rejection reason ID
+     * @private
+     */
+    async _submitFeedbackWithReason(index, reason) {
+        const features = this.detectionResult?.geojson?.features || [];
+        const feature = features[index];
+        if (!feature) return;
+
+        const annotationId = feature.properties?.annotation_id || feature.properties?.id;
+        if (!annotationId) return;
+
+        try {
+            await apiService.submitFeedback(this.slideId, {
+                original_annotation_id: annotationId,
+                correction_type: 'rejected',
+                notes: reason,
+            });
+            this.feedbackStatus.set(index, 'rejected');
+        } catch (e) {
+            console.warn('[DetectionPanel] Feedback with reason failed:', e);
+        }
     }
 
     /**

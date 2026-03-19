@@ -40,6 +40,9 @@ class Correction(Base):
         nullable=True,
     )
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # false_positive_artifact, false_positive_inflammation, imprecise_contour, wrong_label, other
     model_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     model_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     metadata_extra: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

@@ -295,6 +295,12 @@ async def reject_annotation(
     slide_id: str,
     annotation_id: UUID,
     notes: str | None = Query(None, max_length=2000),
+    rejection_reason: str | None = Query(
+        None,
+        max_length=50,
+        description="Structured reason: false_positive_artifact, false_positive_inflammation, "
+        "imprecise_contour, wrong_label, other",
+    ),
     current_user: CurrentUser = Depends(require_role("MEDECIN")),
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
@@ -328,6 +334,7 @@ async def reject_annotation(
             slide_id=slide_id,
             correction_type="rejected",
             original_confidence=annotation.confidence,
+            rejection_reason=rejection_reason,
             comment=notes,
             created_by=current_user.username,
         )

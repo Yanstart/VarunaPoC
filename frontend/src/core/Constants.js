@@ -193,6 +193,8 @@ export const Events = Object.freeze({
     DETECTION_VALIDATE_CURRENT: 'detection:validateCurrent',
     /** @payload {} */
     DETECTION_REJECT_CURRENT: 'detection:rejectCurrent',
+    /** @payload {} — Shift+X: reject with reason picker */
+    DETECTION_REJECT_WITH_REASON: 'detection:rejectWithReason',
     /** @payload {} */
     DETECTION_NEXT: 'detection:next',
 

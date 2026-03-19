@@ -1,0 +1,41 @@
+/* RejectionReasonPicker — inline micro-selector for rejection reasons */
+
+.rejection-picker {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: var(--color-bg-elevated, #1a1f2e);
+    border: 1px solid var(--color-border, #2a3040);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.rejection-picker__btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px;
+    background: #ef444410;
+    color: #fca5a5;
+    border: 1px solid #ef444430;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.rejection-picker__btn:hover {
+    background: #ef444430;
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.rejection-picker__icon {
+    font-size: 16px;
+}
+
+.rejection-picker__label {
+    font-weight: 600;
+    white-space: nowrap;
+}

@@ -677,8 +677,11 @@ class ApiService {
      * @param {string} annotationId
      * @param {string|null} notes - Optional rejection reason
      */
-    async rejectAnnotation(slideId, annotationId, notes = null) {
-        const params = notes ? `?notes=${encodeURIComponent(notes)}` : '';
+    async rejectAnnotation(slideId, annotationId, notes = null, rejectionReason = null) {
+        const parts = [];
+        if (notes) parts.push(`notes=${encodeURIComponent(notes)}`);
+        if (rejectionReason) parts.push(`rejection_reason=${encodeURIComponent(rejectionReason)}`);
+        const params = parts.length > 0 ? `?${parts.join('&')}` : '';
         return this.patch(`/api/v1/annotations/${slideId}/${annotationId}/reject${params}`);
     }
 

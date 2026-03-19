@@ -16,6 +16,7 @@ import { eventBus } from '../core/EventBus.js';
 import { Events } from '../core/Constants.js';
 import { annotationStore } from '../services/AnnotationStore.js';
 import { i18nService } from '../services/I18nService.js';
+import { showRejectionReasonPicker } from './RejectionReasonPicker.js';
 
 export class AnnotationNotes {
     /**
@@ -342,8 +343,11 @@ export class AnnotationNotes {
 
     async _onReject() {
         if (!this._currentId) {return;}
+        // Show reason picker anchored to the reject button
+        const reason = await showRejectionReasonPicker(this._rejectBtn, { position: 'above' });
+        if (!reason) return; // cancelled
         const notes = this._textarea?.value?.trim() || null;
-        await annotationStore.rejectAnnotation(this._currentId, notes);
+        await annotationStore.rejectAnnotation(this._currentId, notes, reason);
     }
 
     async _onNotesSave() {
