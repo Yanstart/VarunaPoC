@@ -463,11 +463,23 @@ class DrawingTools {
                 if (e.ctrlKey || e.metaKey) break;
                 this._quizMode = !this._quizMode;
                 eventBus.emit(Events.QUIZ_MODE_TOGGLE, { enabled: this._quizMode });
-                eventBus.emit(Events.TOAST_SHOW, {
-                    type: 'info',
-                    message: this._quizMode ? 'Quiz mode ON' : 'Quiz mode OFF',
-                    duration: 2000,
-                });
+                if (!this._quizMode && this.annotationLayer?.getQuizSummary) {
+                    const s = this.annotationLayer.getQuizSummary();
+                    const missedStr = s.missed.length > 0
+                        ? `\nNon r\u00e9v\u00e9l\u00e9es : ${s.missed.slice(0, 5).join(', ')}${s.missed.length > 5 ? '...' : ''}`
+                        : '';
+                    eventBus.emit(Events.TOAST_SHOW, {
+                        type: s.pct >= 80 ? 'success' : 'info',
+                        message: `Quiz termin\u00e9 : ${s.revealed}/${s.total} (${s.pct}%)${missedStr}`,
+                        duration: 5000,
+                    });
+                } else {
+                    eventBus.emit(Events.TOAST_SHOW, {
+                        type: 'info',
+                        message: 'Quiz mode ON',
+                        duration: 2000,
+                    });
+                }
                 break;
             case 'h': case 'H':
                 this._overlaysVisible = !this._overlaysVisible;

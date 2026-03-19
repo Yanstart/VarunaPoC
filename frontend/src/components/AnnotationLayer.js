@@ -37,6 +37,8 @@ class AnnotationLayer {
 
         this._quizMode = false;
         this._revealedAnnotations = new Set();
+        this._quizTotal = 0;
+        this._quizOverlay = null;
 
         this._boundUpdate = this._updateViewBox.bind(this);
         this._create();
@@ -207,7 +209,7 @@ class AnnotationLayer {
                             // Quiz mode: reveal before selecting
                             if (this._quizMode && !this._revealedAnnotations.has(shape.dataset.annotationId)) {
                                 this._revealedAnnotations.add(shape.dataset.annotationId);
-                                this.render();
+                                this.render(); // re-renders with real colors + updates counter
                                 event.preventDefaultAction = true;
                                 return;
                             }
@@ -225,6 +227,9 @@ class AnnotationLayer {
         this._unsubscribers.push(
             eventBus.on(Events.QUIZ_MODE_TOGGLE, ({ enabled }) => {
                 this._quizMode = enabled;
+                if (!enabled) {
+                    this._updateQuizOverlay(); // removes overlay
+                }
                 this._revealedAnnotations.clear();
                 this.render();
             }),
@@ -283,16 +288,24 @@ class AnnotationLayer {
         }
 
         const annotations = annotationStore.getAll();
+        let quizVisible = 0;
 
         for (const anno of annotations) {
             // Check layer visibility
             const layerKey = anno.label_id || anno.annotation_type;
             if (!annotationStore.isLayerVisible(layerKey)) {continue;}
 
+            quizVisible++;
             const el = this._createAnnotationElement(anno);
             if (el) {
                 this.annoGroup.appendChild(el);
             }
+        }
+
+        // Update quiz counter
+        if (this._quizMode) {
+            this._quizTotal = quizVisible;
+            this._updateQuizOverlay();
         }
     }
 
@@ -321,9 +334,13 @@ class AnnotationLayer {
             case 'MultiPolygon':
                 el = this._createMultiPolygon(geom.coordinates, color, opacity);
                 break;
-            case 'LineString':
-                el = this._createArrow(geom.coordinates, color, opacity, anno.properties?.text);
+            case 'LineString': {
+                // Quiz mode: hide arrow text until revealed
+                const arrowText = (this._quizMode && !this._revealedAnnotations.has(anno.id))
+                    ? null : anno.properties?.text;
+                el = this._createArrow(geom.coordinates, color, opacity, arrowText);
                 break;
+            }
             default:
                 el = this._createPolygon(geom.coordinates, color, opacity);
         }
@@ -624,6 +641,59 @@ class AnnotationLayer {
                 this.disagreementGroup.appendChild(el);
             }
         }
+    }
+
+    // ==========================================
+    // QUIZ MODE OVERLAY
+    // ==========================================
+
+    _updateQuizOverlay() {
+        if (!this._quizMode) {
+            if (this._quizOverlay) {
+                this._quizOverlay.remove();
+                this._quizOverlay = null;
+            }
+            return;
+        }
+
+        if (!this._quizOverlay) {
+            this._quizOverlay = document.createElement('div');
+            this._quizOverlay.className = 'quiz-overlay';
+            this._quizOverlay.style.cssText = 'position:absolute;top:12px;right:60px;z-index:310;' +
+                'background:rgba(15,18,24,0.85);padding:6px 12px;border-radius:6px;' +
+                'font-size:13px;font-weight:600;color:#e2e8f0;pointer-events:none;' +
+                'border:1px solid rgba(99,102,241,0.4);';
+            this.viewer.container.appendChild(this._quizOverlay);
+        }
+
+        const revealed = this._revealedAnnotations.size;
+        const total = this._quizTotal;
+        const pct = total > 0 ? Math.round((revealed / total) * 100) : 0;
+        this._quizOverlay.textContent = `Quiz: ${revealed}/${total} (${pct}%)`;
+    }
+
+    /**
+     * Get quiz summary when quiz mode is turned off.
+     * @returns {{ revealed: number, total: number, pct: number, missed: string[] }}
+     */
+    getQuizSummary() {
+        const annotations = annotationStore.getAll();
+        const missed = [];
+        for (const anno of annotations) {
+            const layerKey = anno.label_id || anno.annotation_type;
+            if (!annotationStore.isLayerVisible(layerKey)) continue;
+            if (!this._revealedAnnotations.has(anno.id)) {
+                missed.push(anno.label?.name || anno.geometry_type || 'unknown');
+            }
+        }
+        const total = this._quizTotal;
+        const revealed = this._revealedAnnotations.size;
+        return {
+            revealed,
+            total,
+            pct: total > 0 ? Math.round((revealed / total) * 100) : 0,
+            missed,
+        };
     }
 
     // ==========================================
