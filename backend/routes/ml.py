@@ -1642,7 +1642,7 @@ async def health_check(
 @router.post("/device")
 async def set_device(
     device: str = "auto",
-    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+    current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
 ):
     """Toggle ML device at runtime (auto/cuda/cpu). Restarts ML worker."""
     if device not in ("auto", "cuda", "cpu"):
