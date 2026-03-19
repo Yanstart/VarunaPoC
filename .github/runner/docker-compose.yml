@@ -14,11 +14,14 @@ services:
     environment:
       REPO_URL: ${REPO_URL:-https://github.com/Yanstart/VarunaPoC}
       ACCESS_TOKEN: ${ACCESS_TOKEN:?ACCESS_TOKEN is required - GitHub PAT with repo scope}
-      RUNNER_WORKDIR: /tmp/runner/work
+      RUNNER_WORKDIR: /data/runner-work
       LABELS: self-hosted,linux,x64,varuna
       DISABLE_AUTO_UPDATE: "true"
+      TMPDIR: /data/runner-tmp
+      DOCKER_BUILDKIT: "1"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /data:/data
     deploy:
       replicas: ${RUNNER_REPLICAS:-4}
     logging:
