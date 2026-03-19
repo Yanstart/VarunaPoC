@@ -1,7 +1,7 @@
 # Fonctionnalites d'Intelligence Artificielle
 
-**Statut:** En cours de developpement
-**Derniere mise a jour:** 2026-02-17
+**Statut:** Fonctionnel
+**Derniere mise a jour:** 2026-03-19
 **Fonctionnalite:** Panneau ML, detection, focus assist, auto-tag, comptage cellulaire, recherche de similarite
 
 ---
@@ -190,6 +190,20 @@ Le modele par defaut est **UNI**, qui offre actuellement les meilleures performa
 
 ---
 
+## Selection du Device (GPU/CPU)
+
+Le panneau ML inclut un selecteur de device :
+
+- **Auto** : detecte automatiquement le GPU (recommande)
+- **GPU (CUDA)** : force l'utilisation du GPU pour des analyses plus rapides et precises
+- **CPU** : utilise le processeur (plus lent mais fonctionne partout)
+
+Le statut du GPU est affiche a cote du selecteur (nom de la carte graphique si detectee).
+
+**Note :** Le changement de device relance le worker ML. Les analyses en cours sont interrompues.
+
+---
+
 ## Depannage
 
 ### L'IA ne se lance pas
@@ -224,6 +238,6 @@ Le modele par defaut est **UNI**, qui offre actuellement les meilleures performa
 
 ---
 
-**Version:** 1.0
-**Derniere revision:** 2026-02-17
+**Version:** 2.0
+**Derniere revision:** 2026-03-19
 **Auteur:** Equipe VarunaPoC
