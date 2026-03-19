@@ -42,7 +42,8 @@ class ServiceContainer:
         ml_mode = os.getenv("ML_MODE", "extractor")
         extractor_name = os.getenv("ML_EXTRACTOR", "resnet50_imagenet")
         model_path = os.getenv("ML_MODEL_PATH", "")
-        config_hash = f"{provider_name}:{ml_mode}:{extractor_name}:{model_path}"
+        ml_device = os.getenv("ML_DEVICE", "auto")
+        config_hash = f"{provider_name}:{ml_mode}:{extractor_name}:{model_path}:{ml_device}"
 
         if cls._ml_provider is not None and cls._ml_config_hash == config_hash:
             return cls._ml_provider
@@ -50,7 +51,7 @@ class ServiceContainer:
         try:
             from services.ml.provider_factory import get_provider
 
-            provider = get_provider(provider_name)
+            provider = get_provider(provider_name, device=ml_device)
 
             if provider_name == "slideflow" and not provider.model_loaded:
                 classes_str = os.getenv("ML_CLASSES", "tissue,background")

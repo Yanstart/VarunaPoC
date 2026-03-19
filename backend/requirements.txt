@@ -37,7 +37,7 @@ cachetools==5.3.3
 slowapi==0.1.9
 
 # Similarity search
-faiss-cpu==1.7.4
+faiss-cpu==1.13.2
 
 # ML: Slideflow + feature extractors
 # Note: torch CPU-only requires --index-url https://download.pytorch.org/whl/cpu
@@ -49,7 +49,7 @@ imghdr-lts==1.0.0; python_version >= "3.13"
 
 # ML: Optimized inference (ML_BACKEND=auto|pytorch|onnx|openvino)
 onnxruntime==1.18.0
-openvino==2024.0.0
+openvino==2024.1.0
 
 # OpenTelemetry (optional: OTEL_ENABLED=true)
 # opentelemetry-api>=1.20.0

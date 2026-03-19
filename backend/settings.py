@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # Feature flags
     ml_enabled: bool = Field(True, alias="ML_ENABLED")
     ml_provider: str = Field("slideflow", alias="ML_PROVIDER")
+    ml_device: str = Field("auto", alias="ML_DEVICE")  # auto | cuda | cpu
     fhir_enabled: bool = Field(False, alias="FHIR_ENABLED")
     quality_enabled: bool = Field(True, alias="QUALITY_ENABLED")
 

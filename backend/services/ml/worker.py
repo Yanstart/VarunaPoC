@@ -336,7 +336,8 @@ def _init_provider(worker_logger):
         extractor_name,
     )
 
-    provider = get_provider(provider_name)
+    ml_device = os.getenv("ML_DEVICE", "auto")
+    provider = get_provider(provider_name, device=ml_device)
 
     if provider_name == "slideflow" and not provider.model_loaded:
         classes_str = os.getenv("ML_CLASSES", "tissue,background")

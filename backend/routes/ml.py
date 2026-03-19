@@ -1611,22 +1611,84 @@ async def get_slide_tags(
 async def health_check(
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    """
-    Health check pour ML services.
-
-    Returns:
-        {"status": "ok", "provider": "slideflow", "device": "cpu"}
-
-    Examples:
-        ```bash
-        curl "http://localhost:8000/api/ml/health"
-        ```
-    """
+    """Health check pour ML services with GPU detection."""
     provider_name = os.getenv("ML_PROVIDER", "slideflow")
+    ml_device = os.getenv("ML_DEVICE", "auto")
     worker_alive = _ml_worker.is_alive() if _ml_worker else False
+
+    gpu_available = False
+    gpu_name = None
+    try:
+        import torch
+
+        gpu_available = torch.cuda.is_available()
+        if gpu_available:
+            gpu_name = torch.cuda.get_device_name(0)
+    except ImportError:
+        pass
+
+    actual_device = ("cuda" if gpu_available else "cpu") if ml_device == "auto" else ml_device
+
     return {
         "status": "ok",
         "provider": provider_name,
-        "device": "cpu",
+        "device": actual_device,
+        "gpu_available": gpu_available,
+        "gpu_name": gpu_name,
         "worker_alive": worker_alive,
+    }
+
+
+@router.post("/device")
+async def set_device(
+    device: str = "auto",
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+):
+    """Toggle ML device at runtime (auto/cuda/cpu). Restarts ML worker."""
+    if device not in ("auto", "cuda", "cpu"):
+        raise HTTPException(400, f"Invalid device: {device}. Use auto, cuda, or cpu.")
+
+    if device == "cuda":
+        try:
+            import torch
+
+            if not torch.cuda.is_available():
+                raise HTTPException(400, "CUDA requested but no GPU detected.")
+        except ImportError:
+            raise HTTPException(400, "CUDA requested but PyTorch not installed.")
+
+    old_device = os.environ.get("ML_DEVICE", "auto")
+    os.environ["ML_DEVICE"] = device
+
+    if device == "cuda":
+        os.environ["ML_ADAPTIVE_STRIDE"] = "false"
+        os.environ.pop("ML_MAX_TILES", None)
+    elif device == "cpu":
+        os.environ["ML_ADAPTIVE_STRIDE"] = "true"
+        os.environ["ML_MAX_TILES"] = "500"
+    else:
+        os.environ["ML_ADAPTIVE_STRIDE"] = "auto"
+        os.environ.pop("ML_MAX_TILES", None)
+
+    # Invalidate cached provider singleton (device changed)
+    from core.container import ServiceContainer
+
+    ServiceContainer.reset()
+
+    global _ml_worker
+    if _ml_worker and _ml_worker.is_alive():
+        _ml_worker.stop()
+        _ml_worker = None
+
+    logger.info(
+        "ML device changed: %s -> %s (worker restarts on next request)",
+        old_device,
+        device,
+    )
+
+    return {
+        "status": "ok",
+        "device": device,
+        "adaptive_stride": os.environ.get("ML_ADAPTIVE_STRIDE", "auto"),
+        "max_tiles": os.environ.get("ML_MAX_TILES", "unlimited"),
     }

@@ -21,6 +21,7 @@ Usage:
     result = provider.predict("path/to/slide.mrxs")
 """
 
+import inspect
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Protocol, Tuple
 
@@ -455,22 +456,19 @@ class MLProvider(Protocol):
 # ============================================================================
 
 
-def get_provider(provider_name: str) -> MLProvider:
+def get_provider(provider_name: str, device: str = "auto") -> MLProvider:
     """
     Factory pour instancier provider ML.
 
     Args:
         provider_name: "slideflow", "torchvision", "huggingface", "mock"
+        device: "auto" (detect GPU), "cuda", or "cpu"
 
     Returns:
         Instance de MLProvider
 
     Raises:
         ValueError: Si provider inconnu
-
-    Examples:
-        >>> provider = get_provider("slideflow")
-        >>> provider.load_model(...)
     """
     providers = {
         "slideflow": "services.ml.providers.slideflow_provider.SlideflowProvider",
@@ -486,4 +484,8 @@ def get_provider(provider_name: str) -> MLProvider:
     module = __import__(module_path, fromlist=[class_name])
     provider_class = getattr(module, class_name)
 
+    # Pass device to providers that support it
+    sig = inspect.signature(provider_class.__init__)
+    if "device" in sig.parameters:
+        return provider_class(device=device)
     return provider_class()

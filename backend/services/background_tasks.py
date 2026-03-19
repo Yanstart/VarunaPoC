@@ -37,7 +37,8 @@ async def precompute_embeddings(slide_id: str, slide_path: str) -> None:
         from core.interfaces import get_provider
 
         provider_name = os.getenv("ML_PROVIDER", "slideflow")
-        provider = get_provider(provider_name)
+        ml_device = os.getenv("ML_DEVICE", "auto")
+        provider = get_provider(provider_name, device=ml_device)
 
         if not provider.model_loaded:
             logger.warning("ML provider not loaded, skipping pre-computation for %s", slide_id)

@@ -130,6 +130,29 @@ class MLPanel {
         scopeDiv.appendChild(scopeRadios);
         content.appendChild(scopeDiv);
 
+        // GPU toggle
+        const deviceDiv = document.createElement('div');
+        deviceDiv.className = 'ml-panel__device';
+        const deviceLabel = document.createElement('label');
+        deviceLabel.className = 'ml-panel__device-label';
+        deviceLabel.textContent = _t('ml.device') || 'Device';
+        deviceDiv.appendChild(deviceLabel);
+        const deviceSelect = document.createElement('select');
+        deviceSelect.className = 'ml-panel__device-select';
+        for (const [val, label] of [['auto', 'Auto'], ['cuda', 'GPU (CUDA)'], ['cpu', 'CPU']]) {
+            const opt = document.createElement('option');
+            opt.value = val; opt.textContent = label;
+            deviceSelect.appendChild(opt);
+        }
+        deviceDiv.appendChild(deviceSelect);
+        this._deviceStatus = document.createElement('span');
+        this._deviceStatus.className = 'ml-panel__device-status';
+        deviceDiv.appendChild(this._deviceStatus);
+        content.appendChild(deviceDiv);
+        this._deviceSelect = deviceSelect;
+        this._fetchDeviceStatus();
+        deviceSelect.addEventListener('change', () => this._switchDevice(deviceSelect.value));
+
         // Actions
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'ml-panel__actions';
@@ -277,9 +300,10 @@ class MLPanel {
 
         // Listen for quality score to show cross-validation warning
         this._unsubscribers.push(
-            eventBus.on(Events.QUALITY_READY, ({ slideId, metrics }) => {
+            eventBus.on(Events.QUALITY_READY, ({ slideId, metrics, data }) => {
                 if (slideId === this.slideId) {
-                    this._qualityScore = metrics.overall_score ?? metrics.score ?? null;
+                    const m = metrics || data || {};
+                    this._qualityScore = m.overall_score ?? m.score ?? null;
                     this._updateQualityWarning();
                 }
             }),
@@ -349,6 +373,57 @@ class MLPanel {
         ph.className = 'ml-panel__placeholder';
         ph.textContent = i18nService.t('ml.loadAndAnalyze');
         this.resultsContainer.appendChild(ph);
+    }
+
+    /**
+     * Fetch ML device status from backend
+     * @private
+     */
+    async _fetchDeviceStatus() {
+        try {
+            const health = await apiService.getMLHealth();
+            if (this._deviceSelect && health.device) {
+                // Set select to match actual device
+                const val = health.device === 'cuda' ? 'cuda' : health.device === 'cpu' ? 'cpu' : 'auto';
+                this._deviceSelect.value = val;
+            }
+            if (this._deviceStatus) {
+                const icon = health.gpu_available ? '\u2705' : '\u26A0\uFE0F';
+                const name = health.gpu_name || 'CPU';
+                this._deviceStatus.textContent = ` ${icon} ${name}`;
+                this._deviceStatus.title = health.gpu_available
+                    ? `GPU: ${health.gpu_name} | Active: ${health.device}`
+                    : 'No GPU detected - using CPU';
+            }
+        } catch (_) {
+            if (this._deviceStatus) this._deviceStatus.textContent = '';
+        }
+    }
+
+    /**
+     * Switch ML device
+     * @param {string} device - "auto", "cuda", or "cpu"
+     * @private
+     */
+    async _switchDevice(device) {
+        try {
+            this._deviceSelect.disabled = true;
+            if (this._deviceStatus) this._deviceStatus.textContent = ' ...';
+            const result = await apiService.setMLDevice(device);
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'success',
+                message: `ML device: ${result.device} (stride: ${result.adaptive_stride})`,
+            });
+            await this._fetchDeviceStatus();
+        } catch (err) {
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'error',
+                message: err.message || 'Failed to switch device',
+            });
+            await this._fetchDeviceStatus();
+        } finally {
+            this._deviceSelect.disabled = false;
+        }
     }
 
     /**
