@@ -982,13 +982,8 @@ class ApiService {
     // ==========================================
 
     /**
-     * Get AI correction report for a slide
-     * @param {string} slideId
-     * @returns {Promise<{ai_corrections: {total_ai: number, validated: number, rejected: number}, validation: {pending: number, validated: number, rejected: number}}>}
+     * Get AI correction report for a slide (duplicate removed — see line 734)
      */
-    async getAnnotationReport(slideId) {
-        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}/report`, { useCache: false });
-    }
 
     // ==========================================
     // WORKLIST & HISTORY API (Wave 4)
@@ -1016,15 +1011,8 @@ class ApiService {
     // ==========================================
 
     /**
-     * Get annotation report for a slide (validation stats, contributors, timeline)
-     * @param {string} slideId - Slide ID
-     * @returns {Promise<Object>} AnnotationReport
+     * Get annotation report for a slide (duplicate removed — see line 734)
      */
-    async getAnnotationReport(slideId) {
-        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}/report`, {
-            useCache: false,
-        });
-    }
 
     // ==========================================
     // HEALTH API

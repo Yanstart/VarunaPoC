@@ -336,13 +336,13 @@ export class AnnotationNotes {
 
     async _onValidate() {
         if (!this._currentId) {return;}
-        const notes = this._notesInput?.value?.trim() || null;
+        const notes = this._textarea?.value?.trim() || null;
         await annotationStore.validateAnnotation(this._currentId, notes);
     }
 
     async _onReject() {
         if (!this._currentId) {return;}
-        const notes = this._notesInput?.value?.trim() || null;
+        const notes = this._textarea?.value?.trim() || null;
         await annotationStore.rejectAnnotation(this._currentId, notes);
     }
 

@@ -364,7 +364,7 @@ class ReportingPanel {
         list.className = 'reporting-panel__timeline';
 
         // Show at most 20 items (most recent first)
-        const items = timeline.slice(-20).reverse();
+        const items = timeline.slice(0, 20);
 
         for (const item of items) {
             const row = document.createElement('div');

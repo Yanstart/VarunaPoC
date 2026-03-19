@@ -111,6 +111,9 @@ class DrawingTools {
         // Overlay visibility toggle state (H key)
         this._overlaysVisible = true;
 
+        // Detection state (for Tab key guard)
+        this._hasActiveDetections = false;
+
         // Arrow state
         this._arrowStart = null;
         this._arrowTextInput = null;
@@ -389,6 +392,16 @@ class DrawingTools {
                 if (tool !== this.activeTool) {this._setTool(tool);}
             }),
         );
+
+        // Track active detections for Tab key guard
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_COMPLETE, () => { this._hasActiveDetections = true; }),
+        );
+        this._unsubscribers.push(
+            eventBus.on(Events.DETECTION_PREVIEW, ({ features }) => {
+                this._hasActiveDetections = features && features.length > 0;
+            }),
+        );
     }
 
     _setupKeyboardShortcuts() {
@@ -438,8 +451,10 @@ class DrawingTools {
                 eventBus.emit(Events.DETECTION_REJECT_CURRENT);
                 break;
             case 'Tab':
-                e.preventDefault();
-                eventBus.emit(Events.DETECTION_NEXT);
+                if (this._hasActiveDetections) {
+                    e.preventDefault();
+                    eventBus.emit(Events.DETECTION_NEXT);
+                }
                 break;
             case 'q': case 'Q':
                 if (e.ctrlKey || e.metaKey) break;
