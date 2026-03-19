@@ -1,11 +1,14 @@
 """Add tenant_id column to annotations, labels, corrections, quality_reports
 
-Revision ID: 006
+Revision ID: 006a
 Revises: 005
 Create Date: 2026-03-11
 
 Multi-tenancy scaffolding: adds tenant_id to all annotation-related tables.
 Existing rows default to 'default' tenant for backward compatibility.
+
+Note: renamed from "006" to "006a" to resolve duplicate revision ID conflict
+with 006_worklist_and_view_history.py. See merge migration 007.
 """
 
 from typing import Sequence, Union
@@ -14,7 +17,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "006"
+revision: str = "006a"
 down_revision: Union[str, None] = "005"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
