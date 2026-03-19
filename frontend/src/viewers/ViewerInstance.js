@@ -180,6 +180,17 @@ class ViewerInstance {
         };
         eventBus.on(Events.AUTH_TOKEN_REFRESHED, this._boundHandlers.tokenRefreshed);
 
+        // Zoom presets: 1-5 keys → microscope objective equivalents (2x, 5x, 10x, 20x, 40x)
+        this._boundHandlers.zoomPreset = ({ level }) => {
+            if (!this._osdViewer || !this._osdViewer.viewport) return;
+            const maxZoom = this._osdViewer.viewport.getMaxZoom();
+            const presets = { 1: 2, 2: 5, 3: 10, 4: 20, 5: 40 };
+            const objective = presets[level] || 10;
+            const targetZoom = (objective / 40) * maxZoom;
+            this._osdViewer.viewport.zoomTo(targetZoom);
+        };
+        eventBus.on(Events.VIEWER_ZOOM_PRESET, this._boundHandlers.zoomPreset);
+
         // Accessibility: label the navigator mini-map
         if (this._osdViewer.navigator && this._osdViewer.navigator.element) {
             this._osdViewer.navigator.element.setAttribute('aria-label', 'Mini-carte de navigation');
@@ -715,6 +726,9 @@ class ViewerInstance {
         // Remove global event listeners
         if (this._boundHandlers.tokenRefreshed) {
             eventBus.off(Events.AUTH_TOKEN_REFRESHED, this._boundHandlers.tokenRefreshed);
+        }
+        if (this._boundHandlers.zoomPreset) {
+            eventBus.off(Events.VIEWER_ZOOM_PRESET, this._boundHandlers.zoomPreset);
         }
 
         // Clear local listeners

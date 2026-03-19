@@ -19,6 +19,7 @@ from auth.schemas import CurrentUser
 from core.database import get_db
 from core.tenant import get_current_tenant
 from models.annotation import Annotation
+from models.correction import Correction
 from rate_limiting import annotation_write_rate, limit
 from schemas.annotation import (
     AnnotationBatchCreate,
@@ -250,7 +251,10 @@ async def validate_annotation(
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark an annotation as validated by the current pathologist."""
+    """Mark an annotation as validated by the current pathologist.
+
+    Also creates a Correction record to feed the ML retraining pipeline.
+    """
     result = await db.execute(
         select(Annotation).where(
             Annotation.id == annotation_id,
@@ -268,6 +272,19 @@ async def validate_annotation(
     if notes is not None:
         annotation.notes = notes
 
+    # Feed the ML retraining pipeline via corrections table
+    if annotation.annotation_type in ("auto", "auto_confirmed"):
+        correction = Correction(
+            tenant_id=tenant_id,
+            annotation_id=annotation.id,
+            slide_id=slide_id,
+            correction_type="confirmed",
+            original_confidence=annotation.confidence,
+            comment=notes,
+            created_by=current_user.username,
+        )
+        db.add(correction)
+
     await db.commit()
     await db.refresh(annotation)
     return annotation
@@ -282,7 +299,10 @@ async def reject_annotation(
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark an annotation as rejected (false positive)."""
+    """Mark an annotation as rejected (false positive).
+
+    Also creates a Correction record to feed the ML retraining pipeline.
+    """
     result = await db.execute(
         select(Annotation).where(
             Annotation.id == annotation_id,
@@ -299,6 +319,19 @@ async def reject_annotation(
     annotation.validated_at = datetime.now(UTC)
     if notes is not None:
         annotation.notes = notes
+
+    # Feed the ML retraining pipeline via corrections table
+    if annotation.annotation_type in ("auto", "auto_confirmed"):
+        correction = Correction(
+            tenant_id=tenant_id,
+            annotation_id=annotation.id,
+            slide_id=slide_id,
+            correction_type="rejected",
+            original_confidence=annotation.confidence,
+            comment=notes,
+            created_by=current_user.username,
+        )
+        db.add(correction)
 
     await db.commit()
     await db.refresh(annotation)

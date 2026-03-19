@@ -423,7 +423,10 @@ class DrawingTools {
                 if (e.ctrlKey || e.metaKey) break;
                 this._setTool('arrow');
                 break;
-            case 'c': case 'C': this._setTool('circle'); break;
+            case 'c': case 'C':
+                if (e.ctrlKey || e.metaKey) break;
+                this._setTool('circle');
+                break;
             case 'l': case 'L': this._setTool('ruler'); break;
             case 'Delete': case 'Backspace': this._deleteSelected(); break;
             case 'Escape':

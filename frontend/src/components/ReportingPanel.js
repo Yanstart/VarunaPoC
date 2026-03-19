@@ -120,7 +120,9 @@ class ReportingPanel {
         this._unsubscribers.push(
             eventBus.on(Events.ANNOTATION_UPDATED, () => {
                 if (this.slideId) {
-                    this._loadReport();
+                    // Debounce: avoid rapid-fire API calls during V/X/Tab workflow
+                    clearTimeout(this._reportDebounce);
+                    this._reportDebounce = setTimeout(() => this._loadReport(), 500);
                 }
             }),
         );

@@ -277,7 +277,7 @@ class DashboardPanel {
         // Motivation section
         const motivation = document.createElement('div');
         motivation.className = 'dashboard-panel__motivation';
-        motivation.textContent = 'Each correction trains the AI for better diagnoses';
+        motivation.textContent = 'Vos corrections sont enregistr\u00e9es pour le prochain cycle d\u2019am\u00e9lioration du mod\u00e8le.';
         this._content.appendChild(motivation);
     }
 

@@ -127,6 +127,8 @@ class AnnotationStore {
                     notes: action.annotation.notes,
                 });
                 this.annotations.set(restored.id, restored);
+                // Update action with new ID so redo can find the right annotation
+                action.annotation = { ...action.annotation, id: restored.id };
                 eventBus.emit(Events.ANNOTATION_CREATED, { annotation: restored });
             } else if (action.type === 'update' && action.previousState) {
                 const restored = await apiService.updateAnnotation(
