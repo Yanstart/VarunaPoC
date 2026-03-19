@@ -827,7 +827,7 @@ class DetectionPanel {
     }
 
     /**
-     * Move to the next visible detection zone (skip hidden/rejected).
+     * Move to the next untreated detection zone (skip hidden, rejected, AND accepted).
      * @private
      */
     _goToNextDetection() {
@@ -839,11 +839,18 @@ class DetectionPanel {
         let attempts = 0;
         while (attempts < total) {
             if (next >= total) next = 0;
-            if (!this.hiddenZones.has(next) && !this.rejected.has(next)) break;
+            if (!this.hiddenZones.has(next) && !this.rejected.has(next) && !this.accepted.has(next)) break;
             next++;
             attempts++;
         }
-        if (attempts >= total) return;
+        if (attempts >= total) {
+            eventBus.emit(Events.TOAST_SHOW, {
+                type: 'success',
+                message: 'Toutes les zones ont \u00e9t\u00e9 trait\u00e9es',
+                duration: 3000,
+            });
+            return;
+        }
 
         this._highlightDetectionItem(next);
         this._scrollToDetectionItem(next);
