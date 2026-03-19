@@ -256,12 +256,6 @@ export const Events = Object.freeze({
     /** @payload {{ visible: boolean }} */
     QUALITY_DISAGREEMENT_TOGGLE: 'quality:disagreementToggle',
 
-    // -- AI Contribution Dashboard --
-    /** @payload {{ annotationId: string, slideId: string }} */
-    ANNOTATION_VALIDATED: 'annotation:validated',
-    /** @payload {{ annotationId: string, slideId: string }} */
-    ANNOTATION_REJECTED: 'annotation:rejected',
-
     // -- Drift monitoring (Wave 4) --
     /** @payload {{ slideId: string }} */
     DRIFT_LOADING: 'drift:loading',
