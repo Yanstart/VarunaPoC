@@ -35,6 +35,7 @@ import { AnnotationLayer } from '../components/AnnotationLayer.js';
 import { DrawingTools } from '../components/DrawingTools.js';
 import { LayerManager } from '../components/LayerManager.js';
 import { DetectionPanel } from '../components/DetectionPanel.js';
+import { ReportingPanel } from '../components/ReportingPanel.js';
 import { CountingPanel } from '../components/CountingPanel.js';
 import { CellCountingPanel } from '../components/CellCountingPanel.js';
 import { ClusteringPanel } from '../components/ClusteringPanel.js';
@@ -730,6 +731,7 @@ export class Router {
         const resetTargets = [
             'mlPanel', 'detectionPanel', 'cellCountingPanel',
             'clusteringPanel', 'similarityPanel', 'qualityBadge', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
+            'reportingPanel',
         ];
         for (const key of resetTargets) {
             if (this._state[key] && this._state[key].setSlide) {
@@ -1144,6 +1146,14 @@ export class Router {
         countingContainer.style.marginTop = '12px';
         infoPanel.appendChild(countingContainer);
         this._state.countingPanel = new CountingPanel(countingContainer);
+
+        const reportingContainer = document.createElement('div');
+        reportingContainer.id = 'reporting-panel-container';
+        reportingContainer.style.marginTop = '12px';
+        infoPanel.appendChild(reportingContainer);
+        this._state.reportingPanel = new ReportingPanel(reportingContainer, {
+            slideId: this._state.selectedSlide ? this._state.selectedSlide.id : null,
+        });
     }
 
     async _initCaseSidebar(slide) {
@@ -1413,7 +1423,7 @@ export class Router {
             'detectionPanel', 'cellCountingPanel', 'clusteringPanel', 'similarityPanel',
             'clusteringOverlay', 'cellMarkerOverlay',
             'mlProgressBar', 'heatmapLegend',
-            'countingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
+            'countingPanel', 'reportingPanel', 'layerManager', 'drawingTools', 'annotationLayer',
             'qualityBadge', 'driftDashboard', 'focusAssistPanel', 'autoTagBadge', 'metadataPanel',
             'scaleBar', 'magnificationBar', 'heatmapOverlay', 'mlPanel', 'mlTabsContainer',
             'compareLayout', 'caseSidebar', 'userMenu', 'loginPage', 'toastManager',

@@ -999,6 +999,21 @@ class ApiService {
     }
 
     // ==========================================
+    // REPORTING API
+    // ==========================================
+
+    /**
+     * Get annotation report for a slide (validation stats, contributors, timeline)
+     * @param {string} slideId - Slide ID
+     * @returns {Promise<Object>} AnnotationReport
+     */
+    async getAnnotationReport(slideId) {
+        return this.get(`/api/v1/annotations/${encodeURIComponent(slideId)}/report`, {
+            useCache: false,
+        });
+    }
+
+    // ==========================================
     // HEALTH API
     // ==========================================
 

@@ -62,3 +62,6 @@
 
 /* 15. Annotation Notes popover */
 @import './css/annotation-notes.css';
+
+/* 16. Reporting Panel styles */
+@import './css/reporting-panel.css';

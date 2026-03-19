@@ -1,21 +1,28 @@
-# scripts
+# Scripts
 
 ## But
-Scripts de backup et restore PostgreSQL pour l'environnement de production VarunaPoC.
+Scripts operationnels: gestion du fork OpenSlide et deploiement Docker par phase.
 
 ## Pourquoi
-L'equipe IT du CHU a besoin de scripts simples et fiables pour sauvegarder et restaurer la base de donnees PostgreSQL + PostGIS utilisee pour les annotations, labels et rapports qualite. Ces scripts encapsulent les commandes Docker Compose et pg_dump/pg_restore.
-
-## Comment
-- `backup.sh` execute `pg_dump` en format custom (-Fc) via `docker compose exec` sur le conteneur `db`
-- `restore.sh` arrete le backend, drop/recreate la base, execute `pg_restore`, puis redemarre le backend
-- Les deux scripts sourcent `.env.production` pour les credentials (POSTGRES_USER, POSTGRES_DB)
-- Les deux utilisent `docker-compose.production.yml` comme fichier compose
+Automatiser les operations repetitives et risquees (rebase fork upstream, deploiement multi-phase, firewall). Chaque script est idempotent et documente.
 
 ## Structure
 ```
-scripts/
-  backup.sh       # Sauvegarde timestampee (pg_dump -Fc) dans ./backups/
-  restore.sh      # Restauration depuis un fichier .dump avec confirmation
-  info.md         # Ce fichier
+Scripts/
+  README.md                    # Guide complet de gestion du fork (619 lignes)
+  01_setup_fork.sh             # Setup initial: configure remotes, cree branches
+  02_update_from_upstream.sh   # Sync depuis OpenSlide upstream officiel
+  03_add_new_patch.sh          # Appliquer un nouveau patch
+  04_rebuild_openslide.sh      # Compiler et installer OpenSlide patche
+  verify-ci-setup.sh           # Verifier la configuration CI
+  Deployment/
+    deploy-phase1.sh           # Deploiement Phase 1 (localhost)
+    deploy-phase2.1.sh         # Deploiement Phase 2.1 (reseau)
+    deploy-phase2.2.sh         # Deploiement Phase 2.2
+    deploy-production.sh       # Deploiement production
+    stop-phase*.sh             # Arret propre par phase
+    switch-to-network.sh       # Basculement reseau
+    test-connectivity.sh       # Validation connectivite
+    firewall-host.sh           # Configuration firewall
+    docker-compose.yml         # Orchestration deploiement
 ```
