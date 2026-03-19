@@ -1007,11 +1007,38 @@ class DrawingTools {
             return;
         }
 
-        // Show inline text input appended to the toolbar element
+        // Show inline text input with predefined suggestions (datalist)
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'drawing-tools__arrow-text';
         input.placeholder = 'Label...';
+        input.setAttribute('list', 'arrow-text-suggestions');
+        input.setAttribute('autocomplete', 'off');
+
+        // Build datalist with recent terms first, then predefined
+        let datalist = this.element.querySelector('#arrow-text-suggestions');
+        if (!datalist) {
+            datalist = document.createElement('datalist');
+            datalist.id = 'arrow-text-suggestions';
+            this.element.appendChild(datalist);
+        }
+        while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
+
+        const recent = this._getRecentArrowTerms();
+        const predefined = [
+            'Mitose', 'Mitose atypique', 'Invasion vasculaire', 'Invasion p\u00e9rineurale',
+            'Bordure de r\u00e9section', 'N\u00e9crose', 'Inflammation', 'Artefact',
+            'A discuter en RCP',
+        ];
+        const seen = new Set();
+        for (const term of [...recent, ...predefined]) {
+            if (seen.has(term)) continue;
+            seen.add(term);
+            const opt = document.createElement('option');
+            opt.value = term;
+            datalist.appendChild(opt);
+        }
+
         this._arrowTextInput = input;
         this.element.appendChild(input);
         input.focus();
@@ -1020,6 +1047,8 @@ class DrawingTools {
             const text = input.value.trim();
             input.remove();
             this._arrowTextInput = null;
+
+            if (text) this._saveRecentArrowTerm(text);
 
             await annotationStore.createAnnotation({
                 geometry: {
@@ -1061,6 +1090,32 @@ class DrawingTools {
                 commit();
             }
         });
+    }
+
+    /**
+     * Get recently used arrow text terms from localStorage.
+     * @returns {string[]}
+     * @private
+     */
+    _getRecentArrowTerms() {
+        try {
+            const raw = localStorage.getItem('varuna_arrow_recent_terms');
+            return raw ? JSON.parse(raw) : [];
+        } catch (_) { return []; }
+    }
+
+    /**
+     * Save an arrow text term to the recent list (most recent first, max 20).
+     * @param {string} term
+     * @private
+     */
+    _saveRecentArrowTerm(term) {
+        try {
+            let terms = this._getRecentArrowTerms().filter(t => t !== term);
+            terms.unshift(term);
+            if (terms.length > 20) terms = terms.slice(0, 20);
+            localStorage.setItem('varuna_arrow_recent_terms', JSON.stringify(terms));
+        } catch (_) { /* localStorage unavailable */ }
     }
 
     /**
