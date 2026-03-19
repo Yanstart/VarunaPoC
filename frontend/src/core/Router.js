@@ -223,6 +223,28 @@ export class Router {
             app.appendChild(worklistBtn);
         }
 
+        // User info bar (home page)
+        if (authService.authEnabled) {
+            const userBar = document.createElement('div');
+            userBar.className = 'home-user-bar';
+            userBar.style.cssText = 'position:fixed;top:12px;right:120px;z-index:100;display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--color-bg-elevated,#1a1f2e);border-radius:8px;border:1px solid var(--color-border,#2a3040);font-size:12px;color:var(--color-text-primary,#e2e8f0);box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+            const claims = authService.user || {};
+            const roleBadge = document.createElement('span');
+            roleBadge.style.cssText = 'padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#3b82f620;color:#60a5fa;border:1px solid #3b82f640;';
+            roleBadge.textContent = (claims.realm_access?.roles || []).filter(r => r !== 'default-roles-varuna' && r !== 'offline_access' && r !== 'uma_authorization').join(', ') || 'USER';
+            userBar.appendChild(roleBadge);
+            const userName = document.createElement('span');
+            userName.style.fontWeight = '600';
+            userName.textContent = claims.preferred_username || claims.name || 'anonymous';
+            userBar.appendChild(userName);
+            const logoutBtn = document.createElement('button');
+            logoutBtn.style.cssText = 'padding:3px 8px;background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:4px;font-size:11px;cursor:pointer;';
+            logoutBtn.textContent = 'Logout';
+            logoutBtn.addEventListener('click', () => { authService.logout(); });
+            userBar.appendChild(logoutBtn);
+            app.appendChild(userBar);
+        }
+
         // Theme toggle (home page)
         app.appendChild(this._createThemeToggle('home'));
 
