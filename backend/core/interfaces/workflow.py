@@ -16,7 +16,7 @@ Pattern: Observer Pattern + Hook Pattern
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 
 class WorkflowEventType(str, Enum):
@@ -75,6 +75,7 @@ class WorkflowEvent:
         self.metadata = metadata or {}
 
 
+@runtime_checkable
 class WorkflowHook(Protocol):
     """
     Protocol for workflow integrations.

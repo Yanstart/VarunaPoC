@@ -21,7 +21,6 @@ import pytest
 from services.cache.redis_cache import RedisCache
 from services.cache.two_level_tile_cache import TwoLevelTileCache
 
-
 pytestmark = pytest.mark.requires_redis
 
 

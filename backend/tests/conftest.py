@@ -514,3 +514,14 @@ def pytest_runtest_setup(item):
     # Skip tests marked with 'requires_pacs'
     if "requires_pacs" in [mark.name for mark in item.iter_markers()] and not os.getenv("PACS_SERVER"):
         pytest.skip("PACS server not configured")
+
+    # Skip tests marked with 'requires_fhir'
+    if "requires_fhir" in [mark.name for mark in item.iter_markers()]:
+        try:
+            import httpx
+
+            base_url = os.getenv("FHIR_BASE_URL", "http://localhost:8090/fhir").rstrip("/")
+            with httpx.Client(timeout=2.0) as client:
+                client.get(f"{base_url}/metadata")
+        except Exception:
+            pytest.skip(f"FHIR server not reachable at {base_url!r}")

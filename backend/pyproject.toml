@@ -71,6 +71,7 @@ markers = [
     "requires_openslide: Requires OpenSlide library",
     "requires_redis: Requires Redis server",
     "requires_pacs: Requires PACS server connection",
+    "requires_fhir: Requires reachable FHIR R4 server (e.g. HAPI FHIR dev container)",
     "requires_gpu: Requires GPU for ML inference",
 
     # Feature phase markers

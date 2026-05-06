@@ -47,6 +47,34 @@ services:
     networks:
       - varuna-network
 
+  # HAPI FHIR R4 - dev/test backend for the FHIRWorkflowHook (DPI integration).
+  # Uses embedded H2 storage so no extra DB container is needed for the demo.
+  # In production, point FHIR_BASE_URL at the hospital's real FHIR server
+  # instead of running this container. Cold start ~30-45s (start_period=60s).
+  hapi-fhir:
+    image: hapiproject/hapi:v7.4.0
+    container_name: varuna-hapi-fhir-dev
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      hapi.fhir.fhir_version: R4
+      hapi.fhir.default_encoding: json
+      hapi.fhir.allow_external_references: "true"
+      hapi.fhir.allow_multiple_delete: "true"
+      spring.datasource.url: jdbc:h2:file:/data/h2;DB_CLOSE_DELAY=-1
+      spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
+    volumes:
+      - varuna-hapi-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/fhir/metadata"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - varuna-network
+
   # Redis - L2 distributed tile cache (TileCache Protocol implementer)
   # Host port 6380 to avoid conflict with a possible local Redis on 6379.
   # Production uses port 6379; see docker-compose.production.yml.
@@ -109,3 +137,5 @@ volumes:
     name: varuna-keycloak-db-data
   varuna-redis-data:
     name: varuna-redis-dev-data
+  varuna-hapi-data:
+    name: varuna-hapi-fhir-dev-data
