@@ -32,7 +32,7 @@ from settings import get_settings
 
 settings = get_settings()
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
@@ -584,7 +584,7 @@ async def health():
 
 
 @app.get("/metrics")
-async def metrics(request):
+async def metrics(request: Request):
     """
     Prometheus metrics endpoint.
 

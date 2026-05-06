@@ -27,9 +27,9 @@ from pydantic import BaseModel, Field
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
-from core.exceptions.storage import SlideNotFoundError
 from core.interfaces import StorageProvider, get_provider
 from rate_limiting import limit, ml_rate
+from routes._storage_helpers import get_storage, resolve_slide_path
 from schemas.geojson import GeoJSONFeatureCollection
 from services.ml import TagExtractor, TagRouter
 from services.ml.worker import (
@@ -39,39 +39,14 @@ from services.ml.worker import (
     MLWorkerProxy,
     MLWorkerTimeoutError,
 )
-from services.slide_scanner import get_slide_path_by_id  # legacy fallback
+from services.slide_scanner import get_slide_path_by_id  # noqa: F401 — legacy fallback in tests
 
 
-# Sprint 3 — StorageProvider injection.
-# A FastAPI dependency that returns the StorageProvider attached to
-# app.state at startup. Routes consume it via Depends() rather than
-# digging into request.app.state, avoiding name collisions with body
-# parameters named `request: PydanticModel`.
-async def get_storage(request: Request) -> Optional[StorageProvider]:
-    return getattr(request.app.state, "storage_provider", None)
-
-
-async def _resolve_slide_path(
-    storage: Optional[StorageProvider], slide_id: str
-) -> str:
-    """Return the absolute slide path, raising HTTPException(404) if missing.
-
-    Migration path: today this consults the StorageProvider when available
-    and falls back to slide_scanner for legacy callers. Once every route
-    has migrated and we delete the slide_scanner imports, this helper
-    becomes a thin wrapper around `provider.get_slide_path`.
-    """
-    if storage is not None:
-        try:
-            path = await storage.get_slide_path(slide_id)
-            return str(path)
-        except SlideNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e)) from e
-    # Legacy fallback (degraded startup / pre-migration tests).
-    path = get_slide_path_by_id(slide_id)
-    if not path:
-        raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
-    return path
+# Sprint 3 — backward-compat alias. New code should `from
+# routes._storage_helpers import resolve_slide_path` directly. Existing
+# tests in tests/unit/test_ml_storage_provider.py reference _resolve_slide_path
+# under the routes.ml namespace; keep the alias so they don't move.
+_resolve_slide_path = resolve_slide_path
 
 # ---------------------------------------------------------------------------
 # ML Worker: isolated process for heavy inference
