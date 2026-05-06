@@ -19,7 +19,7 @@ Pattern: Strategy Pattern + Adapter Pattern
 
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncIterator, BinaryIO, Dict, List, Optional, Protocol
+from typing import AsyncIterator, BinaryIO, Dict, List, Optional, Protocol, runtime_checkable
 
 
 class SlideMetadata:
@@ -50,6 +50,7 @@ class SlideMetadata:
         self.properties = properties or {}
 
 
+@runtime_checkable
 class StorageProvider(Protocol):
     """
     Protocol for pluggable storage backends.

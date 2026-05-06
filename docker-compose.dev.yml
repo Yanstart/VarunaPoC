@@ -47,6 +47,27 @@ services:
     networks:
       - varuna-network
 
+  # Redis - L2 distributed tile cache (TileCache Protocol implementer)
+  # Host port 6380 to avoid conflict with a possible local Redis on 6379.
+  # Production uses port 6379; see docker-compose.production.yml.
+  redis:
+    image: redis:7-alpine
+    container_name: varuna-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--save", "60", "1000", "--appendonly", "yes"]
+    volumes:
+      - varuna-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - varuna-network
+
   keycloak:
     image: quay.io/keycloak/keycloak:23.0
     container_name: varuna-keycloak
@@ -86,3 +107,5 @@ volumes:
     name: varuna-db-dev-data
   varuna-keycloak-db-data:
     name: varuna-keycloak-db-data
+  varuna-redis-data:
+    name: varuna-redis-dev-data

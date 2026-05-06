@@ -32,6 +32,7 @@ locust==2.20.0
 
 # Phase 5: Caching
 cachetools==5.3.3
+redis==5.0.7
 
 # Rate limiting
 slowapi==0.1.9
