@@ -103,6 +103,35 @@ def record_tile_cache_lookup(outcome: str, level: int, duration: float):
         TILE_CACHE_MISSES.labels(level=str(level)).inc()
 
 
+# ============================================================================
+# WORKFLOW EVENT METRICS (Tier 5 sprint 2 — exports.py REPORT_SIGNED wiring)
+# ============================================================================
+# Tracks each WorkflowEvent emission by event type, hook type, and status.
+# Lets a Grafana dashboard answer questions like "what fraction of signed
+# reports actually reached the DPI?" or "is the PACS hook flapping?".
+
+WORKFLOW_EVENTS = Counter(
+    "varuna_workflow_events_total",
+    "WorkflowHook events emitted, by event type, hook type, and outcome",
+    ["event_type", "hook_type", "status"],
+)
+
+
+def record_workflow_event(event_type: str, hook_type: str, status: str):
+    """Record a workflow event emission outcome.
+
+    Args:
+        event_type: e.g. "report_signed", "slide_opened" (use the
+            WorkflowEventType.value for consistency with the Protocol enum).
+        hook_type: type name of the hook that handled it (e.g.
+            "FHIRWorkflowHook", "CompositeWorkflowHook", "NoOpWorkflowHook").
+        status: "success" (every hook returned True), "partial_failure"
+            (composite returned False — some hook in the chain failed), or
+            "exception" (the hook itself raised, breaking the contract).
+    """
+    WORKFLOW_EVENTS.labels(event_type=event_type, hook_type=hook_type, status=status).inc()
+
+
 def record_slide_opened(format_name: str, vendor: str):
     """Record slide opened."""
     SLIDES_OPENED.labels(format=format_name, vendor=vendor).inc()
