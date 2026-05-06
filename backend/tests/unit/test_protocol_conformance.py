@@ -45,3 +45,38 @@ def test_workflow_hook_has_two_implementers():
 
     assert isinstance(FHIRWorkflowHook(), WorkflowHook)
     assert isinstance(NoOpWorkflowHook(), WorkflowHook)
+
+
+def test_all_custom_exceptions_inherit_from_varuna_error():
+    """Regression guard: every custom exception class in the project must
+    inherit from VarunaError so a single `except VarunaError` handler
+    catches everything domain-specific. Adding a new `class XError(Exception)`
+    should make this test fail until it's rewired into the hierarchy.
+    """
+    from core.exceptions import VarunaError
+
+    # ML worker errors (services/ml/worker.py)
+    from services.ml.worker import (
+        MLWorkerBusyError,
+        MLWorkerDownError,
+        MLWorkerError,
+        MLWorkerExecutionError,
+        MLWorkerTimeoutError,
+    )
+
+    # Reader selector errors (services/readers/selector.py)
+    from services.readers.selector import NoCompatibleReaderError
+
+    custom_exceptions = [
+        MLWorkerError,
+        MLWorkerBusyError,
+        MLWorkerTimeoutError,
+        MLWorkerDownError,
+        MLWorkerExecutionError,
+        NoCompatibleReaderError,
+    ]
+    for cls in custom_exceptions:
+        assert issubclass(cls, VarunaError), (
+            f"{cls.__module__}.{cls.__name__} does not inherit from VarunaError. "
+            f"Add an appropriate parent in core.exceptions or rewire the class."
+        )

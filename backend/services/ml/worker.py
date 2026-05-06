@@ -30,6 +30,8 @@ from dataclasses import dataclass, field
 from threading import Thread
 from typing import Any, Dict, Optional, Tuple
 
+from core.exceptions.ml_exceptions import MLProviderError
+
 logger = logging.getLogger(__name__)
 
 ML_TIMEOUT_SECONDS = int(os.getenv("ML_TIMEOUT_SECONDS", "120"))
@@ -438,8 +440,12 @@ def _setup_worker_logging():
 # ---------------------------------------------------------------------------
 
 
-class MLWorkerError(Exception):
-    """Base exception for ML worker errors."""
+class MLWorkerError(MLProviderError):
+    """Base exception for ML worker errors.
+
+    Inherits from MLProviderError → VarunaError so a single
+    `except VarunaError` catches every domain error in the project.
+    """
 
 
 class MLWorkerBusyError(MLWorkerError):
@@ -459,4 +465,6 @@ class MLWorkerExecutionError(MLWorkerError):
 
     def __init__(self, message: str, error_type: str = ""):
         self.error_type = error_type
-        super().__init__(message)
+        # Pass error_type into details so it's queryable on a generic
+        # VarunaError handler without losing it in the parent stack.
+        super().__init__(message, details={"error_type": error_type} if error_type else None)

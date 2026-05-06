@@ -18,6 +18,7 @@ References:
 import logging
 from typing import List, Type
 
+from core.exceptions.slide import SlideFormatError
 from core.interfaces.slide_reader import SlideReader
 
 logger = logging.getLogger(__name__)
@@ -36,8 +37,14 @@ _REQUIRED_READER_API = (
 )
 
 
-class NoCompatibleReaderError(Exception):
-    """Raised when no registered reader can open a file."""
+class NoCompatibleReaderError(SlideFormatError):
+    """Raised when no registered reader can open a file.
+
+    Inherits from SlideFormatError → VarunaError so a single
+    `except VarunaError` catches every domain error in the project.
+    Callers pass a free-form message; SlideFormatError's parent
+    VarunaError stores it under self.message.
+    """
 
 
 class ReaderSelector:
