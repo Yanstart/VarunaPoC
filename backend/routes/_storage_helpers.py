@@ -16,14 +16,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Optional
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request  # noqa: TC002 — Request needs runtime import for FastAPI to inject
 
 from core.exceptions.storage import SlideNotFoundError
 from monitoring import record_workflow_event
 from services.slide_scanner import get_slide_path_by_id  # legacy fallback
 
 if TYPE_CHECKING:
-    from fastapi import Request
     from core.interfaces import StorageProvider
     from core.interfaces.workflow import WorkflowEvent
 

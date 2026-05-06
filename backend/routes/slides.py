@@ -573,7 +573,7 @@ def resolve_slide_by_name(
 
 
 @router.get("/{slide_id}/mpp", tags=["visualization"], response_model=MPPResponse)
-def get_slide_mpp(
+async def get_slide_mpp(
     slide_id: str = Path(
         ...,
         description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
@@ -582,6 +582,7 @@ def get_slide_mpp(
         pattern=r"^[0-9a-f]{12}$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
+    storage: "StorageProvider | None" = Depends(get_storage),
 ):
     """
     Retrieve microns-per-pixel (MPP) calibration data for a slide.
@@ -601,15 +602,17 @@ def get_slide_mpp(
         - Fallback: estimate MPP from ``openslide.objective-power`` using a
           standard lookup table (40x -> 0.25, 20x -> 0.50, etc.).
         - Returns 404 if neither MPP nor objective power is available.
+        - Sprint 6: async + StorageProvider injected; OpenSlide call runs in
+          a worker thread so the loop stays free.
     """
+    import asyncio
+
     from services.slide_utils import resolve_slide_mpp
 
-    slide_path = get_slide_path_by_id(slide_id)
-    if not slide_path:
-        raise slide_not_found(slide_id)
+    slide_path = await resolve_slide_path(storage, slide_id)
 
     try:
-        mpp_data = resolve_slide_mpp(slide_path)
+        mpp_data = await asyncio.to_thread(resolve_slide_mpp, slide_path)
     except openslide.OpenSlideError as e:
         raise slide_open_error(slide_id, e)
 
@@ -629,7 +632,7 @@ def get_slide_mpp(
 
 
 @router.get("/{slide_id}/info", tags=["visualization"], response_model=SlideInfoResponse)
-def get_slide_info(
+async def get_slide_info(
     background_tasks: BackgroundTasks,
     slide_id: str = Path(
         ...,
@@ -639,6 +642,7 @@ def get_slide_info(
         pattern=r"^[0-9a-f]{12}$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
+    storage: "StorageProvider | None" = Depends(get_storage),
 ):
     """
     Récupère métadonnées d'une lame.
@@ -661,19 +665,18 @@ def get_slide_info(
         500: Erreur OpenSlide
 
     Technical Notes:
-        - Ouvre temporairement la lame avec OpenSlide
+        - Ouvre temporairement la lame avec OpenSlide (en thread pool)
         - Extrait métadonnées puis ferme immédiatement
     """
-    slide_path = get_slide_path_by_id(slide_id)
-    if not slide_path:
-        raise HTTPException(404, f"Slide {slide_id} not found")
+    import asyncio
+    import os
+
+    slide_path = await resolve_slide_path(storage, slide_id)
 
     try:
-        metadata = get_slide_metadata(slide_path)
+        metadata = await asyncio.to_thread(get_slide_metadata, slide_path)
 
         # Trigger background embedding pre-computation
-        import os
-
         if os.getenv("ML_ENABLED", "true").lower() == "true":
             from services.background_tasks import precompute_embeddings
 
@@ -687,7 +690,7 @@ def get_slide_info(
 
 
 @router.get("/{slide_id}/overview", tags=["visualization"])
-def get_overview(
+async def get_overview(
     slide_id: str = Path(
         ...,
         description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
@@ -696,6 +699,7 @@ def get_overview(
         pattern=r"^[0-9a-f]{12}$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
+    storage: "StorageProvider | None" = Depends(get_storage),
 ):
     """
     Extrait image overview d'une lame.
@@ -713,14 +717,15 @@ def get_overview(
     Technical Notes:
         - Utilise OpenSlide.get_thumbnail() (SIMPLE, efficace)
         - Retourne JPEG optimisé (~100-500KB typiquement)
-        - Pas de cache Phase 1 (sera ajouté Phase 2)
+        - Sprint 6: async + StorageProvider injected; OpenSlide thumbnail
+          runs in a worker thread.
     """
-    slide_path = get_slide_path_by_id(slide_id)
-    if not slide_path:
-        raise HTTPException(404, f"Slide {slide_id} not found")
+    import asyncio
+
+    slide_path = await resolve_slide_path(storage, slide_id)
 
     try:
-        img_bytes = get_slide_overview_bytes(slide_path)
+        img_bytes = await asyncio.to_thread(get_slide_overview_bytes, slide_path)
         return Response(content=img_bytes, media_type="image/jpeg")
     except openslide.OpenSlideError as e:
         raise slide_open_error(slide_id, e)
@@ -729,7 +734,7 @@ def get_overview(
 
 
 @router.get("/{slide_id}/dzi.json", tags=["visualization"], response_model=DziMetadataResponse)
-def get_dzi_metadata(
+async def get_dzi_metadata(
     slide_id: str = Path(
         ...,
         description="Identifiant unique de la lame (12 caracteres hexadecimaux, hash MD5 tronque)",
@@ -738,6 +743,7 @@ def get_dzi_metadata(
         pattern=r"^[0-9a-f]{12}$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
+    storage: "StorageProvider | None" = Depends(get_storage),
 ):
     """
     Récupère métadonnées DZI pour OpenSeadragon (streaming de tuiles).
@@ -765,14 +771,15 @@ def get_dzi_metadata(
         - Format compatible OpenSeadragon DziTileSource
         - overlap=0 pour simplifier (pas de chevauchement)
         - tile_size=256 (standard DZI/OpenSeadragon)
-        - Voir: docs/CLAUDE.md section "Coordinate Mapping"
+        - Sprint 6: async + StorageProvider injected; OpenSlide opening
+          runs in a worker thread.
     """
-    slide_path = get_slide_path_by_id(slide_id)
-    if not slide_path:
-        raise HTTPException(404, f"Slide {slide_id} not found")
+    import asyncio
+
+    slide_path = await resolve_slide_path(storage, slide_id)
 
     try:
-        metadata = tile_server.get_dzi_metadata(slide_path)
+        metadata = await asyncio.to_thread(tile_server.get_dzi_metadata, slide_path)
         return JSONResponse(content=metadata)
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
