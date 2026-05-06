@@ -54,7 +54,9 @@ from services.tile_server import tile_server
 # Tier 5 sprint 1 — TwoLevelTileCache wiring
 import time
 
+from core.interfaces import StorageProvider
 from monitoring import record_tile_cache_lookup
+from routes._storage_helpers import get_storage, resolve_slide_path
 
 logger = logging.getLogger(__name__)
 
@@ -793,6 +795,7 @@ async def get_tile(
     col: int = Path(..., ge=0, description="Colonne de la tuile"),
     row: int = Path(..., ge=0, description="Ligne de la tuile"),
     current_user: CurrentUser = Depends(get_current_user),
+    storage: "StorageProvider | None" = Depends(get_storage),
 ):
     """
     Extrait une tuile JPEG depuis une lame (streaming à la demande).
@@ -821,9 +824,7 @@ async def get_tile(
         GET /api/v1/slides/a1b2c3d4e5f6/tiles/2/5_3.jpg
         → Tuile au niveau 2, colonne 5, ligne 3
     """
-    slide_path = get_slide_path_by_id(slide_id)
-    if not slide_path:
-        raise HTTPException(404, f"Slide {slide_id} not found")
+    slide_path = await resolve_slide_path(storage, slide_id)
 
     try:
         # Detect whether the slide is already in the open-slide cache before

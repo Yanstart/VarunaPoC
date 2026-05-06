@@ -47,7 +47,7 @@ async def test_resolve_falls_back_to_legacy_when_no_provider():
     backend instead of returning 503.
     """
     with patch(
-        "routes.ml.get_slide_path_by_id",
+        "routes._storage_helpers.get_slide_path_by_id",
         return_value="/slides/legacy.svs",
     ):
         path = await _resolve_slide_path(None, "abc123")
@@ -58,8 +58,8 @@ async def test_resolve_falls_back_to_legacy_when_no_provider():
 async def test_resolve_legacy_404_when_scanner_returns_none():
     from fastapi import HTTPException
 
-    with patch("routes.ml.get_slide_path_by_id", return_value=None), pytest.raises(
-        HTTPException
-    ) as exc:
+    with patch(
+        "routes._storage_helpers.get_slide_path_by_id", return_value=None
+    ), pytest.raises(HTTPException) as exc:
         await _resolve_slide_path(None, "missing")
     assert exc.value.status_code == 404
