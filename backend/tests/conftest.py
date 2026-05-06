@@ -525,3 +525,24 @@ def pytest_runtest_setup(item):
                 client.get(f"{base_url}/metadata")
         except Exception:
             pytest.skip(f"FHIR server not reachable at {base_url!r}")
+
+    # Skip tests marked with 'requires_orthanc' (PACSWorkflowHook integration tests)
+    if "requires_orthanc" in [mark.name for mark in item.iter_markers()]:
+        try:
+            from pynetdicom import AE  # type: ignore[import-untyped]
+
+            host = os.getenv("PACS_HOST", "localhost")
+            port = int(os.getenv("PACS_DICOM_PORT", "4242"))
+            local_aet = os.getenv("PACS_AET_LOCAL", "VARUNA_TEST")
+            remote_aet = os.getenv("PACS_AET_REMOTE", "ORTHANC")
+            ae = AE(ae_title=local_aet)
+            ae.add_requested_context("1.2.840.10008.1.1")  # Verification SOP
+            assoc = ae.associate(host, port, ae_title=remote_aet)
+            try:
+                if not assoc.is_established:
+                    pytest.skip(f"Orthanc PACS association rejected at {host}:{port}")
+            finally:
+                if assoc.is_established:
+                    assoc.release()
+        except Exception as e:
+            pytest.skip(f"Orthanc PACS not reachable: {e}")

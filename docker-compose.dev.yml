@@ -47,6 +47,38 @@ services:
     networks:
       - varuna-network
 
+  # Orthanc PACS - DICOM dev backend for the PACSWorkflowHook.
+  # Two ports: 4242 (DICOM C-FIND/C-STORE/C-ECHO) and 8042 (HTTP REST API,
+  # used as fallback for update_worklist which has no DIMSE-C equivalent).
+  # AE Titles are env-driven (PACS_AET_LOCAL / PACS_AET_REMOTE) so the same
+  # compose file works against any PACS vendor's allow-list.
+  orthanc:
+    image: orthancteam/orthanc:24.7.3
+    container_name: varuna-orthanc-dev
+    restart: unless-stopped
+    ports:
+      - "4242:4242"
+      - "8042:8042"
+    environment:
+      ORTHANC__DICOM_PORT: 4242
+      ORTHANC__HTTP_PORT: 8042
+      ORTHANC__NAME: varuna-orthanc-dev
+      ORTHANC__DICOM_AET: ${PACS_AET_REMOTE:-ORTHANC}
+      ORTHANC__REGISTERED_USERS: '{"varuna": "varuna_dev"}'
+      ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
+      ORTHANC__AUTHENTICATION_ENABLED: "true"
+      ORTHANC__DICOM_MODALITIES: '{"varuna": ["${PACS_AET_LOCAL:-VARUNA_SCU}", "host.docker.internal", 4242]}'
+    volumes:
+      - varuna-orthanc-data:/var/lib/orthanc/db
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --user=varuna --password=varuna_dev http://localhost:8042/system || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - varuna-network
+
   # HAPI FHIR R4 - dev/test backend for the FHIRWorkflowHook (DPI integration).
   # Uses embedded H2 storage so no extra DB container is needed for the demo.
   # In production, point FHIR_BASE_URL at the hospital's real FHIR server
@@ -139,3 +171,5 @@ volumes:
     name: varuna-redis-dev-data
   varuna-hapi-data:
     name: varuna-hapi-fhir-dev-data
+  varuna-orthanc-data:
+    name: varuna-orthanc-dev-data

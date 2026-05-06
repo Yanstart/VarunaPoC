@@ -128,17 +128,43 @@ def test_no_op_hook_satisfies_workflow_protocol():
     assert isinstance(NoOpWorkflowHook(), WorkflowHook)
 
 
-def test_get_workflow_hook_returns_no_op_when_fhir_disabled(monkeypatch):
+def test_get_workflow_hook_returns_no_op_when_nothing_configured(monkeypatch):
     monkeypatch.delenv("FHIR_ENABLED", raising=False)
+    monkeypatch.delenv("PACS_ENABLED", raising=False)
     hook = get_workflow_hook()
     assert isinstance(hook, NoOpWorkflowHook)
 
 
-def test_get_workflow_hook_returns_fhir_when_configured(monkeypatch):
+def test_get_workflow_hook_returns_fhir_when_only_fhir_configured(monkeypatch):
     monkeypatch.setenv("FHIR_ENABLED", "true")
     monkeypatch.setenv("FHIR_BASE_URL", "http://hapi/fhir")
+    monkeypatch.delenv("PACS_ENABLED", raising=False)
     hook = get_workflow_hook()
     assert isinstance(hook, FHIRWorkflowHook)
+
+
+def test_get_workflow_hook_returns_pacs_when_only_pacs_configured(monkeypatch):
+    from services.workflow import PACSWorkflowHook
+
+    monkeypatch.delenv("FHIR_ENABLED", raising=False)
+    monkeypatch.setenv("PACS_ENABLED", "true")
+    monkeypatch.setenv("PACS_AET_LOCAL", "VARUNA")
+    monkeypatch.setenv("PACS_AET_REMOTE", "ORTHANC")
+    hook = get_workflow_hook()
+    assert isinstance(hook, PACSWorkflowHook)
+
+
+def test_get_workflow_hook_returns_composite_when_both_configured(monkeypatch):
+    from services.workflow import CompositeWorkflowHook
+
+    monkeypatch.setenv("FHIR_ENABLED", "true")
+    monkeypatch.setenv("FHIR_BASE_URL", "http://hapi/fhir")
+    monkeypatch.setenv("PACS_ENABLED", "true")
+    monkeypatch.setenv("PACS_AET_LOCAL", "VARUNA")
+    monkeypatch.setenv("PACS_AET_REMOTE", "ORTHANC")
+    hook = get_workflow_hook()
+    assert isinstance(hook, CompositeWorkflowHook)
+    assert len(hook.get_hooks()) == 2
 
 
 # ---------------------------------------------------------------------------
