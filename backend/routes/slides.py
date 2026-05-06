@@ -51,6 +51,11 @@ from services.slide_scanner import (
 from services.tile_audit import schedule_tile_audit
 from services.tile_server import tile_server
 
+# Tier 5 sprint 1 — TwoLevelTileCache wiring
+import time
+
+from monitoring import record_tile_cache_lookup
+
 logger = logging.getLogger(__name__)
 
 # ==========================================
@@ -775,7 +780,7 @@ def get_dzi_metadata(
 
 @router.get("/{slide_id}/tiles/{level}/{col}_{row}.jpg", tags=["visualization"])
 @limit(tile_rate)
-def get_tile(
+async def get_tile(
     request: Request,
     slide_id: str = Path(
         ...,
@@ -823,13 +828,43 @@ def get_tile(
     try:
         # Detect whether the slide is already in the open-slide cache before
         # extraction so we can include the cache_hit flag in the audit event.
+        # NOTE: this is the open-slide handle cache, not the tile-bytes cache;
+        # the latter is checked below via TwoLevelTileCache.
         slide_cache_hit = slide_path in tile_server._slide_cache
 
-        tile_bytes = tile_server.get_tile(slide_path, level, col, row, tile_size=256)
+        # Tier 5 sprint 1 — TwoLevelTileCache lookup BEFORE OpenSlide extraction.
+        # Cache key uses slide_id (stable identifier) so the same tile bytes
+        # are reused across processes (L2 Redis is shared) and across slide
+        # cache evictions in tile_server. tile_size hardcoded to 256 to match
+        # tile_server.get_tile() default.
+        tile_cache = getattr(request.app.state, "tile_cache", None)
+        cache_lookup_t0 = time.monotonic()
+        tile_bytes: bytes | None = None
+        if tile_cache is not None:
+            tile_bytes = await tile_cache.get_tile(slide_id, level, col, row, tile_size=256)
+        cache_lookup_dt = time.monotonic() - cache_lookup_t0
 
-        if tile_bytes is None:
-            # Tuile hors limites (pas d'erreur, juste pas de contenu)
-            raise HTTPException(404, "Tile out of bounds")
+        if tile_bytes is not None:
+            # Cache hit — record metric and serve.
+            record_tile_cache_lookup("hit", level, cache_lookup_dt)
+        else:
+            # Cache miss (or no cache configured) — render via tile_server,
+            # then warm the cache for subsequent requests.
+            record_tile_cache_lookup("miss", level, cache_lookup_dt)
+            # tile_server.get_tile is sync (OpenSlide is C-bound). Run it in
+            # a thread so the event loop stays free for other tile requests.
+            import asyncio
+
+            tile_bytes = await asyncio.to_thread(
+                tile_server.get_tile, slide_path, level, col, row, 256
+            )
+            if tile_bytes is None:
+                # Tuile hors limites (pas d'erreur, juste pas de contenu)
+                raise HTTPException(404, "Tile out of bounds")
+            # Write-through to L1 + L2. Best-effort: a Redis outage is logged
+            # by RedisCache itself and degrades silently to L1-only.
+            if tile_cache is not None:
+                await tile_cache.set_tile(slide_id, level, col, row, 256, tile_bytes)
 
         # Emit SLIDE_VIEWED audit event (first access per user/slide/day only).
         # Fire-and-forget: must not block or fail tile serving.

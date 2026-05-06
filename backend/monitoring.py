@@ -60,10 +60,47 @@ SLIDES_OPENED = Counter(
     "varuna_slides_opened_total", "Total number of slides opened", ["format", "vendor"]
 )
 
+# ============================================================================
+# TILE CACHE METRICS (Tier 5 sprint 1 — TwoLevelTileCache wiring)
+# ============================================================================
+# These metrics live alongside TILE_LOAD_TIME so a Grafana dashboard can
+# correlate cache hit rate with tile-render latency. The route-level layer
+# attribution is approximate (we can't observe L1 vs L2 from the route side
+# without an extra round-trip); finer breakdown is available via
+# /api/cache/stats which calls into TwoLevelTileCache.get_stats().
+
+TILE_CACHE_HITS = Counter(
+    "varuna_tile_cache_hits_total",
+    "Tile cache hits (route-level: any layer served the tile), by pyramid level",
+    ["level"],
+)
+
+TILE_CACHE_MISSES = Counter(
+    "varuna_tile_cache_misses_total",
+    "Tile cache misses (both layers missed → fell through to OpenSlide), by level",
+    ["level"],
+)
+
+TILE_CACHE_LOOKUP_TIME = Histogram(
+    "varuna_tile_cache_lookup_seconds",
+    "Time spent on tile cache lookup before deciding hit/miss",
+    ["outcome"],  # "hit" | "miss"
+    buckets=(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1),
+)
+
 
 def record_tile_load(format_name: str, level: int, duration: float):
     """Record tile load time."""
     TILE_LOAD_TIME.labels(format=format_name, level=str(level)).observe(duration)
+
+
+def record_tile_cache_lookup(outcome: str, level: int, duration: float):
+    """Record a cache lookup, by outcome ('hit' or 'miss') and pyramid level."""
+    TILE_CACHE_LOOKUP_TIME.labels(outcome=outcome).observe(duration)
+    if outcome == "hit":
+        TILE_CACHE_HITS.labels(level=str(level)).inc()
+    elif outcome == "miss":
+        TILE_CACHE_MISSES.labels(level=str(level)).inc()
 
 
 def record_slide_opened(format_name: str, vendor: str):

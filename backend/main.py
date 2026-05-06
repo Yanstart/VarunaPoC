@@ -139,7 +139,7 @@ else:
 
 
 @asynccontextmanager
-async def lifespan(_app):  # noqa: PLR0915
+async def lifespan(_app):  # noqa: PLR0915, PLR0912
     """Startup/shutdown events for DB, plugins, and other resources."""
     # --- Startup validation (issue #282) ---
     from pathlib import Path as FsPath
@@ -210,7 +210,41 @@ async def lifespan(_app):  # noqa: PLR0915
         "configured" if settings.redis_url else "not set",
     )
 
+    # --- Protocol singletons (Strangler Fig wiring, Tier 5 sprint 1) ---
+    # Attach the TwoLevelTileCache singleton so the /api/v1/.../tile route
+    # can do a cache-first lookup before falling through to OpenSlide. Also
+    # attach the WorkflowHook (FHIR / PACS / Composite) chosen by env vars
+    # so future routes can emit WorkflowEvents without re-resolving config.
+    try:
+        from services.cache.two_level_tile_cache import get_tile_cache
+        from services.workflow import get_workflow_hook
+
+        _app.state.tile_cache = get_tile_cache()
+        _app.state.workflow_hook = get_workflow_hook()
+        logger.info(
+            "Protocol singletons attached: tile_cache=%s, workflow_hook=%s",
+            type(_app.state.tile_cache).__name__,
+            type(_app.state.workflow_hook).__name__,
+        )
+    except Exception as e:
+        logger.warning("Failed to attach Protocol singletons: %s", e)
+        _app.state.tile_cache = None
+        _app.state.workflow_hook = None
+
     yield
+
+    # --- Shutdown: release Protocol singletons (Tier 5 sprint 1) ---
+    try:
+        if getattr(_app.state, "tile_cache", None) is not None:
+            await _app.state.tile_cache.aclose()
+    except Exception as e:
+        logger.debug("tile_cache shutdown failed: %s", e)
+    try:
+        wh = getattr(_app.state, "workflow_hook", None)
+        if wh is not None and hasattr(wh, "aclose"):
+            await wh.aclose()
+    except Exception as e:
+        logger.debug("workflow_hook shutdown failed: %s", e)
 
     # --- Shutdown: ML worker cleanup (issue #281) ---
     try:
@@ -465,6 +499,14 @@ try:
     api_v1.include_router(gdpr.router)
 except ImportError:
     print("[INFO] GDPR module disabled")
+
+# Tile cache stats (Tier 5 sprint 1) — admin-only operational telemetry.
+try:
+    from routes import cache_stats
+
+    app.include_router(cache_stats.router)
+except ImportError as e:
+    print(f"[INFO] cache_stats route disabled: {e}")
 
 # Regional standards — ABDM, SS-MIX2, I18n
 REGIONAL_ENABLED = False
