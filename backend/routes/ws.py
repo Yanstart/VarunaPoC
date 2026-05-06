@@ -383,3 +383,95 @@ async def get_presence(slide_id: str, _current_user: CurrentUser = Depends(get_c
         "active_users": len(users),
         "users": users,
     }
+
+
+# ---------------------------------------------------------------------------
+# Global WorkflowEvent broadcast endpoint (Sprint 15)
+# ---------------------------------------------------------------------------
+# A single fanout channel — any auth'd user can subscribe and will receive
+# every WorkflowEvent emitted in the backend (REPORT_SIGNED, ANNOTATION_*,
+# etc.). The frontend WorkflowEventService consumes this to refresh the
+# UI (worklist, banner notifications, viewer overlays) in real time.
+#
+# RBAC: open to any authenticated user (LECTURE_SEULE and up). The events
+# do NOT carry PHI — they carry slide_id, annotation_id, user_id, and
+# event-type metadata. The actual annotations/reports are still gated by
+# the REST endpoints that the client will call after receiving an event.
+
+
+@router.websocket("/ws/events")
+async def events_websocket(websocket: WebSocket):
+    """WebSocket endpoint that streams every WorkflowEvent to subscribers.
+
+    Query params:
+        token: JWT access token (required when AUTH_ENABLED=true)
+
+    Lifecycle:
+        1. Validate token → 4001 close on failure.
+        2. Accept connection, subscribe to the in-process broadcaster.
+        3. Send a hello frame with the user info (so the client can
+           confirm it's authenticated and identify itself in logs).
+        4. Loop on ping/pong: clients send `{"type": "ping"}` periodically
+           to keep the connection warm; we reply `{"type": "pong"}`.
+        5. On disconnect, unsubscribe from the broadcaster.
+
+    The broadcaster is NOT queried by the client. It only PUSHES events
+    when something happens in the backend (annotation created, report
+    signed, etc.).
+    """
+    from services.workflow.event_broadcaster import get_broadcaster
+
+    token = websocket.query_params.get("token")
+    user_info = await _resolve_user_from_token(token)
+    if user_info is None:
+        logger.warning(
+            "WorkflowEvent WS auth failure from ip=%s",
+            websocket.client.host if websocket.client else "unknown",
+        )
+        await websocket.close(code=WS_CLOSE_AUTH_FAILURE)
+        return
+
+    broadcaster = get_broadcaster()
+    await websocket.accept()
+    await broadcaster.subscribe(websocket)
+
+    try:
+        # Hello frame — lets the client display "connected as X" status.
+        await websocket.send_json(
+            {
+                "type": "hello",
+                "user": user_info,
+                "subscriber_count": broadcaster.subscriber_count(),
+            }
+        )
+
+        # Listen for client pings (and ignore other client→server messages
+        # — this channel is push-only).
+        while True:
+            message = await websocket.receive()
+            msg_type_ws = message.get("type", "")
+            if msg_type_ws == "websocket.disconnect":
+                break
+            raw = message.get("text", "") or message.get("bytes", b"").decode(
+                "utf-8", errors="ignore"
+            )
+            if not raw:
+                continue
+            try:
+                data = json.loads(raw)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            if data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.warning("WorkflowEvent WS error for user=%s: %s", user_info.get("name"), e)
+    finally:
+        await broadcaster.unsubscribe(websocket)
+        logger.info(
+            "WorkflowEvent WS disconnected: user=%s, remaining=%d",
+            user_info.get("name", "anonymous"),
+            broadcaster.subscriber_count(),
+        )

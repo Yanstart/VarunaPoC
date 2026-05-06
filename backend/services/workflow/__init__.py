@@ -26,11 +26,13 @@ from services.workflow.composite_hook import CompositeWorkflowHook
 from services.workflow.fhir_hook import FHIRWorkflowHook
 from services.workflow.no_op_hook import NoOpWorkflowHook
 from services.workflow.pacs_hook import PACSWorkflowHook
+from services.workflow.websocket_hook import WebSocketWorkflowHook
 
 __all__ = [
     "NoOpWorkflowHook",
     "FHIRWorkflowHook",
     "PACSWorkflowHook",
+    "WebSocketWorkflowHook",
     "CompositeWorkflowHook",
     "get_workflow_hook",
 ]
@@ -48,17 +50,31 @@ def get_workflow_hook():
     Lazy imports keep fhir/config.py and pacs_config.py out of the module-
     level graph until actually needed.
     """
+    import os
+
     from fhir.config import get_fhir_config
     from services.workflow.pacs_config import get_pacs_config
 
     fhir_config = get_fhir_config()
     pacs_config = get_pacs_config()
+    ws_enabled = os.getenv("WORKFLOW_WS_BROADCAST_ENABLED", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
     hooks = []
     if fhir_config.is_configured:
         hooks.append(FHIRWorkflowHook(config=fhir_config))
     if pacs_config.is_configured:
         hooks.append(PACSWorkflowHook(config=pacs_config))
+    # Sprint 15 — WebSocket broadcast is included by default. It's a
+    # pure in-process fanout (no external infra), so the cost is zero
+    # when no client is connected. Set WORKFLOW_WS_BROADCAST_ENABLED=false
+    # to opt out (e.g. headless batch worker).
+    if ws_enabled:
+        hooks.append(WebSocketWorkflowHook())
 
     if not hooks:
         return NoOpWorkflowHook()

@@ -1446,9 +1446,9 @@ Statut au commit `9ff4bc9` (Tier 5 sprint 1, mai 2026).
 | `StorageProvider` | `FilesystemStorageProvider` | `ml.py` (9 sites), `slides.py` (5 sites async — get_tile + mpp + info + overview + dzi) ✓ | — (migration silencieuse, mêmes performances) |
 | `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` (legacy direct, héritage transitif) | — |
 | `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | `routes/slides.py:get_tile` ✓ (Tier 5 sprint 1) | `varuna_tile_cache_hits_total{level}`, `varuna_tile_cache_misses_total{level}`, `varuna_tile_cache_lookup_seconds{outcome}` |
-| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `CompositeWorkflowHook`, `NoOpWorkflowHook` | `routes/exports.py` (REPORT_SIGNED), `routes/annotations.py` (CREATE/UPDATE/DELETE/REJECT/BATCH) ✓ | `varuna_workflow_events_total{event_type, hook_type, status}` |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `WebSocketWorkflowHook` (sprint 15), `CompositeWorkflowHook`, `NoOpWorkflowHook` | `routes/exports.py` (REPORT_SIGNED), `routes/annotations.py` (CREATE/UPDATE/DELETE/REJECT/BATCH) ✓ | `varuna_workflow_events_total{event_type, hook_type, status}` |
 | `MLProvider` | `SlideflowProvider`, `MockProvider`, `OpenSlideProvider` | `routes/ml.py` (via `MLWorkerProvider.submit`) | — (couvert par les métriques `varuna_tile_load_seconds` côté serveur) |
-| `MLWorkerProvider` (sprint 11) | `MLWorkerProxy` (subprocess Slideflow), `InProcessMLWorker` (ONNX/OpenVINO local), `TritonClientMLWorker` (stub remote) | aucune encore — factory dispo via `services.ml.get_ml_worker_provider()`, migration de `routes/ml.py:get_ml_worker()` reportée à sprint 12 | — |
+| `MLWorkerProvider` (sprint 11) | `MLWorkerProxy` (subprocess Slideflow), `InProcessMLWorker` (ONNX/OpenVINO local), `TritonClientMLWorker` (stub remote) | `routes/ml.py` ✓ (sprint 12 — 9 handlers via `Depends(get_ml_worker_dep)`) | — |
 
 ### Sprint 11 — MLWorkerProvider Protocol (mai 2026)
 
@@ -1473,7 +1473,10 @@ L'objectif est d'éviter le big-bang. Chaque sprint migre **une seule route** ve
 - Sprint 4 : slides.py:get_tile shared helper (commit `c9fa981`)
 - Sprint 5 : annotations.py create/validate/delete (commit `636425f`)
 - Sprint 6 : slides.py mpp/info/overview/dzi async + StorageProvider (commit `519f451`)
-- Sprint 7 : annotations.py update/reject/batch_create (commit pending)
+- Sprint 7 : annotations.py update/reject/batch_create (commit `97c985d`)
+- Sprint 11 : MLWorkerProvider Protocol + 3 backends (commit `03f0e41`)
+- Sprint 12 : routes/ml.py consumes MLWorkerProvider via Depends (commit `093c5c7`)
+- Sprint 15 : WebSocketWorkflowHook + frontend WorkflowEventService (live UI updates)
 
 **Bug résolus pendant les sprints :**
 - `/metrics` 422 : `request` sans annotation `: Request` (commit `d92238d`)

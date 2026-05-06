@@ -16,6 +16,7 @@ import { apiService } from './services/ApiService.js';
 import { viewerManager } from './viewers/ViewerManager.js';
 import { themeService } from './services/ThemeService.js';
 import { i18nService } from './services/I18nService.js';
+import { workflowEventService } from './services/WorkflowEventService.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -412,6 +413,23 @@ await i18nService.init();
 const router = new Router(appState);
 router.start();
 
+// Sprint 15 — connect to the backend WorkflowEvent stream so the UI
+// receives real-time signals (REPORT_SIGNED, ANNOTATION_*, etc.) and
+// dispatches them via EventBus channels. Components subscribe to the
+// `workflow:<event_type>` channels they care about.
+//
+// Auth: pulls the JWT lazily from localStorage if present (matches what
+// AuthService writes on successful PKCE flow). When AUTH_ENABLED=false
+// on the backend, the token is ignored and the connection still opens.
+const wsToken = (() => {
+    try {
+        return sessionStorage.getItem('varuna_access_token') || null;
+    } catch (_) {
+        return null;
+    }
+})();
+workflowEventService.start({ token: wsToken });
+
 // Export for debugging
 window.__VarunaApp = {
     state: appState,
@@ -421,4 +439,5 @@ window.__VarunaApp = {
     router,
     themeService,
     i18nService,
+    workflowEventService,
 };
