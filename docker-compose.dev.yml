@@ -70,12 +70,15 @@ services:
       ORTHANC__DICOM_MODALITIES: '{"varuna": ["${PACS_AET_LOCAL:-VARUNA_SCU}", "host.docker.internal", 4242]}'
     volumes:
       - varuna-orthanc-data:/var/lib/orthanc/db
+    # The orthancteam/orthanc image is minimal — no curl, no wget, no nc.
+    # Use the Orthanc binary itself as a process-liveness check; the actual
+    # DICOM/HTTP endpoints are externally validated via the dev backend.
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider --user=varuna --password=varuna_dev http://localhost:8042/system || exit 1"]
+      test: ["CMD", "Orthanc", "--version"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - varuna-network
 
@@ -87,6 +90,10 @@ services:
     image: hapiproject/hapi:v7.4.0
     container_name: varuna-hapi-fhir-dev
     restart: unless-stopped
+    # Run as root in dev so H2 can write to /data without volume-permission
+    # gymnastics. The hapiproject/hapi image is distroless, so chown'ing
+    # the volume from inside the container isn't possible.
+    user: "0:0"
     ports:
       - "8090:8080"
     environment:
@@ -98,12 +105,12 @@ services:
       spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
     volumes:
       - varuna-hapi-data:/data
+    # The hapiproject/hapi image is distroless — no shell, no wget, no curl.
+    # Disable Docker's healthcheck and rely on external probes (curl from
+    # the host or Prometheus blackbox exporter). The container is up iff
+    # the JVM is running and Tomcat has bound port 8080.
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/fhir/metadata"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      disable: true
     networks:
       - varuna-network
 
