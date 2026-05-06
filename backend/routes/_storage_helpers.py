@@ -13,15 +13,21 @@ one place rather than chased across each route file.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Optional
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 
 from core.exceptions.storage import SlideNotFoundError
+from monitoring import record_workflow_event
 from services.slide_scanner import get_slide_path_by_id  # legacy fallback
 
 if TYPE_CHECKING:
+    from fastapi import Request
     from core.interfaces import StorageProvider
+    from core.interfaces.workflow import WorkflowEvent
+
+logger = logging.getLogger(__name__)
 
 
 async def get_storage(request: Request) -> "Optional[StorageProvider]":
@@ -62,4 +68,40 @@ async def resolve_slide_path(
     return path
 
 
-__all__ = ["get_storage", "resolve_slide_path"]
+__all__ = ["emit_workflow_event", "get_storage", "resolve_slide_path"]
+
+
+# ---------------------------------------------------------------------------
+# WorkflowHook event emission (sprint 5)
+# ---------------------------------------------------------------------------
+
+
+async def emit_workflow_event(request: Request, event: "WorkflowEvent") -> None:
+    """Fire a WorkflowEvent through `request.app.state.workflow_hook`.
+
+    Records the outcome via `monitoring.record_workflow_event`. NEVER
+    raises — by Protocol contract the hook must not fail callers, and we
+    add a defensive try/except in case a hook breaks the contract.
+
+    Args:
+        request: FastAPI request (used to read app.state.workflow_hook).
+        event: A WorkflowEvent instance.
+    """
+    hook = getattr(request.app.state, "workflow_hook", None)
+    if hook is None:
+        return
+
+    try:
+        ok = await hook.on_event(event)
+        record_workflow_event(
+            event_type=event.event_type.value,
+            hook_type=type(hook).__name__,
+            status="success" if ok else "partial_failure",
+        )
+    except Exception as e:
+        logger.warning("workflow_hook.on_event raised: %s", e)
+        record_workflow_event(
+            event_type=event.event_type.value,
+            hook_type=type(hook).__name__,
+            status="exception",
+        )

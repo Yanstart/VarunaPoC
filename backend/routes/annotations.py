@@ -17,10 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.database import get_db
+from core.interfaces.workflow import WorkflowEvent, WorkflowEventType
 from core.tenant import get_current_tenant
 from models.annotation import Annotation
 from models.correction import Correction
 from rate_limiting import annotation_write_rate, limit
+from routes._storage_helpers import emit_workflow_event
 from schemas.annotation import (
     AnnotationBatchCreate,
     AnnotationCreate,
@@ -59,10 +61,25 @@ async def create_annotation(
         if not data.created_by:
             data.created_by = current_user.username
         result = await annotation_service.create_annotation(db, slide_id, data, tenant_id=tenant_id)
-        return AnnotationResponse(**result)
     except Exception as e:
         logger.error(f"Failed to create annotation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+    # Sprint 5 — emit ANNOTATION_CREATED. Fire-and-forget; logged on failure.
+    await emit_workflow_event(
+        request,
+        WorkflowEvent(
+            event_type=WorkflowEventType.ANNOTATION_CREATED,
+            slide_id=slide_id,
+            user_id=current_user.username,
+            metadata={
+                "annotation_id": str(result.get("id", "")),
+                "annotation_type": result.get("annotation_type"),
+                "label": result.get("label"),
+            },
+        ),
+    )
+    return AnnotationResponse(**result)
 
 
 @router.get("/{slide_id}", response_model=List[AnnotationResponse])
@@ -244,6 +261,7 @@ async def update_annotation(
 
 @router.patch("/{slide_id}/{annotation_id}/validate", response_model=AnnotationResponse)
 async def validate_annotation(
+    request: Request,
     slide_id: str,
     annotation_id: UUID,
     notes: str | None = Query(None, max_length=2000),
@@ -254,6 +272,8 @@ async def validate_annotation(
     """Mark an annotation as validated by the current pathologist.
 
     Also creates a Correction record to feed the ML retraining pipeline.
+    Emits ANNOTATION_UPDATED on success — the validation is the closest
+    annotation-level equivalent of REPORT_SIGNED for downstream PACS / DPI.
     """
     result = await db.execute(
         select(Annotation).where(
@@ -287,6 +307,23 @@ async def validate_annotation(
 
     await db.commit()
     await db.refresh(annotation)
+
+    # Sprint 5 — emit ANNOTATION_UPDATED with status=validated.
+    await emit_workflow_event(
+        request,
+        WorkflowEvent(
+            event_type=WorkflowEventType.ANNOTATION_UPDATED,
+            slide_id=slide_id,
+            user_id=current_user.username,
+            metadata={
+                "annotation_id": str(annotation.id),
+                "annotation_type": annotation.annotation_type,
+                "label": annotation.label,
+                "status": "validated",
+                "validated_by": current_user.username,
+            },
+        ),
+    )
     return annotation
 
 
@@ -361,6 +398,19 @@ async def delete_annotation(
     )
     if not deleted:
         raise HTTPException(status_code=404, detail="Annotation not found")
+
+    # Sprint 5 — emit ANNOTATION_DELETED for audit/PACS-side reconciliation.
+    await emit_workflow_event(
+        request,
+        WorkflowEvent(
+            event_type=WorkflowEventType.ANNOTATION_DELETED,
+            slide_id=slide_id,
+            user_id=current_user.username,
+            metadata={
+                "annotation_id": str(annotation_id),
+            },
+        ),
+    )
 
 
 @router.post("/{slide_id}/batch", response_model=List[AnnotationResponse], status_code=201)

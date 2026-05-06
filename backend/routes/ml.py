@@ -39,7 +39,7 @@ from services.ml.worker import (
     MLWorkerProxy,
     MLWorkerTimeoutError,
 )
-from services.slide_scanner import get_slide_path_by_id  # noqa: F401 — legacy fallback in tests
+from services.slide_scanner import get_slide_path_by_id
 
 
 # Sprint 3 — backward-compat alias. New code should `from

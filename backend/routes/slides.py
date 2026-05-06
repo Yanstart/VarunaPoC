@@ -22,7 +22,7 @@ import hashlib
 import logging
 import random
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 import openslide
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query, Request
@@ -54,9 +54,11 @@ from services.tile_server import tile_server
 # Tier 5 sprint 1 — TwoLevelTileCache wiring
 import time
 
-from core.interfaces import StorageProvider
 from monitoring import record_tile_cache_lookup
 from routes._storage_helpers import get_storage, resolve_slide_path
+
+if TYPE_CHECKING:
+    from core.interfaces import StorageProvider
 
 logger = logging.getLogger(__name__)
 
