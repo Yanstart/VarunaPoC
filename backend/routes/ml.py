@@ -27,7 +27,8 @@ from pydantic import BaseModel, Field
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
-from core.interfaces import get_provider
+from core.exceptions.storage import SlideNotFoundError
+from core.interfaces import StorageProvider, get_provider
 from rate_limiting import limit, ml_rate
 from schemas.geojson import GeoJSONFeatureCollection
 from services.ml import TagExtractor, TagRouter
@@ -38,7 +39,39 @@ from services.ml.worker import (
     MLWorkerProxy,
     MLWorkerTimeoutError,
 )
-from services.slide_scanner import get_slide_path_by_id
+from services.slide_scanner import get_slide_path_by_id  # legacy fallback
+
+
+# Sprint 3 — StorageProvider injection.
+# A FastAPI dependency that returns the StorageProvider attached to
+# app.state at startup. Routes consume it via Depends() rather than
+# digging into request.app.state, avoiding name collisions with body
+# parameters named `request: PydanticModel`.
+async def get_storage(request: Request) -> Optional[StorageProvider]:
+    return getattr(request.app.state, "storage_provider", None)
+
+
+async def _resolve_slide_path(
+    storage: Optional[StorageProvider], slide_id: str
+) -> str:
+    """Return the absolute slide path, raising HTTPException(404) if missing.
+
+    Migration path: today this consults the StorageProvider when available
+    and falls back to slide_scanner for legacy callers. Once every route
+    has migrated and we delete the slide_scanner imports, this helper
+    becomes a thin wrapper around `provider.get_slide_path`.
+    """
+    if storage is not None:
+        try:
+            path = await storage.get_slide_path(slide_id)
+            return str(path)
+        except SlideNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+    # Legacy fallback (degraded startup / pre-migration tests).
+    path = get_slide_path_by_id(slide_id)
+    if not path:
+        raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+    return path
 
 # ---------------------------------------------------------------------------
 # ML Worker: isolated process for heavy inference
@@ -466,6 +499,7 @@ async def predict_slide(
     tag_extractor=Depends(get_tag_extractor),
     tag_router=Depends(get_tag_router),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Prédiction ML sur slide complète ou région.
@@ -503,9 +537,7 @@ async def predict_slide(
     """
     try:
         # Get slide path from scanner
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         worker = get_ml_worker()
@@ -556,6 +588,7 @@ async def extract_features(
     slide_id: str,
     body: FeatureExtractionRequest = FeatureExtractionRequest(),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Extraction de features (embeddings) pour MIL.
@@ -581,9 +614,7 @@ async def extract_features(
     """
     try:
         # Get slide path from scanner
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         # Extract features via ML worker (heavy — isolated process)
@@ -618,6 +649,7 @@ async def get_heatmap(
     resolution_level: int = Query(2, ge=0, le=5, description="Resolution level (0=max)"),
     colormap: str = Query("jet", description="Matplotlib colormap (jet, hot, viridis, etc.)"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Génère heatmap d'explainability (Grad-CAM ou feature attention).
@@ -641,9 +673,7 @@ async def get_heatmap(
     """
     try:
         # Get slide path from scanner
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         # Generate heatmap via ML worker (heavy — isolated process)
@@ -700,6 +730,7 @@ async def detect_regions_endpoint(
     prediction_class: str = Query("tissue", description="Target class for heatmap"),
     region: Optional[str] = Query(None, description="Viewport region x,y,w,h in slide pixels"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Auto-detection: generate heatmap then extract regions as GeoJSON.
@@ -717,9 +748,7 @@ async def detect_regions_endpoint(
 
     try:
         # Get slide path
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         # Generate heatmap via ML worker (heavy — isolated process)
@@ -851,6 +880,7 @@ async def get_focus_zones(
     prediction_class: str = Query("tissue", description="Target class"),
     disk_cache=Depends(get_disk_cache),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Focus Assist — Retourne les N zones les plus intéressantes d'une lame.
@@ -860,9 +890,7 @@ async def get_focus_zones(
     coordonnées, bounding box et score.
     """
     try:
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         # Model ID from env config (model itself is in worker process)
@@ -930,12 +958,11 @@ async def measure_slide(
     prediction_class: str = Query("tissue"),
     resolution_level: int = Query(2, ge=0, le=5),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """Auto-measure tumor dimensions in millimeters."""
     try:
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         # Get MPP from slide metadata
@@ -991,6 +1018,7 @@ async def count_cells(
     request: CountRequest = CountRequest(),
     include_positions: bool = Query(False, description="Return cell centroid positions"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Comptage cellulaire automatisé (Ki-67 / IHC).
@@ -1004,9 +1032,7 @@ async def count_cells(
     Used by frontend CellCountingPanel (Wave 4).
     """
     try:
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         slide_dims = None
@@ -1055,12 +1081,11 @@ async def cluster_slide(
     slide_id: str,
     n_clusters: int = Query(4, ge=2, le=8, description="Number of clusters"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """Clustering morphologique -- identifie les patterns dans une lame."""
     try:
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         worker = get_ml_worker()
@@ -1098,6 +1123,7 @@ async def cluster_slide(
 async def get_slide_quality(
     slide_id: str,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Controle qualite automatique -- evalue la qualite d'une lame.
@@ -1106,9 +1132,7 @@ async def get_slide_quality(
     et une recommandation.
     """
     try:
-        slide_path = get_slide_path_by_id(slide_id)
-        if not slide_path:
-            raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+        slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
         worker = get_ml_worker()
@@ -1267,6 +1291,7 @@ async def submit_feedback(
     slide_id: str,
     request: FeedbackRequest,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """Record pathologist correction on ML prediction."""
     import uuid as uuid_mod
@@ -1326,6 +1351,7 @@ async def submit_feedback(
 async def get_feedback_stats(
     model_name: str = Query(None),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """Get aggregated feedback statistics per model (7-day sliding window)."""
     from core.database import get_db_context
@@ -1378,6 +1404,7 @@ async def search_similar(
     slide_id: str,
     top_k: int = Query(5, ge=1, le=20),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """Find the K most similar slides to the given slide."""
     import os
@@ -1413,6 +1440,7 @@ async def batch_predict(
     body: BatchPredictionRequest,
     background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """
     Batch inference asynchrone.
@@ -1643,6 +1671,7 @@ async def health_check(
 async def set_device(
     device: str = "auto",
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
+    storage: Optional[StorageProvider] = Depends(get_storage),
 ):
     """Toggle ML device at runtime (auto/cuda/cpu). Restarts ML worker."""
     if device not in ("auto", "cuda", "cpu"):

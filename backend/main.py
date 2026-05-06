@@ -217,18 +217,22 @@ async def lifespan(_app):  # noqa: PLR0915, PLR0912
     # so future routes can emit WorkflowEvents without re-resolving config.
     try:
         from services.cache.two_level_tile_cache import get_tile_cache
+        from services.storage_provider import get_storage_provider
         from services.workflow import get_workflow_hook
 
         _app.state.tile_cache = get_tile_cache()
+        _app.state.storage_provider = get_storage_provider()
         _app.state.workflow_hook = get_workflow_hook()
         logger.info(
-            "Protocol singletons attached: tile_cache=%s, workflow_hook=%s",
+            "Protocol singletons attached: tile_cache=%s, storage_provider=%s, workflow_hook=%s",
             type(_app.state.tile_cache).__name__,
+            type(_app.state.storage_provider).__name__,
             type(_app.state.workflow_hook).__name__,
         )
     except Exception as e:
         logger.warning("Failed to attach Protocol singletons: %s", e)
         _app.state.tile_cache = None
+        _app.state.storage_provider = None
         _app.state.workflow_hook = None
 
     yield
