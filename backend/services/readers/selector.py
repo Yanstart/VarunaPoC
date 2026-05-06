@@ -18,9 +18,22 @@ References:
 import logging
 from typing import List, Type
 
-from .base import ISlideReader
+from core.interfaces.slide_reader import SlideReader
 
 logger = logging.getLogger(__name__)
+
+# Methods/classmethods a reader class must expose to be registerable.
+# Validated structurally at register() time (PEP 544 duck typing) since
+# isinstance/issubclass on Protocol-with-properties is not supported.
+_REQUIRED_READER_API = (
+    "open",
+    "close",
+    "read_region",
+    "get_metadata",
+    "get_thumbnail",
+    "can_open",
+    "supported_formats",
+)
 
 
 class NoCompatibleReaderError(Exception):
@@ -44,25 +57,32 @@ class ReaderSelector:
     """
 
     def __init__(self) -> None:
-        self._readers: List[Type[ISlideReader]] = []
+        self._readers: List[Type[SlideReader]] = []
 
-    def register(self, reader_cls: Type[ISlideReader]) -> None:
+    def register(self, reader_cls: Type[SlideReader]) -> None:
         """
         Register a reader class.
 
         Args:
-            reader_cls: A class that implements ISlideReader.
+            reader_cls: A class that conforms structurally to SlideReader.
 
         Raises:
-            TypeError: If reader_cls is not a subclass of ISlideReader.
+            TypeError: If reader_cls is not a class or does not expose the
+                       required reader API (open, close, read_region, etc.).
         """
-        if not (isinstance(reader_cls, type) and issubclass(reader_cls, ISlideReader)):
-            raise TypeError(f"{reader_cls} must be a subclass of ISlideReader")
+        if not isinstance(reader_cls, type):
+            raise TypeError(f"{reader_cls!r} must be a class implementing SlideReader")
+        missing = [m for m in _REQUIRED_READER_API if not hasattr(reader_cls, m)]
+        if missing:
+            raise TypeError(
+                f"{reader_cls.__name__} is missing required SlideReader members: "
+                f"{', '.join(missing)}"
+            )
         if reader_cls not in self._readers:
             self._readers.append(reader_cls)
             logger.debug(f"Registered reader: {reader_cls.__name__}")
 
-    def select(self, path: str) -> ISlideReader:
+    def select(self, path: str) -> SlideReader:
         """
         Select the best reader for a file and open it.
 
@@ -74,7 +94,7 @@ class ReaderSelector:
             path: Path to the slide file.
 
         Returns:
-            An opened ISlideReader instance ready for use.
+            An opened SlideReader instance ready for use.
 
         Raises:
             NoCompatibleReaderError: If no reader can open the file.

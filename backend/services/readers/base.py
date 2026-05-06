@@ -1,26 +1,29 @@
 """
-ISlideReader Abstract Base Class
+Slide Reader Base — Metadata dataclass
 
-Abstract base class defining the interface that ALL slide readers must implement.
-Follows the Strategy Pattern to allow interchangeable reader implementations.
+This module previously defined an `ISlideReader` ABC. The project has moved
+to PEP 544 Protocols for all module interfaces (see core/interfaces/), and
+the slide reader contract now lives in `core.interfaces.slide_reader.SlideReader`.
 
-Design patterns:
-- Strategy Pattern: Each reader is an interchangeable strategy
-- Template Method: Context manager support via __enter__/__exit__
+What stays here:
+- `SlideMetadata` — the dataclass returned by readers' `get_metadata()`. It
+  is colocated with concrete reader implementations because it is purely a
+  reader-side concern (format-level technical metadata: dimensions, mpp,
+  vendor, etc.) and does not belong in core/interfaces.
+
+For backward compatibility, `ISlideReader` is re-exported as an alias to
+the new `SlideReader` Protocol. New code should import `SlideReader`
+directly from `core.interfaces.slide_reader`.
 
 References:
-- Architecture doc: docs/architecture/READER_SELECTION_SYSTEM.md
-- Existing pattern: core/interfaces/ml_provider.py (Protocol/ABC usage)
-- OpenSlide API: https://openslide.org/api/python/
-
-Issue #8: ISlideReader ABC
+- core/interfaces/slide_reader.py (new Protocol)
+- docs/architecture/READER_SELECTION_SYSTEM.md
+- docs/architecture/MODULAR_ARCHITECTURE.md (Service vs Resource Protocols)
 """
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 
 # ============================================================================
 # DATA CLASSES
@@ -80,165 +83,41 @@ class SlideMetadata:
 
 
 # ============================================================================
-# ABSTRACT BASE CLASS
+# CONCRETE HELPER: SlideReaderBase
 # ============================================================================
+# A tiny non-abstract base providing the context-manager protocol for slide
+# readers. Concrete readers (OpenSlideReader, BioFormatsReader, etc.) inherit
+# from it for `with reader: ...` support without re-implementing __enter__/
+# __exit__ in every reader.
+#
+# This is NOT an ABC — it does not enforce method implementations. Conformance
+# to the SlideReader Protocol is verified structurally via duck typing
+# (PEP 544). Inheriting from SlideReaderBase is purely a code-reuse choice.
 
 
-class ISlideReader(ABC):
-    """
-    Abstract base class for slide readers.
+class SlideReaderBase:
+    """Concrete helper base with context-manager support.
 
-    All concrete readers (OpenSlide, BioFormats, OME-TIFF, OME-Zarr, etc.)
-    must implement this interface.
-
-    Lifecycle:
-        1. Instantiate reader: ``reader = OpenSlideReader()``
-        2. Open file: ``reader.open("/path/to/slide.svs")``
-        3. Use reader: ``region = reader.read_region(...)``
-        4. Close: ``reader.close()``
-
-    Or use as context manager:
-        >>> with OpenSlideReader() as reader:
-        ...     reader.open("/path/to/slide.svs")
-        ...     meta = reader.get_metadata()
-
-    Class methods ``supported_formats()`` and ``can_open()`` are used by
-    ReaderSelector to choose the best reader for a given file.
-
-    References:
-        - docs/architecture/READER_SELECTION_SYSTEM.md
-        - core/interfaces/ml_provider.py (Protocol pattern example)
+    Subclassing is optional; structural conformance to SlideReader is the
+    real contract. Use this base only for the `with` statement convenience.
     """
 
-    @abstractmethod
-    def open(self, path: str) -> None:
-        """
-        Open a slide file for reading.
-
-        Args:
-            path: Absolute path to the slide file.
-
-        Raises:
-            FileNotFoundError: If the file does not exist.
-            RuntimeError: If the file cannot be opened by this reader.
-        """
-        ...
-
-    @abstractmethod
-    def close(self) -> None:
-        """
-        Close the slide and release resources.
-
-        Safe to call multiple times. After close(), all other methods
-        except open() will raise RuntimeError.
-        """
-        ...
-
-    @abstractmethod
-    def read_region(
-        self, location: Tuple[int, int], level: int, size: Tuple[int, int]
-    ) -> np.ndarray:
-        """
-        Read a region from the slide.
-
-        Args:
-            location: (x, y) coordinates at level 0 (top-left corner).
-            level: Pyramid level (0 = highest resolution).
-            size: (width, height) of the region to read at the given level.
-
-        Returns:
-            numpy array with shape (height, width, 3) in RGB format, dtype uint8.
-
-        Raises:
-            RuntimeError: If slide is not open.
-            ValueError: If level or coordinates are out of bounds.
-        """
-        ...
-
-    @abstractmethod
-    def get_metadata(self) -> SlideMetadata:
-        """
-        Extract metadata from the open slide.
-
-        Returns:
-            SlideMetadata dataclass with all available information.
-
-        Raises:
-            RuntimeError: If slide is not open.
-        """
-        ...
-
-    @abstractmethod
-    def get_thumbnail(self, size: Tuple[int, int]) -> np.ndarray:
-        """
-        Get a thumbnail image of the slide.
-
-        Args:
-            size: Maximum (width, height). Aspect ratio is preserved.
-
-        Returns:
-            numpy array with shape (height, width, 3) in RGB format, dtype uint8.
-
-        Raises:
-            RuntimeError: If slide is not open.
-        """
-        ...
-
-    @property
-    @abstractmethod
-    def dimensions(self) -> Tuple[int, int]:
-        """Slide dimensions (width, height) at level 0."""
-        ...
-
-    @property
-    @abstractmethod
-    def level_count(self) -> int:
-        """Number of pyramid levels."""
-        ...
-
-    @property
-    @abstractmethod
-    def level_dimensions(self) -> List[Tuple[int, int]]:
-        """List of (width, height) for each pyramid level."""
-        ...
-
-    # Context manager support
-    def __enter__(self) -> "ISlideReader":
+    def __enter__(self) -> "SlideReaderBase":
         return self
 
     def __exit__(self, *args: object) -> None:
-        self.close()
+        # Subclasses must define close()
+        self.close()  # type: ignore[attr-defined]
 
-    @classmethod
-    @abstractmethod
-    def supported_formats(cls) -> List[str]:
-        """
-        Return list of file extensions this reader supports.
 
-        Returns:
-            List of lowercase extensions without dots, e.g. ['svs', 'ndpi', 'mrxs'].
-        """
-        ...
+# ============================================================================
+# BACKWARD COMPATIBILITY: ISlideReader -> SlideReader Protocol
+# ============================================================================
+# Existing code uses `from services.readers.base import ISlideReader`.
+# Re-export the new Protocol under that name. New code should import
+# `SlideReader` from core.interfaces.slide_reader directly.
 
-    @classmethod
-    @abstractmethod
-    def can_open(cls, path: str) -> int:
-        """
-        Return a confidence score (0-100) for the ability to open a file.
+from core.interfaces.slide_reader import SlideReader as ISlideReader
 
-        Used by ReaderSelector to rank readers. Higher score = better match.
 
-        Scoring guidelines:
-            - 90-100: Native format, excellent support
-            - 70-89: Good support with minor limitations
-            - 50-69: Partial support
-            - 1-49: Experimental/untested
-            - 0: Cannot open this file
-
-        Args:
-            path: Path to the slide file.
-
-        Returns:
-            Integer confidence score 0-100.
-        """
-        ...
+__all__ = ["SlideMetadata", "SlideReaderBase", "ISlideReader"]

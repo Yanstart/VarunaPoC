@@ -95,10 +95,13 @@ exclude = [
 "fhir/**/*.py" = ["ISC001", "B008", "ARG001"]
 # Quality routes - FastAPI Depends pattern
 "quality/routes.py" = ["B008", "ARG001"]
-# Core interfaces - ML Provider protocol with Optional types
-"core/interfaces/**/*.py" = ["UP", "RUF013", "EM101", "RET504", "RUF002"]
-# Core exceptions - ML exceptions with Optional parameters
-"core/exceptions/**/*.py" = ["RUF013"]
+# Core interfaces - Protocol files: legitimate use of `format` as kwarg name,
+# datetime.now() in docstring examples and default factories, categorized
+# (non-alphabetical) __all__ for grouping by Service vs Resource Protocols.
+"core/interfaces/**/*.py" = ["UP", "RUF013", "EM101", "RET504", "RUF002", "A002", "DTZ005", "RUF022"]
+# Core exceptions - ML exceptions with Optional parameters; `format` is a
+# legitimate domain term in slide-format errors (not the builtin).
+"core/exceptions/**/*.py" = ["RUF013", "A002"]
 # ML Providers - Slideflow/OpenSlide integration with complex ML patterns
 "services/ml/providers/**/*.py" = ["RET504", "B007", "ERA001", "TRY301", "PLC", "UP", "RUF013", "RUF012", "SIM105", "F841"]
 

@@ -14,9 +14,9 @@ VarunaPoC must integrate WITHOUT being coupled to specific vendors.
 Pattern: Observer Pattern + Hook Pattern
 """
 
-from typing import Protocol, Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Protocol
 
 
 class WorkflowEventType(str, Enum):

@@ -14,8 +14,7 @@ Caching Strategies:
 Pattern: Strategy Pattern
 """
 
-from typing import Protocol, Optional, Dict, Any
-from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, Protocol
 
 
 class TileCache(Protocol):

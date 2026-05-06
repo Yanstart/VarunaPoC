@@ -32,7 +32,6 @@ class ConfigurationError(VarunaError):
     - Invalid YAML syntax
     - Contradictory settings
     """
-    pass
 
 
 class ValidationError(VarunaError):
@@ -44,4 +43,3 @@ class ValidationError(VarunaError):
     - Out-of-range coordinates
     - Missing required fields
     """
-    pass

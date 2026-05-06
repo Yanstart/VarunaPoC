@@ -7,7 +7,6 @@ from .base import VarunaError
 
 class SlideFormatError(VarunaError):
     """Base exception for slide format errors."""
-    pass
 
 
 class SlideCorruptedError(SlideFormatError):

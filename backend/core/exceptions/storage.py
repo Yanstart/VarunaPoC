@@ -7,7 +7,6 @@ from .base import VarunaError
 
 class StorageError(VarunaError):
     """Base exception for storage errors."""
-    pass
 
 
 class SlideNotFoundError(StorageError):

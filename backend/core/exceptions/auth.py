@@ -7,12 +7,10 @@ from .base import VarunaError
 
 class AuthenticationError(VarunaError):
     """Base exception for authentication errors."""
-    pass
 
 
 class AuthorizationError(VarunaError):
     """Base exception for authorization errors."""
-    pass
 
 
 class TokenExpiredError(AuthenticationError):

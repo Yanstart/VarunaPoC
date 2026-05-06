@@ -24,8 +24,7 @@ References:
 - OpenID Connect: https://openid.net/connect/
 """
 
-from typing import Protocol, Optional, Dict, Any
-from datetime import datetime
+from typing import Any, Dict, Optional, Protocol, runtime_checkable
 
 
 class User:
@@ -48,6 +47,7 @@ class User:
         self.metadata = metadata or {}
 
 
+@runtime_checkable
 class AuthProvider(Protocol):
     """
     Protocol for pluggable authentication providers.

@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .base import ISlideReader, SlideMetadata
+from .base import SlideMetadata, SlideReaderBase
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def _is_ome_zarr(path: str) -> bool:
         return False
 
 
-class OMEZarrReader(ISlideReader):
+class OMEZarrReader(SlideReaderBase):
     """
     Slide reader for OME-Zarr datasets using the zarr library.
 

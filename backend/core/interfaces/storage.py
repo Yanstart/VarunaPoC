@@ -17,9 +17,9 @@ Why this matters:
 Pattern: Strategy Pattern + Adapter Pattern
 """
 
-from typing import Protocol, Optional, Dict, List, BinaryIO, AsyncIterator
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import AsyncIterator, BinaryIO, Dict, List, Optional, Protocol
 
 
 class SlideMetadata:

@@ -2,7 +2,7 @@
 Tests for the Reader Architecture
 
 Comprehensive tests covering:
-1. ISlideReader ABC cannot be instantiated directly
+1. Concrete readers structurally satisfy the SlideReader Protocol
 2. OpenSlideReader.can_open() scores correctly
 3. OpenSlideReader.open/read_region/close with mocked openslide
 4. BioFormatsReader returns 0 for can_open when no JRE
@@ -11,7 +11,7 @@ Comprehensive tests covering:
 7. NoCompatibleReaderError when no reader works
 8. OMETIFFReader.can_open() with mocked tifffile
 9. OMEZarrReader.can_open() with mocked zarr
-10. Context manager protocol works
+10. Context manager protocol works (via SlideReaderBase)
 11. SlideMetadata dataclass fields
 
 External dependencies (openslide, tifffile, zarr) are mocked since they
@@ -26,7 +26,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from services.readers.base import ISlideReader, SlideMetadata
+from core.interfaces.slide_reader import SlideReader
+from services.readers.base import SlideMetadata, SlideReaderBase
 from services.readers.bioformats_reader import BioFormatsReader
 from services.readers.ome_tiff_reader import OMETIFFReader, _parse_ome_xml
 from services.readers.ome_zarr_reader import OMEZarrReader, _is_ome_zarr
@@ -39,9 +40,9 @@ from services.readers.selector import NoCompatibleReaderError, ReaderSelector, d
 
 
 def _make_mock_reader(name, score, open_succeeds=True):
-    """Create a mock ISlideReader subclass with configurable score and open behavior."""
+    """Create a mock SlideReader subclass with configurable score and open behavior."""
 
-    class _MockReader(ISlideReader):
+    class _MockReader(SlideReaderBase):
         _name = name
         _score = score
         _open_succeeds = open_succeeds
@@ -91,35 +92,32 @@ def _make_mock_reader(name, score, open_succeeds=True):
 
 
 # ============================================================================
-# 1. ISlideReader ABC Tests
+# 1. SlideReader Protocol Conformance Tests
 # ============================================================================
 
 
-class TestISlideReaderABC:
-    """Test that ISlideReader ABC cannot be instantiated directly."""
+class TestSlideReaderProtocol:
+    """Verify concrete readers structurally satisfy the SlideReader Protocol."""
 
-    def test_cannot_instantiate_abc(self):
-        """ISlideReader is abstract and cannot be instantiated."""
-        with pytest.raises(TypeError, match="abstract method"):
-            ISlideReader()
+    @pytest.mark.parametrize(
+        "reader_cls", [OpenSlideReader, BioFormatsReader, OMETIFFReader, OMEZarrReader]
+    )
+    def test_reader_instance_satisfies_protocol(self, reader_cls):
+        """isinstance check via @runtime_checkable Protocol (duck typing)."""
+        reader = reader_cls()
+        assert isinstance(reader, SlideReader), (
+            f"{reader_cls.__name__} does not structurally conform to SlideReader Protocol"
+        )
 
-    def test_must_implement_all_abstract_methods(self):
-        """A partial implementation should also fail to instantiate."""
-
-        class PartialReader(ISlideReader):
-            def open(self, path):
-                pass
-
-            def close(self):
-                pass
-
+    def test_protocol_cannot_be_instantiated_directly(self):
+        """SlideReader is a Protocol — instantiating raises TypeError."""
         with pytest.raises(TypeError):
-            PartialReader()
+            SlideReader()  # type: ignore[abstract]
 
-    def test_concrete_subclass_can_be_instantiated(self):
-        """A complete concrete implementation should be instantiable."""
+    def test_concrete_implementation_works(self):
+        """An ad-hoc class satisfying the Protocol works without inheritance."""
 
-        class ConcreteReader(ISlideReader):
+        class AdHocReader:
             def open(self, path):
                 pass
 
@@ -157,9 +155,10 @@ class TestISlideReaderABC:
             def can_open(cls, path):  # noqa: ARG003
                 return 50
 
-        reader = ConcreteReader()
+        reader = AdHocReader()
         assert reader is not None
         assert reader.can_open("test.test") == 50
+        assert isinstance(reader, SlideReader)
 
 
 # ============================================================================
@@ -659,7 +658,7 @@ class TestContextManagerProtocol:
     def test_context_manager_calls_close(self):
         """Exiting context manager should call close()."""
 
-        class TrackingReader(ISlideReader):
+        class TrackingReader(SlideReaderBase):
             close_called = False
 
             def open(self, path):
@@ -707,7 +706,7 @@ class TestContextManagerProtocol:
     def test_context_manager_closes_on_exception(self):
         """Context manager should close even if an exception occurs."""
 
-        class ErrorReader(ISlideReader):
+        class ErrorReader(SlideReaderBase):
             close_called = False
 
             def open(self, path):
@@ -857,15 +856,15 @@ class TestReaderSelectorRegistration:
     """Test ReaderSelector registration behavior."""
 
     def test_register_valid_reader(self):
-        """Registering a valid ISlideReader subclass should succeed."""
+        """Registering a class that satisfies SlideReader should succeed."""
         selector = ReaderSelector()
         selector.register(OpenSlideReader)
         assert len(selector._readers) == 1
 
     def test_register_invalid_type_raises(self):
-        """Registering a non-ISlideReader should raise TypeError."""
+        """Registering a class missing required SlideReader members raises."""
         selector = ReaderSelector()
-        with pytest.raises(TypeError, match="subclass of ISlideReader"):
+        with pytest.raises(TypeError, match="missing required SlideReader members"):
             selector.register(str)  # type: ignore[arg-type]
 
     def test_register_same_reader_twice_is_idempotent(self):

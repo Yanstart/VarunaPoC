@@ -7,7 +7,6 @@ from .base import VarunaError
 
 class WorkflowError(VarunaError):
     """Base exception for workflow errors."""
-    pass
 
 
 class WorklistNotFoundError(WorkflowError):

@@ -30,7 +30,7 @@ from xml.etree import ElementTree as ET
 
 import numpy as np
 
-from .base import ISlideReader, SlideMetadata
+from .base import SlideMetadata, SlideReaderBase
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def _parse_ome_xml(xml_string: str) -> dict:
     return result
 
 
-class OMETIFFReader(ISlideReader):
+class OMETIFFReader(SlideReaderBase):
     """
     Slide reader for OME-TIFF files using tifffile.
 

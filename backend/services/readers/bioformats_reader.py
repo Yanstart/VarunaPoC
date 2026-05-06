@@ -30,7 +30,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
-from .base import ISlideReader, SlideMetadata
+from .base import SlideMetadata, SlideReaderBase
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ _JRE_ERROR_MSG = (
 )
 
 
-class BioFormatsReader(ISlideReader):
+class BioFormatsReader(SlideReaderBase):
     """
     Slide reader backed by Bio-Formats (via python-bioformats + jpype).
 
