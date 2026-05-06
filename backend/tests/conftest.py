@@ -14,6 +14,7 @@ Documentation:
 import asyncio
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import AsyncMock
@@ -358,8 +359,6 @@ def mock_slide_metadata_storage():
     Returns a SlideMetadata instance (matching the StorageProvider Protocol
     contract) so attribute access works in tests.
     """
-    from datetime import datetime
-
     from core.interfaces.storage import SlideMetadata
 
     return SlideMetadata(
@@ -369,7 +368,7 @@ def mock_slide_metadata_storage():
         dimensions=(100000, 80000),
         level_count=5,
         storage_path="/slides/sample.mrxs",
-        created_at=datetime(2025, 1, 1),
+        created_at=datetime(2025, 1, 1, tzinfo=UTC),
         tags=["breast_cancer", "high_priority"],
         properties={"vendor": "3DHISTECH", "magnification": "40x"},
     )
@@ -513,6 +512,5 @@ def pytest_runtest_setup(item):
             pytest.skip("Redis not available")
 
     # Skip tests marked with 'requires_pacs'
-    if "requires_pacs" in [mark.name for mark in item.iter_markers()]:
-        if not os.getenv("PACS_SERVER"):
-            pytest.skip("PACS server not configured")
+    if "requires_pacs" in [mark.name for mark in item.iter_markers()] and not os.getenv("PACS_SERVER"):
+        pytest.skip("PACS server not configured")

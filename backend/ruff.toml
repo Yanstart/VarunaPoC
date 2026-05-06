@@ -76,8 +76,10 @@ exclude = [
 ]
 
 [lint.per-file-ignores]
-# Tests - allow assertions, magic values, prints for reports, os.path usage, compound assertions
-"tests/**/*.py" = ["S101", "PLR2004", "T201", "PTH110", "PT018"]
+# Tests - allow assertions, magic values, prints for reports, os.path usage,
+# compound assertions, and unused arguments (pytest hooks have fixed signatures
+# and fixtures may be requested for side effects, not their return value).
+"tests/**/*.py" = ["S101", "PLR2004", "T201", "PTH110", "PT018", "ARG001"]
 # Test conftest - needs os.path before Path import for DLL loading
 "tests/conftest.py" = ["PTH110"]
 # Config files - setup scripts with prints and legacy code
