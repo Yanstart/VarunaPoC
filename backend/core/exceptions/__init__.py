@@ -2,16 +2,15 @@
 Core Exceptions for VarunaPoC
 
 Centralized exception hierarchy for clear error handling.
+All custom exceptions inherit from VarunaError; a single `except VarunaError`
+catches every domain-specific error in the project (storage, auth, slide,
+workflow, ML).
 
 Philosophy:
 - Specific exceptions over generic exceptions
 - Include context (what failed, why, how to fix)
 - Log appropriately (error vs warning vs info)
 - User-friendly messages (not technical stacktraces)
-
-Note: ML-specific exceptions (MLProviderError and subclasses) live in
-ml_exceptions.py and inherit directly from Exception for now.
-Migrating them to VarunaError is tracked as a follow-up refactoring task.
 """
 
 from .auth import (
@@ -57,7 +56,7 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidRegionError",
     "MLModelNotLoadedError",
-    # ML (own hierarchy, VarunaError migration pending)
+    # ML (inherits from VarunaError via MLProviderError)
     "MLProviderError",
     "ModelLoadError",
     "PredictionError",

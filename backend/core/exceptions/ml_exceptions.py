@@ -5,6 +5,7 @@ Custom exceptions pour machine learning operations.
 
 Design:
 - Hiérarchie claire (MLProviderError → sous-exceptions spécifiques)
+- Inherits from VarunaError so a single `except VarunaError` catches them
 - Messages informatifs (pas juste "error")
 - Attributs contextuels (model_id, slide_id, etc.)
 
@@ -13,17 +14,21 @@ References:
 - Effective Python Item 87: Define exceptions hierarchically
 """
 
+from .base import VarunaError
 
-class MLProviderError(Exception):
+
+class MLProviderError(VarunaError):
     """
     Base exception pour ML provider errors.
 
     Tous les autres ML exceptions héritent de celle-ci.
+    Inherits from VarunaError so generic `except VarunaError` handlers
+    capture ML errors as well.
 
     Attributes:
-        message: Message d'erreur
+        message: Message d'erreur (inherited from VarunaError)
         provider: Nom du provider ("slideflow", "torchvision", etc.)
-        details: Détails additionnels (dict)
+        details: Détails additionnels (dict, inherited; includes provider key)
 
     Examples:
         >>> try:
@@ -34,17 +39,23 @@ class MLProviderError(Exception):
     """
 
     def __init__(self, message: str, provider: str = "", details: dict = None):
-        self.message = message
         self.provider = provider
-        self.details = details or {}
-        super().__init__(self.message)
+        # Provider also flows into details so generic VarunaError handlers
+        # have full context. __str__ filters it out below to avoid display
+        # duplication with the explicit "(provider: ...)" segment.
+        merged_details = {"provider": provider} if provider else {}
+        if details:
+            merged_details.update(details)
+        super().__init__(message, details=merged_details)
 
     def __str__(self):
         base = f"[ML Provider Error] {self.message}"
         if self.provider:
             base += f" (provider: {self.provider})"
-        if self.details:
-            base += f" - Details: {self.details}"
+        # Filter provider to avoid duplication: it is already shown above.
+        extra = {k: v for k, v in self.details.items() if k != "provider"}
+        if extra:
+            base += f" - Details: {extra}"
         return base
 
 
