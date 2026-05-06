@@ -1438,7 +1438,7 @@ Cette architecture modulaire permet:
 
 Statut au commit `9ff4bc9` (Tier 5 sprint 1, mai 2026).
 
-### Statut des Protocols (mis à jour Tier 5 sprint 7)
+### Statut des Protocols (mis à jour Tier 5 sprint 11)
 
 | Protocol | Implémenteur(s) | Routes utilisatrices | Métriques |
 |---|---|---|---|
@@ -1447,6 +1447,20 @@ Statut au commit `9ff4bc9` (Tier 5 sprint 1, mai 2026).
 | `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` (legacy direct, héritage transitif) | — |
 | `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | `routes/slides.py:get_tile` ✓ (Tier 5 sprint 1) | `varuna_tile_cache_hits_total{level}`, `varuna_tile_cache_misses_total{level}`, `varuna_tile_cache_lookup_seconds{outcome}` |
 | `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `CompositeWorkflowHook`, `NoOpWorkflowHook` | `routes/exports.py` (REPORT_SIGNED), `routes/annotations.py` (CREATE/UPDATE/DELETE/REJECT/BATCH) ✓ | `varuna_workflow_events_total{event_type, hook_type, status}` |
+| `MLProvider` | `SlideflowProvider`, `MockProvider`, `OpenSlideProvider` | `routes/ml.py` (via `MLWorkerProvider.submit`) | — (couvert par les métriques `varuna_tile_load_seconds` côté serveur) |
+| `MLWorkerProvider` (sprint 11) | `MLWorkerProxy` (subprocess Slideflow), `InProcessMLWorker` (ONNX/OpenVINO local), `TritonClientMLWorker` (stub remote) | aucune encore — factory dispo via `services.ml.get_ml_worker_provider()`, migration de `routes/ml.py:get_ml_worker()` reportée à sprint 12 | — |
+
+### Sprint 11 — MLWorkerProvider Protocol (mai 2026)
+
+Sépare proprement **WHAT** est demandé en inférence (`MLProvider`) de **HOW** c'est exécuté (`MLWorkerProvider`).
+
+| Backend | Cas d'usage | Status |
+|---|---|---|
+| `subprocess` (default) | Slideflow + GIL-bound loops, isolation mémoire ~5 GB | Wired (current MLWorkerProxy) |
+| `inprocess` | ONNX Runtime / OpenVINO (release GIL, modèles légers) | New |
+| `triton` | Inférence GPU sur serveur Triton distant (HTTP/gRPC) | Stub avec env wiring (TRITON_URL, TRITON_MODEL_NAME) |
+
+Configuration via `ML_WORKER_BACKEND=subprocess|inprocess|triton`. Le test `test_ml_worker_provider_has_three_implementers` garantit la conformance.
 
 ### Cadence : une route par sprint
 

@@ -7,6 +7,7 @@ against the "Protocol defined but never used" anti-pattern.
 
 from core.interfaces import (
     AuthProvider,
+    MLWorkerProvider,
     SlideReader,
     StorageProvider,
     TileCache,
@@ -45,6 +46,17 @@ def test_workflow_hook_has_two_implementers():
 
     assert isinstance(FHIRWorkflowHook(), WorkflowHook)
     assert isinstance(NoOpWorkflowHook(), WorkflowHook)
+
+
+def test_ml_worker_provider_has_three_implementers():
+    """Subprocess (default), in-process (ONNX/OpenVINO), and Triton stub."""
+    from services.ml.inprocess_worker import InProcessMLWorker
+    from services.ml.triton_worker import TritonClientMLWorker
+    from services.ml.worker import MLWorkerProxy
+
+    assert isinstance(MLWorkerProxy(), MLWorkerProvider)
+    assert isinstance(InProcessMLWorker(), MLWorkerProvider)
+    assert isinstance(TritonClientMLWorker(), MLWorkerProvider)
 
 
 def test_all_custom_exceptions_inherit_from_varuna_error():

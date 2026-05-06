@@ -20,12 +20,17 @@ Two flavours of Protocol coexist:
   opening is expensive and must be amortized. Used by: SlideReader.
 
 Modules:
-- ml_provider:   MLProvider Protocol + result dataclasses (Slideflow, etc.)
+- ml_provider:   MLProvider Protocol + result dataclasses (Slideflow, etc.) — WHAT inference is requested
+- ml_worker:     MLWorkerProvider Protocol — HOW inference is executed (subprocess / in-process / Triton)
 - auth:          AuthProvider Protocol + User model
 - storage:       StorageProvider Protocol (filesystem, S3, PACS)
 - slide_reader:  SlideReader Protocol (OpenSlide, BioFormats, OME-TIFF, OME-Zarr)
 - tile_cache:    TileCache Protocol (memory, Redis, filesystem)
 - workflow:      WorkflowHook Protocol (Telemis, HL7, custom)
+
+The MLProvider / MLWorkerProvider split is intentional — they're orthogonal:
+an InProcessMLWorker can wrap a SlideflowMLProvider, and a TritonClientMLWorker
+runs whatever model is loaded server-side regardless of the local MLProvider.
 """
 
 from .auth import AuthProvider
@@ -36,6 +41,7 @@ from .ml_provider import (
     PredictionResult,
     get_provider,
 )
+from .ml_worker import MLWorkerProvider
 from .slide_reader import SlideReader
 from .storage import StorageProvider
 from .tile_cache import TileCache
@@ -45,6 +51,7 @@ __all__ = [
     # Service Protocols (stateless)
     "AuthProvider",
     "MLProvider",
+    "MLWorkerProvider",
     "StorageProvider",
     "TileCache",
     "WorkflowHook",
