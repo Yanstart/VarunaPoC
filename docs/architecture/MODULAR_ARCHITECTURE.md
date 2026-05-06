@@ -1438,19 +1438,32 @@ Cette architecture modulaire permet:
 
 Statut au commit `9ff4bc9` (Tier 5 sprint 1, mai 2026).
 
-### Statut des Protocols
+### Statut des Protocols (mis à jour Tier 5 sprint 7)
 
 | Protocol | Implémenteur(s) | Routes utilisatrices | Métriques |
 |---|---|---|---|
-| `AuthProvider` | `OIDCAuthProvider` | aucune (legacy `dependencies.py:get_current_user` toujours en place) | — |
-| `StorageProvider` | `FilesystemStorageProvider` | aucune (legacy `slide_scanner` toujours utilisé directement) | — |
-| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` (legacy direct, pas via Protocol) | — |
-| `TileCache` | `TwoLevelTileCache` | **`routes/slides.py:get_tile`** ✓ (Tier 5 sprint 1) | `varuna_tile_cache_hits_total{level}`, `varuna_tile_cache_misses_total{level}`, `varuna_tile_cache_lookup_seconds{outcome}` |
-| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `CompositeWorkflowHook`, `NoOpWorkflowHook` | aucune (factory exposé sur `app.state.workflow_hook` mais aucune route ne le consulte encore) | — |
+| `AuthProvider` | `OIDCAuthProvider` | aucune (legacy `dependencies.py:get_current_user` — gain Protocol limité, pas de migration prévue) | — |
+| `StorageProvider` | `FilesystemStorageProvider` | `ml.py` (9 sites), `slides.py` (5 sites async — get_tile + mpp + info + overview + dzi) ✓ | — (migration silencieuse, mêmes performances) |
+| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` (legacy direct, héritage transitif) | — |
+| `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | `routes/slides.py:get_tile` ✓ (Tier 5 sprint 1) | `varuna_tile_cache_hits_total{level}`, `varuna_tile_cache_misses_total{level}`, `varuna_tile_cache_lookup_seconds{outcome}` |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `CompositeWorkflowHook`, `NoOpWorkflowHook` | `routes/exports.py` (REPORT_SIGNED), `routes/annotations.py` (CREATE/UPDATE/DELETE/REJECT/BATCH) ✓ | `varuna_workflow_events_total{event_type, hook_type, status}` |
 
 ### Cadence : une route par sprint
 
 L'objectif est d'éviter le big-bang. Chaque sprint migre **une seule route** vers les Protocols injectés, mesure le résultat, et ajuste si frottement.
+
+**Sprints livrés (2026-05) :**
+- Sprint 1 : tile cache wiring + hit-rate metrics (commit `9ff4bc9`)
+- Sprint 2 : exports.py REPORT_SIGNED (commit `19f95e0`)
+- Sprint 3 : ml.py StorageProvider injection (9 sites) (commit `cdf8387`)
+- Sprint 4 : slides.py:get_tile shared helper (commit `c9fa981`)
+- Sprint 5 : annotations.py create/validate/delete (commit `636425f`)
+- Sprint 6 : slides.py mpp/info/overview/dzi async + StorageProvider (commit `519f451`)
+- Sprint 7 : annotations.py update/reject/batch_create (commit pending)
+
+**Bug résolus pendant les sprints :**
+- `/metrics` 422 : `request` sans annotation `: Request` (commit `d92238d`)
+- 4 handlers slides.py 422 : `Request` déplacé sous TYPE_CHECKING par auto-fix ruff (commit `519f451`). Règle projet : ne jamais déplacer `Request` (et autres types FastAPI introspectés runtime) en TYPE_CHECKING — utiliser `# noqa: TC002`.
 
 ### Sprint 2 — `routes/exports.py` (recommandé prochain)
 

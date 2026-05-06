@@ -256,6 +256,27 @@ async def update_annotation(
     )
     if not result:
         raise HTTPException(status_code=404, detail="Annotation not found")
+
+    # Sprint 7 — emit ANNOTATION_UPDATED with the post-update annotation state.
+    # `data` carries the partial update payload; we surface what actually
+    # changed (label, status, geometry are the most-watched fields by the DPI).
+    await emit_workflow_event(
+        request,
+        WorkflowEvent(
+            event_type=WorkflowEventType.ANNOTATION_UPDATED,
+            slide_id=slide_id,
+            user_id=current_user.username,
+            metadata={
+                "annotation_id": str(annotation_id),
+                "annotation_type": result.get("annotation_type"),
+                "label": result.get("label"),
+                "status": result.get("status"),
+                "fields_changed": list(data.model_dump(exclude_unset=True).keys())
+                if hasattr(data, "model_dump")
+                else None,
+            },
+        ),
+    )
     return AnnotationResponse(**result)
 
 
@@ -329,6 +350,7 @@ async def validate_annotation(
 
 @router.patch("/{slide_id}/{annotation_id}/reject", response_model=AnnotationResponse)
 async def reject_annotation(
+    request: Request,
     slide_id: str,
     annotation_id: UUID,
     notes: str | None = Query(None, max_length=2000),
@@ -345,6 +367,9 @@ async def reject_annotation(
     """Mark an annotation as rejected (false positive).
 
     Also creates a Correction record to feed the ML retraining pipeline.
+    Emits ANNOTATION_UPDATED with status=rejected so DPI / audit consumers
+    see the negative validation signal alongside the positive ones from
+    validate_annotation.
     """
     result = await db.execute(
         select(Annotation).where(
@@ -379,6 +404,26 @@ async def reject_annotation(
 
     await db.commit()
     await db.refresh(annotation)
+
+    # Sprint 7 — emit ANNOTATION_UPDATED with status=rejected. Mirrors the
+    # validate_annotation emission so a Grafana dashboard can plot
+    # validated/rejected ratios per pathologist.
+    await emit_workflow_event(
+        request,
+        WorkflowEvent(
+            event_type=WorkflowEventType.ANNOTATION_UPDATED,
+            slide_id=slide_id,
+            user_id=current_user.username,
+            metadata={
+                "annotation_id": str(annotation.id),
+                "annotation_type": annotation.annotation_type,
+                "label": annotation.label,
+                "status": "rejected",
+                "rejection_reason": rejection_reason,
+                "rejected_by": current_user.username,
+            },
+        ),
+    )
     return annotation
 
 
@@ -428,10 +473,33 @@ async def batch_create_annotations(
         results = await annotation_service.batch_create_annotations(
             db, slide_id, data.annotations, tenant_id=tenant_id
         )
-        return [AnnotationResponse(**r) for r in results]
     except Exception as e:
         logger.error(f"Batch create failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+    # Sprint 7 — emit a SINGLE ANNOTATION_CREATED event for the batch,
+    # not one-per-item. Auto-detection pipelines can produce hundreds of
+    # annotations at once; per-item events would flood the DPI / FHIR
+    # server and mask the operationally meaningful signal (a batch ran).
+    # The batch is identified by count + annotation_ids; consumers that
+    # want per-item visibility can dereference the IDs.
+    await emit_workflow_event(
+        request,
+        WorkflowEvent(
+            event_type=WorkflowEventType.ANNOTATION_CREATED,
+            slide_id=slide_id,
+            user_id=current_user.username,
+            metadata={
+                "batch": True,
+                "count": len(results),
+                "annotation_ids": [str(r.get("id", "")) for r in results],
+                "annotation_type": data.annotations[0].annotation_type
+                if data.annotations
+                else None,
+            },
+        ),
+    )
+    return [AnnotationResponse(**r) for r in results]
 
 
 # ============================================

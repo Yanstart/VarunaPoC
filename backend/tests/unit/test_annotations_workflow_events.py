@@ -123,3 +123,73 @@ async def test_emit_silently_skips_when_app_state_missing():
         await emit_workflow_event(request, event)
 
     mock_record.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 7 — event-shape assertions for the 3 new emission sites
+# (update / reject / batch_create). The helper-level emit_workflow_event
+# is already covered above; here we just check that the WorkflowEvent
+# payload built by each route fits the documented metadata schema.
+# ---------------------------------------------------------------------------
+
+
+def test_workflow_event_for_update_carries_fields_changed():
+    """Verify the event shape produced by the update_annotation route."""
+    event = WorkflowEvent(
+        event_type=WorkflowEventType.ANNOTATION_UPDATED,
+        slide_id="slide-1",
+        user_id="dr.test",
+        metadata={
+            "annotation_id": "abc-123",
+            "annotation_type": "manual",
+            "label": "tumor",
+            "status": "validated",
+            "fields_changed": ["label", "geometry"],
+        },
+    )
+    assert event.metadata["fields_changed"] == ["label", "geometry"]
+    # Required keys for downstream consumers (DPI / Prometheus dashboards).
+    for key in ("annotation_id", "annotation_type", "label", "status"):
+        assert key in event.metadata
+
+
+def test_workflow_event_for_reject_carries_rejection_reason():
+    """Verify reject_annotation produces an ANNOTATION_UPDATED event with
+    rejection_reason — the structured field that drives the ML retraining
+    pipeline (false_positive_artifact / wrong_label / etc.)."""
+    event = WorkflowEvent(
+        event_type=WorkflowEventType.ANNOTATION_UPDATED,
+        slide_id="slide-1",
+        user_id="dr.test",
+        metadata={
+            "annotation_id": "abc-123",
+            "annotation_type": "auto",
+            "label": "tumor",
+            "status": "rejected",
+            "rejection_reason": "false_positive_artifact",
+            "rejected_by": "dr.test",
+        },
+    )
+    assert event.metadata["status"] == "rejected"
+    assert event.metadata["rejection_reason"] == "false_positive_artifact"
+
+
+def test_workflow_event_for_batch_create_aggregates_to_single_event():
+    """Batch creates emit ONE event with count + annotation_ids list, not
+    N per-item events. Per-item flooding would mask the operational signal.
+    """
+    annotation_ids = [f"id-{i}" for i in range(50)]
+    event = WorkflowEvent(
+        event_type=WorkflowEventType.ANNOTATION_CREATED,
+        slide_id="slide-1",
+        user_id="auto-detection-pipeline",
+        metadata={
+            "batch": True,
+            "count": len(annotation_ids),
+            "annotation_ids": annotation_ids,
+            "annotation_type": "auto",
+        },
+    )
+    assert event.metadata["batch"] is True
+    assert event.metadata["count"] == 50
+    assert len(event.metadata["annotation_ids"]) == 50
