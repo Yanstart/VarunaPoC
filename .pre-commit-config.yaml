@@ -30,6 +30,9 @@ repos:
       # Check for merge conflicts
       - id: check-merge-conflict
 
+      # Prevent files that differ only in case (breaks on Windows/macOS)
+      - id: check-case-conflict
+
       # Ensure files end with newline
       - id: end-of-file-fixer
 
