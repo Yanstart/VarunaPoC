@@ -1431,3 +1431,97 @@ Cette architecture modulaire permet:
 **Contact:** [À compléter]
 **License:** Propriétaire (CHU UCL Namur)
 **Version:** 2.0.0 - 2025-02-05
+
+---
+
+## Wiring Status & Strangler Fig Roadmap
+
+Statut au commit `9ff4bc9` (Tier 5 sprint 1, mai 2026).
+
+### Statut des Protocols
+
+| Protocol | Implémenteur(s) | Routes utilisatrices | Métriques |
+|---|---|---|---|
+| `AuthProvider` | `OIDCAuthProvider` | aucune (legacy `dependencies.py:get_current_user` toujours en place) | — |
+| `StorageProvider` | `FilesystemStorageProvider` | aucune (legacy `slide_scanner` toujours utilisé directement) | — |
+| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` (legacy direct, pas via Protocol) | — |
+| `TileCache` | `TwoLevelTileCache` | **`routes/slides.py:get_tile`** ✓ (Tier 5 sprint 1) | `varuna_tile_cache_hits_total{level}`, `varuna_tile_cache_misses_total{level}`, `varuna_tile_cache_lookup_seconds{outcome}` |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `CompositeWorkflowHook`, `NoOpWorkflowHook` | aucune (factory exposé sur `app.state.workflow_hook` mais aucune route ne le consulte encore) | — |
+
+### Cadence : une route par sprint
+
+L'objectif est d'éviter le big-bang. Chaque sprint migre **une seule route** vers les Protocols injectés, mesure le résultat, et ajuste si frottement.
+
+### Sprint 2 — `routes/exports.py` (recommandé prochain)
+
+**Pourquoi en premier** : c'est le point où l'événement `REPORT_SIGNED` doit être émis (export DICOM = "report signed" sémantiquement). Cela exerce le `WorkflowHook` (FHIR + PACS via Composite). Petite surface (~12 lignes touchées). Risque faible.
+
+**Blueprint 5-step** :
+1. Imports : ajouter `from core.interfaces.workflow import WorkflowEvent, WorkflowEventType`.
+2. Au handler `export_dicom` : récupérer `request.app.state.workflow_hook`.
+3. Après `result = service.export(...)` réussi, émettre :
+   ```python
+   await request.app.state.workflow_hook.on_event(WorkflowEvent(
+       event_type=WorkflowEventType.REPORT_SIGNED,
+       slide_id=slide_id,
+       user_id=current_user.username,
+       metadata={
+           "accession_number": result.accession_number,
+           "patient_id": result.patient_id,
+           "dicom_uid": result.dicom_uid,
+           "anonymized": anonymize,
+       },
+   ))
+   ```
+4. Test unit : mock `request.app.state.workflow_hook`, vérifier l'appel + payload.
+5. Métrique cible (à ajouter) : `varuna_workflow_events_total{event_type, hook_type, status}` Counter dans `monitoring.py`.
+
+**Risque mitigation** : `on_event` ne propage jamais d'exception (contrat du Protocol) — un DPI/PACS down ne peut pas casser l'export DICOM côté viewer.
+
+### Sprint 3 — `routes/ml.py`
+
+**Pourquoi** : injection de `StorageProvider` à la place de l'import direct `slide_scanner.get_slide_path_by_id`. Surface modérée (~15 lignes). Valide le DI sur un module qui consomme le storage en lecture seule.
+
+**Blueprint** :
+1. `from core.interfaces.storage import StorageProvider` + Depends helper.
+2. `get_storage_provider(request: Request) -> StorageProvider: return request.app.state.storage_provider`.
+3. Lifespan dans `main.py` : `_app.state.storage_provider = get_storage_provider()` (ajout symétrique au tile_cache wiring déjà en place).
+4. Remplacer `get_slide_path_by_id(slide_id)` par `await storage.get_slide_path(slide_id)` (renvoie `Path`, équivalent fonctionnel).
+5. Métrique cible : `varuna_storage_calls_total{operation, status}` pour observer où le `FilesystemStorageProvider` est sollicité.
+
+### Sprint 4 — `routes/slides.py` (StorageProvider migration complète)
+
+**Pourquoi en quatrième** : c'est la route la plus large (~200 lignes touchées). Migrer après que ML l'ait validé. Migrer `list_slides`, `info`, `overview`, `worklist` vers `StorageProvider.list_slides` / `get_metadata` / `stream_slide`.
+
+**Blueprint condensé** :
+1. Injecter `StorageProvider` dans 5 endpoints (list, info, overview, worklist, history).
+2. Garder le legacy `slide_scanner` accessible pendant la migration via un fallback `try/except` — supprimer après vérification production.
+3. Couvrir avec les tests existants `test_pacs_integration.py`, ajouter des tests pour la nouvelle injection.
+4. Métrique cible : ratio appels Provider vs legacy pendant la transition (debug temporaire).
+5. Une fois 100% via Provider sur 2 semaines, supprimer les imports `slide_scanner` directs des routes.
+
+### Sprint 5 — `routes/annotations.py`
+
+**Pourquoi en cinquième** : émettre des `WorkflowEvent` sur ANNOTATION_CREATED / ANNOTATION_UPDATED / ANNOTATION_DELETED + REPORT_SIGNED quand un rapport est signé via l'UI annotation. Petite surface. Permet aux hooks de capter le signal réel d'un patho qui valide.
+
+### Métriques à observer
+
+Après chaque sprint, vérifier :
+
+| Sprint | Métrique cible | Seuil de succès |
+|---|---|---|
+| 1 (✓ landed) | `varuna_tile_cache_hits_total / (hits + misses)` | hit rate > 60% après 100 requêtes sur le même slide |
+| 2 | `varuna_workflow_events_total{status="success"}` après un export DICOM | ≥ 1 par export, latence p99 < 200ms |
+| 3 | `varuna_storage_calls_total{operation="get_slide_path"}` | proportionnel au nombre d'appels ML |
+| 4 | Latence p50/p99 inchangée vs avant migration | régression < 5% |
+| 5 | `varuna_workflow_events_total{event_type="REPORT_SIGNED"}` | ≥ 1 par signature annotation, latence p99 < 500ms |
+
+### Décisions architecturales déjà prises (rappel)
+
+- **Service Protocol vs Resource Protocol** : Service stateless pour Auth/Storage/Cache/Workflow ; Resource stateful pour SlideReader. Voir Tier 1 commit (`f642086`).
+- **Cherry-pick + adapter** : on n'a pas réécrit les services existants ; les Protocols sont des adapters Strangler Fig au-dessus du legacy. Migration progressive sans big-bang.
+- **3 dev containers** : Redis (6380), HAPI FHIR (8090), Orthanc (4242/8042). Tous env-driven, AET configurable, fallback graceful en cas d'outage.
+
+### Suivi
+
+Le garde-fou `tests/unit/test_protocol_conformance.py` vérifie que chaque Protocol garde au moins un implémenteur — il ne dit RIEN sur l'usage par les routes. La présente section comble ce gap. À jour à chaque sprint.
