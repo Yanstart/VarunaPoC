@@ -27,16 +27,15 @@ from pydantic import BaseModel, Field
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.exceptions import MLProviderError
-from core.interfaces import StorageProvider, get_provider
+from core.interfaces import MLWorkerProvider, StorageProvider, get_provider
 from rate_limiting import limit, ml_rate
 from routes._storage_helpers import get_storage, resolve_slide_path
 from schemas.geojson import GeoJSONFeatureCollection
-from services.ml import TagExtractor, TagRouter
+from services.ml import TagExtractor, TagRouter, get_ml_worker_provider
 from services.ml.worker import (
     MLWorkerBusyError,
     MLWorkerDownError,
     MLWorkerExecutionError,
-    MLWorkerProxy,
     MLWorkerTimeoutError,
 )
 from services.slide_scanner import get_slide_path_by_id
@@ -49,20 +48,44 @@ from services.slide_scanner import get_slide_path_by_id
 _resolve_slide_path = resolve_slide_path
 
 # ---------------------------------------------------------------------------
-# ML Worker: isolated process for heavy inference
+# ML Worker: dispatched via the MLWorkerProvider Protocol (sprint 11+12).
+#
+# The factory `get_ml_worker_provider()` selects the backend based on
+# ML_WORKER_BACKEND (subprocess | inprocess | triton). routes/ml.py
+# consumes the Protocol — switching backends is an env-var flip with no
+# code change here.
 # ---------------------------------------------------------------------------
-_ml_worker: Optional[MLWorkerProxy] = None
 
 
-def get_ml_worker() -> MLWorkerProxy:
-    """Get or create the ML worker singleton."""
-    global _ml_worker
-    if _ml_worker is None:
-        _ml_worker = MLWorkerProxy()
-        _ml_worker.start()
-    elif not _ml_worker.is_alive():
-        _ml_worker.restart()
-    return _ml_worker
+async def get_ml_worker_dep() -> MLWorkerProvider:
+    """FastAPI dependency: return the singleton MLWorkerProvider, started.
+
+    `start()` is idempotent across all three implementers — a no-op when
+    the worker is already running, a fresh spawn if it crashed.
+    """
+    worker = get_ml_worker_provider()
+    worker.start()
+    return worker
+
+
+# Backward-compat alias: existing code (e.g. shutdown hook in main.py
+# that does `from routes.ml import _ml_worker`) and tests may still
+# reference these names. Resolved lazily via the factory so the
+# semantics (singleton, started) match the legacy get_ml_worker() exactly.
+def get_ml_worker() -> MLWorkerProvider:
+    """Legacy accessor — prefer Depends(get_ml_worker_dep) in new routes."""
+    worker = get_ml_worker_provider()
+    worker.start()
+    return worker
+
+
+# Mirror the legacy global name so `from routes.ml import _ml_worker`
+# continues to resolve. Read lazily via __getattr__ at module level so
+# we don't materialise the singleton at import time.
+def __getattr__(name):
+    if name == "_ml_worker":
+        return get_ml_worker_provider()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -137,9 +160,14 @@ router = APIRouter(prefix="/ml", tags=["Machine Learning"])
 @router.post("/cancel", summary="Cancel the current ML job")
 async def cancel_ml_job(
     _user: CurrentUser = Depends(get_current_user),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
-    """Cancel the running ML job by restarting the worker process."""
-    worker = get_ml_worker()
+    """Cancel the running ML job via the configured MLWorkerProvider backend.
+
+    For MLWorkerProxy (subprocess) this restarts the worker process; for
+    InProcessMLWorker it cancels the current asyncio task; for Triton it
+    cancels the in-flight HTTP/gRPC request (when implemented).
+    """
     cancelled = worker.cancel_current()
     return {"status": "cancelled" if cancelled else "idle"}
 
@@ -475,6 +503,7 @@ async def predict_slide(
     tag_router=Depends(get_tag_router),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Prédiction ML sur slide complète ou région.
@@ -515,7 +544,6 @@ async def predict_slide(
         slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
-        worker = get_ml_worker()
         region_tuple = (
             (body.region.x, body.region.y, body.region.width, body.region.height)
             if body.region
@@ -564,6 +592,7 @@ async def extract_features(
     body: FeatureExtractionRequest = FeatureExtractionRequest(),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Extraction de features (embeddings) pour MIL.
@@ -593,7 +622,6 @@ async def extract_features(
         _check_slide_format(slide_path, slide_id)
 
         # Extract features via ML worker (heavy — isolated process)
-        worker = get_ml_worker()
         result = await worker.submit("extract_features", slide_path, body.tile_size, body.overlap)
 
         return FeatureExtractionResponse(
@@ -625,6 +653,7 @@ async def get_heatmap(
     colormap: str = Query("jet", description="Matplotlib colormap (jet, hot, viridis, etc.)"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Génère heatmap d'explainability (Grad-CAM ou feature attention).
@@ -652,7 +681,6 @@ async def get_heatmap(
         _check_slide_format(slide_path, slide_id)
 
         # Generate heatmap via ML worker (heavy — isolated process)
-        worker = get_ml_worker()
         result = await worker.submit(
             "generate_heatmap", slide_path, prediction_class, resolution_level
         )
@@ -706,6 +734,7 @@ async def detect_regions_endpoint(
     region: Optional[str] = Query(None, description="Viewport region x,y,w,h in slide pixels"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Auto-detection: generate heatmap then extract regions as GeoJSON.
@@ -727,7 +756,6 @@ async def detect_regions_endpoint(
         _check_slide_format(slide_path, slide_id)
 
         # Generate heatmap via ML worker (heavy — isolated process)
-        worker = get_ml_worker()
         heatmap_result = await worker.submit(
             "generate_heatmap",
             slide_path,
@@ -856,6 +884,7 @@ async def get_focus_zones(
     disk_cache=Depends(get_disk_cache),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Focus Assist — Retourne les N zones les plus intéressantes d'une lame.
@@ -887,7 +916,6 @@ async def get_focus_zones(
             slide.close()
         else:
             # Generate heatmap via ML worker (heavy — isolated process)
-            worker = get_ml_worker()
             heatmap_result = await worker.submit(
                 "generate_heatmap", slide_path, prediction_class, resolution_level
             )
@@ -934,6 +962,7 @@ async def measure_slide(
     resolution_level: int = Query(2, ge=0, le=5),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Auto-measure tumor dimensions in millimeters."""
     try:
@@ -948,7 +977,6 @@ async def measure_slide(
         slide.close()
 
         # Generate heatmap via ML worker (heavy — isolated process)
-        worker = get_ml_worker()
         heatmap_result = await worker.submit(
             "generate_heatmap", slide_path, prediction_class, resolution_level
         )
@@ -994,6 +1022,7 @@ async def count_cells(
     include_positions: bool = Query(False, description="Return cell centroid positions"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Comptage cellulaire automatisé (Ki-67 / IHC).
@@ -1020,7 +1049,6 @@ async def count_cells(
             except Exception as exc:
                 logger.warning("Could not read slide dimensions for cell positions: %s", exc)
 
-        worker = get_ml_worker()
         region_data = request.region.model_dump() if request.region else None
         result = await worker.submit(
             "count_cells",
@@ -1057,13 +1085,13 @@ async def cluster_slide(
     n_clusters: int = Query(4, ge=2, le=8, description="Number of clusters"),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Clustering morphologique -- identifie les patterns dans une lame."""
     try:
         slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
-        worker = get_ml_worker()
         result = await worker.submit("cluster", slide_path, n_clusters=n_clusters)
 
         return ClusteringResponse(
@@ -1099,6 +1127,7 @@ async def get_slide_quality(
     slide_id: str,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Controle qualite automatique -- evalue la qualite d'une lame.
@@ -1110,7 +1139,6 @@ async def get_slide_quality(
         slide_path = await _resolve_slide_path(storage, slide_id)
         _check_slide_format(slide_path, slide_id)
 
-        worker = get_ml_worker()
         result = await worker.submit("assess_quality", slide_path)
 
         return QualityResponse(
@@ -1267,6 +1295,7 @@ async def submit_feedback(
     request: FeedbackRequest,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Record pathologist correction on ML prediction."""
     import uuid as uuid_mod
@@ -1327,6 +1356,7 @@ async def get_feedback_stats(
     model_name: str = Query(None),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Get aggregated feedback statistics per model (7-day sliding window)."""
     from core.database import get_db_context
@@ -1380,6 +1410,7 @@ async def search_similar(
     top_k: int = Query(5, ge=1, le=20),
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Find the K most similar slides to the given slide."""
     import os
@@ -1416,6 +1447,7 @@ async def batch_predict(
     background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """
     Batch inference asynchrone.
@@ -1647,6 +1679,7 @@ async def set_device(
     device: str = "auto",
     current_user: CurrentUser = Depends(require_role("MEDECIN", "ADMIN_TECHNIQUE")),
     storage: Optional[StorageProvider] = Depends(get_storage),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Toggle ML device at runtime (auto/cuda/cpu). Restarts ML worker."""
     if device not in ("auto", "cuda", "cpu"):
