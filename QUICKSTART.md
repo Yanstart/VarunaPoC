@@ -183,12 +183,12 @@ cd ../frontend
 
 ---
 
-## Prochaines Étapes (Phase 2)
+## Pour aller plus loin
 
-Une fois Phase 1 validée (overview fonctionne):
-- Tiling DZI pour navigation zone principale
-- Mapping coordonnées OpenSeadragon ↔ OpenSlide
-- Cache tiles
-- Optimisations performance
+Cette page-ci ne couvre que le **bootstrap Python/Node local** (souvent
+demandé sous Windows à cause de MSYS2). Pour la suite :
 
-Voir `CLAUDE.md` pour roadmap complète.
+- **Stack complète en Docker (dev ou prod)** : voir [`docs/Admin/DEPLOYMENT.md`](docs/Admin/DEPLOYMENT.md).
+- **Topologie réseau, ports, profils Compose** : voir [`docs/Admin/INFRASTRUCTURE.md`](docs/Admin/INFRASTRUCTURE.md) et [`docs/Admin/PROFILES.md`](docs/Admin/PROFILES.md).
+- **Manuel utilisateur clinicien** : voir [`docs/Manuel/`](docs/Manuel/).
+- **Architecture du backend (6 Protocols, Strangler Fig, sprints)** : voir [`docs/architecture/MODULAR_ARCHITECTURE.md`](docs/architecture/MODULAR_ARCHITECTURE.md).

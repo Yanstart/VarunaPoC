@@ -18,11 +18,15 @@ VarunaPoC/
   nginx/                   # Reverse proxy, cache tuiles 10 GB, TLS
   monitoring/              # Prometheus + Grafana + alertes
   openslide-patch/         # Fork OpenSlide patche (Ventana BIF LEFT)
-  Slides/                  # Donnees de test multi-vendeur (~60 GB, 12+ formats)
+  Slides/                  # Donnees de test multi-vendeur (~60 GB, 10 formats)
   Scripts/                 # Deploiement Docker + gestion fork OpenSlide
   Config_Integration_Infra/ # Config plugin Telemis (PACS hospitalier)
   docs/                    # Documentation technique, manuel utilisateur, standards
-  Archives/                # Plans futurs (refactoring, MLOps, securite) + historique
+    Admin/                 # Manuel administrateur (topologie, profils, ops, fiches services)
+    architecture/          # MODULAR_ARCHITECTURE.md canonique (Protocols + sprints)
+    Manuel/                # Manuel utilisateur (cliniciens)
+    Deployment/            # Guides specifiques deploiement (CHU, secrets, breakglass)
+  Archives/                # Plans clos + historique + research future-phase
   .github/                 # CI/CD workflows + runner self-hosted (4 replicas)
 ```
 
