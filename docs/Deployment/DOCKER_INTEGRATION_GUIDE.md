@@ -117,7 +117,7 @@ Defines two services:
 - Exposes port 8000
 - Mounts `/local/slides` as `/slides` (read-only)
 - Uses environment variables from `backend/.env.phase1`
-- Health check: `GET /api/health` (retries 5 times)
+- Health check: `GET /api/v1/health` (retries 5 times)
 
 **Frontend Service:**
 - Builds from `./frontend/Dockerfile` (multi-stage: Node build + Nginx serve)
@@ -303,7 +303,7 @@ ls /local/slides  # Should show .mrxs, .bif, or .tif files
 
 ```bash
 # Check backend health
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 # Expected: {"status":"healthy"}
 
 # Check backend root

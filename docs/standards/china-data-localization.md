@@ -219,7 +219,7 @@ which includes health data. The consent must be:
 |-----------|-----------|---------|
 | Backend | FastAPI (Python 3.11) | VarunaPoC API server |
 | Frontend | Vite + OpenSeadragon | WSI viewer application |
-| Database | PostgreSQL 15+ with PostGIS | Annotations, clinical data, audit logs |
+| Database | PostgreSQL 16+ with PostGIS | Annotations, clinical data, audit logs |
 | Object Storage | MinIO (S3-compatible) | WSI slide storage |
 | Authentication | Keycloak | OIDC/SAML identity management |
 | ML Inference | Slideflow + Phikon-v2 (CPU/GPU) | AI analysis (air-gapped) |
@@ -303,7 +303,7 @@ MinIO provides S3-compatible object storage suitable for on-premise deployment:
 
 ```
 +---------------------------------------------+
-| PostgreSQL 15 (Primary-Replica)             |
+| PostgreSQL 16 (Primary-Replica)             |
 |                                             |
 | Primary: Clinical zone server               |
 | Replica: Same zone, synchronous replication |

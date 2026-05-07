@@ -1,8 +1,21 @@
 # VarunaPoC - Deployment Documentation Index
 
-**Version:** 2.0
-**Last Updated:** 2025-12-03
+**Version:** 2.1
+**Last Updated:** 2026-05-07
 **Status:** Production Ready
+
+> **Pour le déploiement standard (compose unifié, profils Docker)**, la doc
+> canonique est [`docs/Admin/`](../Admin/) — topologie réseau, matrice
+> ports/rôles, profils, fiches par service.
+>
+> **Cette page (`Deployment/`)** garde les guides spécifiques à l'environnement
+> CHU UCL Namur : phases historiques de mise en production réseau, intégration
+> Telemis PACS, secrets management, breakglass, scénarios réseau hospitaliers.
+> Les fichiers `docker-compose.phase{1,2.1,2.2}.yml` mentionnés ci-dessous ont
+> été remplacés par le `docker-compose.yml` unifié à la racine ; les scripts
+> `Scripts/Deployment/deploy-phase*.sh` et les `.env.phase*` existent toujours
+> mais sont à considérer comme historiques (utiles pour comprendre la
+> chronologie de l'intégration au CHU).
 
 ---
 
@@ -198,9 +211,9 @@ Telemis PACS → Right-click on slide → "Open with VarunaPoC"
 - [ ] Check: `docker ps` shows running containers
 
 **Post-Deployment:**
-- [ ] Test from server: `curl http://localhost:8000/api/health`
-- [ ] Test from server: `curl http://varun-p-01:8000/api/health`
-- [ ] Test from PC client: `curl http://varun-p-01:8000/api/health`
+- [ ] Test from server: `curl http://localhost:8000/api/v1/health`
+- [ ] Test from server: `curl http://varun-p-01:8000/api/v1/health`
+- [ ] Test from PC client: `curl http://varun-p-01:8000/api/v1/health`
 - [ ] Test from PC client browser: `http://varun-p-01`
 - [ ] Verify slide list loads
 - [ ] Open a slide and verify navigation works

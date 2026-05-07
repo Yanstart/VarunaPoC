@@ -338,7 +338,7 @@ Traduction des messages cles aux contraintes locales identifiees au CHU UCL Namu
 
 **Etape 6 : Mettre en oeuvre**
 
-Developpement Agile avec sprints de 1-2 semaines. Chaque sprint inclut developpement, tests automatises (94 tests backend), et feedback pathologistes.
+Developpement Agile avec sprints de 1-2 semaines. Chaque sprint inclut developpement, tests automatises (1000+ tests backend), et feedback pathologistes.
 
 *Etat actuel : Phase 2 en cours, viewer operationnel (94 lames, 10 formats), annotations CRUD, ML integre. Cf. Section 6.1 pour le detail.*
 
@@ -568,7 +568,7 @@ graph LR
 | Backend API | FastAPI (Python 3.11) | Async natif, validation Pydantic, documentation auto OpenAPI |
 | Lecture WSI | OpenSlide 4.0 | Standard de facto, 10+ formats proprietaires, C library performante |
 | Viewer web | OpenSeadragon 4.1 | Mature, performant, communaute active, DZI protocol |
-| Base donnees | PostgreSQL 15 + PostGIS | Spatial queries, SRID=0 pour coordonnees pixels, robuste |
+| Base donnees | PostgreSQL 16 + PostGIS | Spatial queries, SRID=0 pour coordonnees pixels, robuste |
 | ML Framework | Slideflow 2.3+ | Foundation models (Phikon-v2), pipelines pathologie, CUDA |
 | Cache | Redis 7 [Post] | Cache tuiles LRU, TTL adaptatif, queue async |
 | Reverse proxy | Nginx | TLS termination, load balancing, compression |
@@ -594,7 +594,7 @@ Le projet est en fin de Phase 2 de son plan en 15 semaines. L'ensemble des fonct
 - **Viewer** : navigation fluide sur images gigapixel (100,000+ x 80,000 px). 10 formats vendor (Aperio SVS, Hamamatsu NDPI, Leica SCN, Philips TIFF, 3DHistech MRXS, Ventana BIF, Zeiss CZI, Sakura SVSLIDE, Trestle, DICOM WSI). 94 lames testees, 3 fichiers corrompus correctement rejetes. Tiles en < 15ms avec keep-alive (mesure reelle). Mode comparaison, mini-map, plein ecran, navigation clavier.
 - **Annotations** : CRUD complet PostGIS, 5 outils dessin, labels couleurs, export GeoJSON, statistiques temps reel.
 - **ML / IA** : Slideflow + Phikon-v2 (CUDA), heatmaps ~2.5 min GPU, detection regions tissulaires, classification avec uncertainty quantification, routage par tags.
-- **Infrastructure** : 94 tests automatises, CI/CD GitHub Actions (lint, tests, build Docker, scan securite Trivy/Bandit/CodeQL/Gitleaks), Docker multi-container.
+- **Infrastructure** : 1000+ tests automatises, CI/CD GitHub Actions (lint, tests, build Docker, scan securite Trivy/Bandit/CodeQL/Gitleaks), Docker multi-container.
 
 **Ce qui n'est PAS encore en place :**
 
@@ -623,21 +623,26 @@ Le projet suit une methodologie Agile avec sprints de 1-2 semaines, structuree e
 - *Ajout non prevu* : annotations CRUD + PostGIS, integration ML Slideflow/Phikon-v2, mode comparaison — developpes en avance sur le plan initial car plus prioritaires que le PACS pour la validation terrain
 - Tests utilisateurs reguliers avec pathologistes pilotes
 
-**Phase 3 : Enrichissement (semaines 10-13)** — *A venir (plan revise)*
+**Phase 3 : Enrichissement (semaines 10-13)** — *fait*
 
-- ~~Sprint 7-8 : Systeme d'annotations avec versioning basique~~ — *annotations basiques deja faites, sprint reoriente vers :*
-- Sprint 7-8 : Authentification RBAC, audit trail
-- Sprint 9 : Premiere couche quality control annotations (calcul kappa)
-- Sprint 10 : Integration PACS minimale (command plugin Telemis)
-- Optimisations performance basees sur retours utilisateurs
+- Sprint 7-8 : Authentification OIDC + RBAC, audit trail dual DB+JSON
+- Sprint 9 : Quality metrics inter-annotateurs (kappa Cohen, kappa Fleiss, IoU spatial via PostGIS)
+- Sprint 10 : Integration PACS Telemis (deep-link `/slide/{name}`, resolution case-insensitive)
 
-**Phase 4 : Finalisation (semaines 14-15)** — *A venir*
+**Phase 4 : Finalisation (semaines 14-15)** — *fait*
 
-- Tests d'integration end-to-end avec scenarios cliniques reels
-- Tests de charge (10 utilisateurs simultanes, 50 lames ouvertes)
-- Documentation technique et utilisateur complete
-- Formation initiale des utilisateurs (sessions 2h par groupe de 5)
-- Mise en production avec periode d'accompagnement renforce (2 semaines)
+- Tests d'integration et E2E (Playwright, 18 suites)
+- Documentation technique (Manuel admin, MODULAR_ARCHITECTURE.md, fiches services) et utilisateur (Manuel/01-08)
+- CI/CD complet (lint, tests, build Docker, scans securite)
+- Tag stable `v0.1.0` (Waves 1-4 + standards), 62 issues fermees
+
+**Apres v0.1.0 — Migration Strangler Fig (mai 2026)** — *en cours*
+
+- 6 Protocols (PEP 544) : `AuthProvider`, `StorageProvider`, `SlideReader`, `TileCache`, `WorkflowHook`, `MLWorkerProvider`
+- 9 routes cablees via FastAPI `Depends` (sprints 1-12)
+- WebSocket broadcast des workflow events (sprint 15)
+- Conteneurs sandbox dev : Redis (cache L2), HAPI FHIR (FHIR R4), Orthanc (PACS DICOM)
+- Voir `docs/architecture/MODULAR_ARCHITECTURE.md` pour le sprint log detaille
 
 ### 6.3 Trajectoire post-MVP
 
@@ -770,7 +775,7 @@ Le risque principal du projet est la dependance a un developpeur unique. C'est u
 **Mesures en place :**
 
 - **Code open-source** (GitHub public) : n'importe quel developpeur Python/JS peut forker et continuer
-- **94 tests automatises** : un nouveau developpeur peut modifier le code avec un filet de securite
+- **1000+ tests automatises** : un nouveau developpeur peut modifier le code avec un filet de securite
 - **CI/CD complet** : lint, tests, build Docker, scan securite — le pipeline valide automatiquement chaque changement
 - **Architecture modulaire** : chaque module (slides, annotations, ML) est isole avec une interface claire ; on peut modifier l'un sans comprendre les autres
 - **Stack standard** : FastAPI, PostgreSQL, OpenSeadragon — pas de technologies exotiques, large pool de developpeurs competents

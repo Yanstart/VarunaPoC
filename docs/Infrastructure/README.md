@@ -10,7 +10,7 @@
 
 ### 1. Architecture Complète
 
-**Fichier:** `C:\Users\junio\Desktop\CHU-UCL\VarunaPoC\docs\INFRASTRUCTURE_ARCHITECTURE.md`
+**Fichier:** `docs/Admin/INFRASTRUCTURE.md`
 
 **Contenu:**
 - Architecture C4 (Contexte, Containers, Components)
@@ -226,7 +226,7 @@ chmod +x Scripts/deploy-optimized.sh
 ## Support et Contacts
 
 **Documentation Technique:**
-- Architecture: `docs/INFRASTRUCTURE_ARCHITECTURE.md`
+- Architecture: `docs/Admin/INFRASTRUCTURE.md`
 - Déploiement: `DEPLOYMENT_GUIDE.md`
 - TFE: `docs/INFRASTRUCTURE_SUMMARY_TFE.md`
 

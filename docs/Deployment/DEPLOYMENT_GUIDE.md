@@ -527,7 +527,7 @@ docker-compose -f docker-compose.optimized.yml up -d --no-deps frontend nginx
    kubectl rollout status deployment/varuna-backend -n production
    ```
 
-Voir `docs/INFRASTRUCTURE_ARCHITECTURE.md` pour architecture K8s complète.
+Voir `docs/Admin/INFRASTRUCTURE.md` pour architecture K8s complète.
 
 ---
 
@@ -541,7 +541,7 @@ Voir `docs/INFRASTRUCTURE_ARCHITECTURE.md` pour architecture K8s complète.
 
 **Documentation:**
 
-- Architecture: `docs/INFRASTRUCTURE_ARCHITECTURE.md`
+- Architecture: `docs/Admin/INFRASTRUCTURE.md`
 - API Reference: http://localhost:8000/docs (Swagger UI)
 - User Manual: `docs/Manuel/`
 

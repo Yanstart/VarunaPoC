@@ -170,7 +170,7 @@ uvicorn main:app --reload
 
 Tests:
 - http://localhost:8000 → JSON status
-- http://localhost:8000/api/health → `{"status":"healthy"}`
+- http://localhost:8000/api/v1/health → `{"status":"healthy"}`
 - http://localhost:8000/api/slides → Liste lames (peut être vide si /Slides vide)
 
 ### Frontend

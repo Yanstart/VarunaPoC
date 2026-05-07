@@ -202,8 +202,8 @@ VITE_ENVIRONMENT=phase2.1-network
 **From Server:**
 ```bash
 # Health check
-curl http://localhost:8000/api/health
-curl http://varun-p-01:8000/api/health
+curl http://localhost:8000/api/v1/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Frontend
 curl http://localhost:80
@@ -216,7 +216,7 @@ curl http://localhost:8000/api/slides/
 **From PC Client:**
 ```bash
 # Health check
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Open browser
 http://varun-p-01
@@ -372,8 +372,8 @@ docker exec varuna-backend-phase2.2 ls -la /slides
 docker exec varuna-backend-phase2.2 find /slides -name "*.mrxs" | head -5
 
 # Health check
-curl http://localhost:8000/api/health
-curl http://varun-p-01:8000/api/health
+curl http://localhost:8000/api/v1/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Slides API
 curl http://localhost:8000/api/slides/
@@ -382,7 +382,7 @@ curl http://localhost:8000/api/slides/
 **From PC Client:**
 ```bash
 # Health check
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Open browser
 http://varun-p-01
@@ -541,8 +541,8 @@ chmod +x Scripts/Deployment/*.sh
 **6. Test from Server**
 ```bash
 # Health check
-curl http://localhost:8000/api/health
-curl http://varun-p-01:8000/api/health
+curl http://localhost:8000/api/v1/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Open browser (if GUI available)
 xdg-open http://varun-p-01  # Linux with GUI
@@ -553,7 +553,7 @@ start http://varun-p-01     # Windows
 ```bash
 # Test connectivity
 ping varun-p-01
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Open browser
 http://varun-p-01
@@ -644,17 +644,17 @@ Both `deploy-phase2.1.sh` and `deploy-phase2.2.sh` run automated tests:
 **Phase 2.1 and 2.2:**
 
 - [ ] **Server localhost access**
-  - [ ] http://localhost:8000/api/health returns 200 OK
+  - [ ] http://localhost:8000/api/v1/health returns 200 OK
   - [ ] http://localhost:80 serves frontend
   - [ ] http://localhost:8000/api/slides/ returns slides
 
 - [ ] **Server network hostname access**
-  - [ ] http://varun-p-01:8000/api/health returns 200 OK
+  - [ ] http://varun-p-01:8000/api/v1/health returns 200 OK
   - [ ] http://varun-p-01 serves frontend
 
 - [ ] **PC client access**
   - [ ] ping varun-p-01 succeeds
-  - [ ] http://varun-p-01:8000/api/health accessible
+  - [ ] http://varun-p-01:8000/api/v1/health accessible
   - [ ] http://varun-p-01 opens frontend
   - [ ] Slide list loads correctly
   - [ ] Clicking a slide opens viewer
@@ -688,7 +688,7 @@ time curl -o /dev/null -s http://varun-p-01:8000/api/slides/{slide_id}/tile/{lev
 **Concurrent Users:**
 ```bash
 # Use Apache Bench (install: sudo apt install apache2-utils)
-ab -n 100 -c 10 http://varun-p-01:8000/api/health
+ab -n 100 -c 10 http://varun-p-01:8000/api/v1/health
 
 # Target: 100 requests, 10 concurrent, < 1 second average
 ```
@@ -719,7 +719,7 @@ nslookup varun-p-01
 
 # Test with IP directly
 ping <SERVER_IP>
-curl http://<SERVER_IP>:8000/api/health
+curl http://<SERVER_IP>:8000/api/v1/health
 ```
 
 **Solutions:**
@@ -977,7 +977,7 @@ docker logs varuna-backend-phase2.X 2>&1 | grep -i "no such file"
 ./Scripts/Deployment/deploy-phase1.sh
 
 # Verify
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 ```
 
 ### Rollback from Phase 2.2 to Phase 2.1
@@ -1105,7 +1105,7 @@ git pull
 ./Scripts/Deployment/deploy-phase2.X.sh
 
 # Verify
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 ```
 
 **Update Docker images:**
@@ -1125,7 +1125,7 @@ docker pull nginx:alpine
 ```bash
 # Automated health check script (run via cron)
 #!/bin/bash
-ENDPOINT="http://varun-p-01:8000/api/health"
+ENDPOINT="http://varun-p-01:8000/api/v1/health"
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $ENDPOINT)
 
 if [ "$RESPONSE" != "200" ]; then

@@ -24,8 +24,8 @@
 docker ps | grep varuna
 
 # Check health
-curl http://localhost:8000/api/health
-curl http://varun-p-01:8000/api/health
+curl http://localhost:8000/api/v1/health
+curl http://varun-p-01:8000/api/v1/health
 
 # View logs
 docker logs varuna-backend-phase2.X
@@ -77,7 +77,7 @@ telnet varun-p-01 80
 telnet varun-p-01 8000
 
 REM Test API
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 
 REM Open in browser
 start http://varun-p-01
@@ -87,10 +87,10 @@ start http://varun-p-01
 
 ```bash
 # Test localhost
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 
 # Test network hostname
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 
 # Check containers
 docker ps
@@ -187,7 +187,7 @@ CORS_ORIGINS=http://varun-p-01,http://localhost
 |---------|-----|-------------------|
 | Frontend | http://varun-p-01 | VarunaPoC homepage |
 | Backend API | http://varun-p-01:8000 | JSON with endpoints |
-| Health Check | http://varun-p-01:8000/api/health | {"status":"ok"} |
+| Health Check | http://varun-p-01:8000/api/v1/health | {"status":"ok"} |
 | API Docs | http://varun-p-01:8000/docs | Swagger UI |
 | Slides List | http://varun-p-01:8000/api/slides/ | JSON array of slides |
 
@@ -267,7 +267,7 @@ thirdPartySoftwareName = VarunaPoC - WSI Viewer
 - [ ] `ping varun-p-01` succeeds
 - [ ] `telnet varun-p-01 80` connects
 - [ ] `telnet varun-p-01 8000` connects
-- [ ] `curl http://varun-p-01:8000/api/health` returns {"status":"ok"}
+- [ ] `curl http://varun-p-01:8000/api/v1/health` returns {"status":"ok"}
 - [ ] Browser: http://varun-p-01 loads frontend
 - [ ] Slide list appears
 - [ ] Can open and navigate a slide

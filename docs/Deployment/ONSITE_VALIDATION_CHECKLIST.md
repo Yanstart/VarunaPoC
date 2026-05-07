@@ -96,7 +96,7 @@ docker-compose -f docker-compose.phase1.yml up -d
 
 ```bash
 # Test health check
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 # Attendu: {"status":"healthy"}
 
 # Test liste des slides
@@ -109,7 +109,7 @@ curl http://localhost:8000/api/slides/{id}/info
 ```
 
 **Checklist:**
-- [ ] `/api/health` retourne `{"status":"healthy"}`
+- [ ] `/api/v1/health` retourne `{"status":"healthy"}`
 - [ ] `/api/slides/` retourne liste de slides (non vide)
 - [ ] `/api/slides/{id}/info` retourne métadonnées correctes
 
@@ -281,8 +281,8 @@ docker-compose -f docker-compose.phase2.1.yml up -d
 
 ```bash
 # Test 1: Backend
-curl http://localhost:8000/api/health
-curl http://192.168.1.100:8000/api/health
+curl http://localhost:8000/api/v1/health
+curl http://192.168.1.100:8000/api/v1/health
 
 # Test 2: Frontend
 start http://localhost
@@ -330,7 +330,7 @@ Test-NetConnection -ComputerName varun-p-01 -Port 9090
 
 ```bash
 # Depuis PC client
-curl http://varun-p-01:8000/api/health
+curl http://varun-p-01:8000/api/v1/health
 # Attendu: {"status":"healthy"}
 
 curl http://varun-p-01:8000/api/slides/
@@ -338,7 +338,7 @@ curl http://varun-p-01:8000/api/slides/
 ```
 
 **Checklist:**
-- [ ] `/api/health` répond correctement
+- [ ] `/api/v1/health` répond correctement
 - [ ] `/api/slides/` retourne données
 - [ ] Latence réseau acceptable (< 100ms)
 
@@ -496,7 +496,7 @@ docker ps
 ### Problème: Backend répond mais frontend ne charge pas
 
 **Symptômes:**
-- `curl http://localhost:8000/api/health` fonctionne
+- `curl http://localhost:8000/api/v1/health` fonctionne
 - `http://localhost` affiche page blanche
 
 **Solutions:**
@@ -529,7 +529,7 @@ docker ps
    ```
 3. Tester avec IP directement (pas hostname):
    ```bash
-   curl http://192.168.1.100:8000/api/health
+   curl http://192.168.1.100:8000/api/v1/health
    ```
 
 ### Problème: Slides ne s'affichent pas

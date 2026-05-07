@@ -1087,7 +1087,7 @@ def deidentify_dicom(dcm: pydicom.Dataset) -> pydicom.Dataset:
 
 ### Testing (Current: 70%)
 
-- ✅ Unit tests (94 tests, pytest)
+- ✅ Unit tests (1000+ tests, pytest)
 - ✅ Format detection tests (94 slides, 10 formats)
 - ⚠️ Integration tests (annotation CRUD skipped on Windows)
 - ❌ End-to-end tests (no Playwright/Selenium)

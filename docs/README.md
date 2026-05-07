@@ -1,214 +1,115 @@
-# VarunaPoC - Documentation Backend
+# VarunaPoC — Documentation
 
-Ce dossier contient la documentation complète du backend VarunaPoC:
+Index central de la documentation du projet VarunaPoC.
 
-- **Documentation des erreurs et limitations** rencontrées
-- **Plans de refactoring** vers Clean Architecture
-- **Guides de migration** étape par étape
-- **Diagrammes d'architecture**
+> Pour démarrer rapidement : voir [`Admin/`](./Admin/) (déploiement) ou
+> [`Manuel/`](./Manuel/) (utilisation clinicienne).
 
 ---
 
-## Documents Principaux
+## Par audience
 
-### Architecture et Refactoring
-
-| Document | Description | Temps de Lecture |
-|----------|-------------|------------------|
-| [BACKEND_REFACTORING.md](./BACKEND_REFACTORING.md) | Plan complet de refactoring vers Clean Architecture (37 pages) | 45 min |
-| [BACKEND_REFACTORING_SUMMARY.md](./BACKEND_REFACTORING_SUMMARY.md) | Résumé exécutif du plan de refactoring | 5 min |
-| [BACKEND_ARCHITECTURE_DIAGRAM.md](./BACKEND_ARCHITECTURE_DIAGRAM.md) | Diagrammes ASCII de l'architecture cible | 15 min |
-| [BACKEND_REFACTORING_STEP1_EXAMPLE.md](./BACKEND_REFACTORING_STEP1_EXAMPLE.md) | Guide pratique Étape 1: Configuration centralisée | 10 min |
-
-### Manuel Utilisateur
-
-| Document | Description |
-|----------|-------------|
-| [Manuel/README.md](./Manuel/README.md) | Index du manuel utilisateur |
-| [Manuel/01-INTRODUCTION.md](./Manuel/01-INTRODUCTION.md) | Présentation et premiers pas |
-| [Manuel/02-NAVIGATION_DOSSIERS.md](./Manuel/02-NAVIGATION_DOSSIERS.md) | Utilisation de l'explorateur de fichiers |
-
-### MLOps & Machine Learning (Phase 3)
-
-| Document | Description | Temps de Lecture |
-|----------|-------------|------------------|
-| [MLOPS_ARCHITECTURE.md](./MLOPS_ARCHITECTURE.md) | Architecture MLOps complète - Référence principale | 60 min |
-| [MLOPS_INTEGRATION_GUIDE.md](./MLOPS_INTEGRATION_GUIDE.md) | Guide d'intégration progressive par phases | 30 min |
-| [MLOPS_FILES_SUMMARY.md](./MLOPS_FILES_SUMMARY.md) | Index de tous les fichiers MLOps créés/à créer | 10 min |
-
-**Vue d'ensemble MLOps:**
-- **Système de tags** (organ, stain, marker) avec extraction automatique
-- **Routage intelligent** vers modèles spécialisés (Gleason, Ki-67, HER2, etc.)
-- **Pipeline feedback** pathologistes pour amélioration continue
-- **Continuous learning** avec MLflow, DVC, Airflow
-- **Explainability** (Grad-CAM, SHAP) et uncertainty quantification
-- **Monitoring drift** et performance avec Evidently AI
-
-**Voir:** `backend/services/ml/README.md` pour documentation technique détaillée
+| Vous êtes... | Commencer par |
+|---|---|
+| **Clinicien·ne / utilisateur·rice final·e** | [`Manuel/`](./Manuel/) |
+| **Administrateur·rice / IT hôpital** | [`Admin/`](./Admin/) |
+| **Développeur·euse backend / frontend** | [`architecture/MODULAR_ARCHITECTURE.md`](./architecture/MODULAR_ARCHITECTURE.md) |
+| **DevOps / SRE** | [`Admin/INFRASTRUCTURE.md`](./Admin/INFRASTRUCTURE.md) puis [`Deployment/`](./Deployment/) |
+| **Auditeur·rice conformité** | [`standards/`](./standards/) |
 
 ---
 
-## Erreurs et Limitations
+## Index par dossier
 
-Ce dossier contient également la documentation détaillée de toutes les erreurs, limitations et problèmes rencontrés durant le développement de VarunaPoC.
+### [`Admin/`](./Admin/) — Manuel administrateur
+Topologie réseau, profils Compose, fiches par service, opérations courantes.
+**Doc canonique pour déployer et opérer.**
 
-## Objectif
+| Page | Contenu |
+|---|---|
+| [README.md](./Admin/README.md) | Index + quickstart dev/prod |
+| [INFRASTRUCTURE.md](./Admin/INFRASTRUCTURE.md) | Topologie, ports, volumes, healthchecks, hardware |
+| [PROFILES.md](./Admin/PROFILES.md) | Quand activer/désactiver chaque profil Compose |
+| [DEPLOYMENT.md](./Admin/DEPLOYMENT.md) | Procédure complète (workstation → prod hôpital) |
+| [OPERATIONS.md](./Admin/OPERATIONS.md) | Backup/restore, logs, troubleshooting |
+| [services/](./Admin/services/) | Une fiche par conteneur |
 
-**Documenter systématiquement** chaque erreur non triviale pour:
-1. Comprendre la cause racine
-2. Archiver les recherches effectuées
-3. Faciliter le debugging futur
-4. Aider les futurs développeurs/mainteneurs
-5. Éviter de refaire les mêmes recherches
+### [`architecture/`](./architecture/) — Architecture technique
 
-## Structure des Documents
+| Page | Contenu |
+|---|---|
+| [README.md](./architecture/README.md) | Statut courant + index architecture |
+| [MODULAR_ARCHITECTURE.md](./architecture/MODULAR_ARCHITECTURE.md) | **Canonique** — 6 Protocols, Strangler Fig, sprint log |
+| [ARCHITECTURE_V3.md](./architecture/ARCHITECTURE_V3.md) | Vision systeme V3 (diagrammes C4) |
+| [SYSTEM_PATTERNS.md](./architecture/SYSTEM_PATTERNS.md) | Patterns implémentés (Factory, Strategy, EventBus) |
+| [MODULE_CONTRACTS.md](./architecture/MODULE_CONTRACTS.md) | Contrats d'interface entre modules |
+| [REFACTORING_PLAN.md](./architecture/REFACTORING_PLAN.md) | Plan migration Clean Architecture |
+| [READER_SELECTION_SYSTEM.md](./architecture/READER_SELECTION_SYSTEM.md) | Sélection des lecteurs WSI |
+| [QUICK_START_MODULAR.md](./architecture/QUICK_START_MODULAR.md) | Quickstart architecture modulaire |
+| [IMPLEMENTATION_REPORT.md](./architecture/IMPLEMENTATION_REPORT.md) | Rapport implémentation pour management |
+| [INTEGRATION_SUMMARY.md](./architecture/INTEGRATION_SUMMARY.md) | Résumé intégrations (Slideflow, FHIR, DICOM) |
 
-Chaque erreur est documentée dans un fichier `ERROR_[NOM_COURT].md` suivant le template `ERROR_TEMPLATE.md`.
+### [`Manuel/`](./Manuel/) — Manuel utilisateur clinicien
+Guides en français pour les utilisateurs finaux (médecins, chercheurs).
 
-### Sections Obligatoires
+01-INTRODUCTION → 08-QUALITE + 99-FAQ. Voir [`Manuel/README.md`](./Manuel/README.md).
 
-- **Description du Problème**: Quoi, où, quand
-- **Analyse Technique**: Pourquoi, comment
-- **Recherches Effectuées**: Ce qui a été testé
-- **Solutions Envisagées**: Options possibles
-- **Solution Implémentée**: Ce qui a été fait
-- **Tests de Reproduction**: Script pour reproduire
-- **Références Externes**: Issues, docs, forums
+### [`Deployment/`](./Deployment/) — Guides spécifiques CHU
+Runbooks production, secrets management, breakglass, integration Telemis,
+monitoring, scénarios réseau hospitaliers.
 
-## Liste des Erreurs Documentées
+### [`Infrastructure/`](./Infrastructure/) — CI/CD
+Guides GitHub Actions, runner self-hosted, pipeline.
 
-### Erreurs Actives (Non Résolues)
+### [`adr/`](./adr/) — Architecture Decision Records
+Décisions techniques majeures (slide ID MD5, modules optionnels, PostGIS, …).
 
-| Fichier | Titre | Impact | Date | Status |
-|---------|-------|--------|------|--------|
-| [ERROR_BIF_DIRECTION_LEFT.md](ERROR_BIF_DIRECTION_LEFT.md) | BIF "Bad direction attribute LEFT" | Certains fichiers BIF ne s'ouvrent pas | 2025-10-21 | Contourné |
+### [`implementation/`](./implementation/) — Notes d'implémentation
+Patches et fixes documentés (BIF LEFT, OIDC token injection, MPP fallback, …).
 
-### Erreurs Résolues
+### [`operations/`](./operations/)
+Procédures opérationnelles (chiffrement au repos, …).
 
-| Fichier | Titre | Solution | Date Résolution |
-|---------|-------|----------|-----------------|
-| _(Aucune pour l'instant)_ | - | - | - |
+### [`research/`](./research/)
+Notes d'enquêtes (interviews pathologistes, workflows annotation).
 
-### Limitations Connues
+### [`standards/`](./standards/) — Conformité réglementaire
+EU AI Act, FDA 510(k), Health Canada MDL, US TEFCA, China data localization,
+certificats Belgian eHealth.
 
-| Fichier | Titre | Workaround | Date |
-|---------|-------|------------|------|
-| [ERROR_BIF_DIRECTION_LEFT.md](ERROR_BIF_DIRECTION_LEFT.md) | OpenSlide ne supporte pas direction LEFT | Gestion d'erreur gracieuse | 2025-10-21 |
-
-## Quand Créer un Document d'Erreur ?
-
-**OUI** - Créer un document si:
-- ✅ L'erreur persiste après plusieurs tentatives de résolution
-- ✅ L'erreur nécessite des recherches approfondies (docs, GitHub issues, forums)
-- ✅ L'erreur est liée à une limitation externe (bibliothèque, format, OS)
-- ✅ La solution n'est pas évidente et nécessite un workaround
-- ✅ L'erreur pourrait se reproduire avec d'autres fichiers/cas
-
-**NON** - Ne pas créer de document si:
-- ❌ Simple typo ou bug évident corrigé immédiatement
-- ❌ Erreur de configuration avec solution standard
-- ❌ Problème utilisateur (mauvais usage de l'API)
-
-## Comment Utiliser le Template
-
-1. Copier `ERROR_TEMPLATE.md`
-2. Renommer en `ERROR_[NOM_DESCRIPTIF].md`
-3. Remplir toutes les sections obligatoires
-4. Ajouter à la liste ci-dessus
-5. Commiter avec le code qui implémente la solution
-
-### Exemple de Nommage
-
-- ✅ `ERROR_BIF_DIRECTION_LEFT.md`
-- ✅ `ERROR_OPENSLIDE_JPEG_CORRUPTION.md`
-- ✅ `ERROR_CORS_LOCALHOST_BLOCKED.md`
-- ❌ `error1.md` (pas descriptif)
-- ❌ `BUG.md` (trop générique)
-- ❌ `ventana_fix.md` (pas de préfixe ERROR_)
-
-## Convention de Nommage
-
-```
-ERROR_[COMPOSANT]_[DESCRIPTION_COURTE].md
-```
-
-**Exemples**:
-- `ERROR_OPENSLIDE_UNSUPPORTED_FORMAT.md`
-- `ERROR_FASTAPI_CORS_POLICY.md`
-- `ERROR_VITE_MODULE_NOT_FOUND.md`
-- `ERROR_WINDOWS_OPENSLIDE_DLL.md`
-
-## Intégration avec le Code
-
-Quand un workaround est implémenté, ajouter un commentaire dans le code:
-
-```python
-# Workaround pour ERROR_BIF_DIRECTION_LEFT.md
-# OpenSlide ne supporte pas direction="LEFT" dans les BIF
-try:
-    slide = openslide.OpenSlide(path)
-except openslide.OpenSlideError as e:
-    if "Bad direction attribute" in str(e):
-        # Voir docs/ERROR_BIF_DIRECTION_LEFT.md pour détails
-        return {"is_supported": False, "notes": "BIF LEFT direction"}
-```
-
-## Règles de Rédaction
-
-### ✅ FAIRE
-- Écrire en français (langue du projet)
-- Inclure des exemples de code concrets
-- Citer les sources (GitHub issues, docs officielles)
-- Expliquer le "pourquoi" pas juste le "quoi"
-- Mettre à jour la date de dernière révision
-- Lier vers le code implémenté
-
-### ❌ NE PAS FAIRE
-- **Utiliser des emojis dans les logs Python** (cause des erreurs d'encodage)
-- Copier-coller sans comprendre
-- Laisser des sections vides (mettre "N/A" si non applicable)
-- Oublier de tester le script de reproduction
-- Négliger les métadonnées (date, version, auteur)
-
-## Maintenance
-
-### Révision Trimestrielle
-- Vérifier si les erreurs sont toujours d'actualité
-- Mettre à jour les versions des bibliothèques testées
-- Ajouter de nouvelles solutions si découvertes
-
-### Avant Release en Production
-- Revoir toutes les erreurs "Non Résolues"
-- Vérifier si des fixes officiels existent
-- Mettre à jour les workarounds si nécessaire
-
-## Contribution
-
-Si vous découvrez une nouvelle erreur nécessitant documentation:
-
-1. Créer le fichier `ERROR_[NOM].md` basé sur le template
-2. Remplir toutes les sections
-3. Ajouter à la liste dans ce README
-4. Commiter avec le code de workaround
-5. Mentionner le fichier dans la PR/commit message
-
-## Ressources Externes Utiles
-
-### OpenSlide
-- [GitHub Issues](https://github.com/openslide/openslide/issues)
-- [Formats Documentation](https://openslide.org/formats/)
-- [API Python Docs](https://openslide.org/api/python/)
-
-### FastAPI
-- [GitHub Issues](https://github.com/tiangolo/fastapi/issues)
-- [Documentation](https://fastapi.tiangolo.com/)
-
-### Forums
-- [Image.sc (digital pathology)](https://forum.image.sc/)
-- [Stack Overflow - OpenSlide tag](https://stackoverflow.com/questions/tagged/openslide)
+### [`plans/`](./plans/)
+Plans actifs uniquement. Plans clos (Waves 1-4) → `Archives/plans-historiques/`.
 
 ---
 
-**Dernière mise à jour**: 2025-10-21
-**Maintenu par**: Équipe VarunaPoC
-**Contact**: [Référence projet ou équipe]
+## Documents racine `docs/`
+
+| Document | Rôle |
+|---|---|
+| [PROPOSAL_VARUNA_v2.md](./PROPOSAL_VARUNA_v2.md) | Vision projet, analyse marché, roadmap |
+| [PROTOCOLE.md](./PROTOCOLE.md) | Spécification protocole hôpital (Telemis, eHealth) |
+| [ML_INTEGRATION.md](./ML_INTEGRATION.md) | Architecture ML / Slideflow / Phikon-v2 |
+| [ML_COMPATIBILITY.md](./ML_COMPATIBILITY.md) | Compatibilité ML par format WSI |
+| [FORMATS_SUPPORTED.md](./FORMATS_SUPPORTED.md) | 10 formats supportés |
+| [ECOSYSTEM_MAP.md](./ECOSYSTEM_MAP.md) | Cartographie écosystème WSI |
+| [ANALYSE_DIRECTION_PROJET.md](./ANALYSE_DIRECTION_PROJET.md) | Stratégie long-terme |
+| [ETUDE_SOLUTIONS_EXISTANTES.md](./ETUDE_SOLUTIONS_EXISTANTES.md) | Analyse Cytomine/DSA/QuPath |
+| [ERROR_BIF_DIRECTION_LEFT.md](./ERROR_BIF_DIRECTION_LEFT.md) | Bug OpenSlide BIF Ventana |
+| [ERROR_TEMPLATE.md](./ERROR_TEMPLATE.md) | Template documentation d'erreur |
+
+---
+
+## Convention errors documentés
+
+Quand une erreur nécessite recherche + workaround, on crée un `ERROR_[NOM].md`
+en suivant [`ERROR_TEMPLATE.md`](./ERROR_TEMPLATE.md). Cible :
+
+- Cause racine documentée
+- Recherches effectuées archivées
+- Workaround référencé dans le code (commentaire pointant vers le fichier)
+
+Ne pas créer un `ERROR_*.md` pour les bugs triviaux résolus immédiatement.
+
+---
+
+**Dernière mise à jour :** 2026-05-07

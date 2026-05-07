@@ -92,7 +92,7 @@ $COMPOSE_CMD up -d --force-recreate --no-build
 
 # 5. Verify health
 $COMPOSE_CMD ps
-curl -f http://localhost/api/health
+curl -f http://localhost/api/v1/health
 ```
 
 ---
@@ -159,7 +159,7 @@ $COMPOSE_CMD up -d
 
 # 7. Verify
 $COMPOSE_CMD ps
-curl -f http://localhost/api/health
+curl -f http://localhost/api/v1/health
 ```
 
 ---
@@ -169,7 +169,7 @@ curl -f http://localhost/api/health
 After the upgrade script completes successfully, run through this verification
 checklist:
 
-- [ ] **Health endpoint** -- `curl http://localhost/api/health` returns 200.
+- [ ] **Health endpoint** -- `curl http://localhost/api/v1/health` returns 200.
 - [ ] **Frontend loads** -- open `http://localhost/` in a browser, confirm the
       viewer appears.
 - [ ] **Open a slide** -- select a slide from the list and confirm tiles load

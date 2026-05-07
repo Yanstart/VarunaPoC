@@ -37,7 +37,7 @@ source venv/bin/activate
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Verifier : `curl -s http://localhost:8000/api/health`
+Verifier : `curl -s http://localhost:8000/api/v1/health`
 
 ### 4. Frontend
 

@@ -41,7 +41,7 @@ Quick reference checklist for deploying VarunaPoC Phase 1 at CHU on-site.
 
 ### Validation (5 minutes)
 - [ ] Frontend loads: Open `http://localhost` in browser
-- [ ] Backend responds: `curl http://localhost:8000/api/health`
+- [ ] Backend responds: `curl http://localhost:8000/api/v1/health`
 - [ ] API docs load: Open `http://localhost:8000/docs`
 - [ ] Slides detected: Check frontend file browser
 - [ ] Can open a slide: Click on a .mrxs file

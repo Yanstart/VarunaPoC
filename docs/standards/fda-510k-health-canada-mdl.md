@@ -256,7 +256,7 @@ The substantial equivalence (SE) argument must demonstrate that VarunaPoC has:
 | Software development plan | Lifecycle model, activities, deliverables | Not formalized per IEC 62304 |
 | Software requirements | Functional, performance, interface requirements | Partially documented |
 | Software architecture | Module design, interfaces, data flows | Documented (architecture docs) |
-| Unit testing | Per-module test coverage >= 80% | 94 tests exist, coverage not measured |
+| Unit testing | Per-module test coverage >= 80% | 1000+ tests exist, coverage not measured |
 | Integration testing | End-to-end workflow validation | E2E tests exist (Playwright) |
 | System testing | Full system validation against requirements | Not formalized |
 | Risk analysis | Software-specific risk analysis (IEC 62304 Class B/C) | Not performed |
