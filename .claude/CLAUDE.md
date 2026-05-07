@@ -25,6 +25,40 @@
 
 ### Current tag: `v0.1.0` — baseline stable (Waves 1-4 + standards + CI/CD)
 
+### Architecture post-v0.1.0 — Strangler Fig migration (in progress)
+
+Six **Protocols** (PEP 544) abstract the seams between routes and infrastructure.
+Each Protocol has at least one concrete implementer; routes consume them via
+FastAPI `Depends`.
+
+| Protocol | Implementer(s) | Status |
+|---|---|---|
+| `AuthProvider` | `OIDCAuthProvider` | available; legacy `dependencies.py` still primary |
+| `StorageProvider` | `FilesystemStorageProvider` | wired in `routes/ml.py`, `routes/slides.py` |
+| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | wired transitively via `services/tile_server.py` |
+| `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | wired in `routes/slides.py:get_tile` |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `WebSocketWorkflowHook`, `CompositeWorkflowHook`, `NoOpWorkflowHook` | wired in `routes/exports.py`, `routes/annotations.py` |
+| `MLWorkerProvider` | `MLWorkerProxy` (subprocess), `InProcessMLWorker` (ONNX/OpenVINO), `TritonClientMLWorker` (stub) | wired in `routes/ml.py` (sprint 12) |
+
+Sprint 15 added a WebSocket broadcaster: `WebSocketWorkflowHook` + `WorkflowEventBroadcaster`
+publish workflow events to clients connected on `GET /api/v1/ws/events`. The frontend
+`WorkflowEventService` subscribes on app boot and re-emits events on the `EventBus`.
+
+Canonical doc: `docs/architecture/MODULAR_ARCHITECTURE.md`. Conformance is locked in
+by `tests/unit/test_protocol_conformance.py`.
+
+### Dev infrastructure (`docker-compose.yml --profile dev`)
+
+| Service | Port | Purpose | Required for |
+|---|---|---|---|
+| `postgres` (PostGIS) | 5433 | Annotations, audit, sessions, quality | most features |
+| `keycloak` | 8180 | OIDC dev | `AUTH_ENABLED=true` |
+| `redis` | 6380 | TileCache L2 | `TILE_CACHE_L2_ENABLED=true` |
+| `hapi-fhir` | 8090 | FHIR R4 sandbox | `FHIR_ENABLED=true` |
+| `orthanc` | 4242 (DICOM) / 8042 (HTTP) | PACS sandbox | `PACS_ENABLED=true` |
+
+All four optional services degrade gracefully when their flag is off.
+
 ---
 
 ## GIT WORKFLOW
@@ -56,25 +90,32 @@
 ```text
 VarunaPoC/
   backend/               # FastAPI: tiles, annotations, ML, FHIR, DICOM
-    main.py              # App entry point (feature-flagged imports)
-    routes/              # API endpoints (~15 routers)
-    services/            # Business logic (tile_server, format_detector, ML, standards)
+    main.py              # App entry point (feature-flagged imports + Protocol singletons)
+    core/interfaces/     # 6 Protocols (Strangler Fig seams)
+    routes/              # API endpoints (~15 routers, ws.py for WebSocket)
+    services/            # Business logic; concrete Protocol implementers live here
+      cache/             # TwoLevelTileCache (L1 mem + L2 Redis)
+      readers/           # SlideReader implementers
+      storage/           # FilesystemStorageProvider
+      workflow/          # FHIR / PACS / WebSocket hooks + Composite + EventBroadcaster
+      ml/                # MLWorkerProvider + 3 backends (subprocess/inprocess/triton)
     models/              # SQLAlchemy ORM (Annotation, Label, QualityReport...)
     alembic/             # DB migrations (PostgreSQL + PostGIS)
-    auth/                # OIDC + RBAC (optional, AUTH_ENABLED)
-    fhir/                # FHIR R4 (optional, FHIR_ENABLED)
+    auth/                # OIDC + RBAC + OIDCAuthProvider (optional, AUTH_ENABLED)
+    fhir/                # FHIR R4 + FHIRWorkflowHook (optional, FHIR_ENABLED)
     quality/             # Inter-annotator agreement (optional, QUALITY_ENABLED)
   frontend/              # Vanilla JS + Vite + OpenSeadragon
     src/core/            # EventBus, Constants
-    src/services/        # ApiService, AuthService, AnnotationStore, I18nService
+    src/services/        # ApiService, AuthService, WorkflowEventService (WS), I18nService
     src/viewers/         # ViewerManager, ViewerInstance, SyncController
     src/components/      # 31 UI components (DrawingTools, MLPanel, CompareLayout...)
     e2e/                 # Playwright tests (18 suites)
-  nginx/                 # Reverse proxy + tile cache (10 GB)
+  nginx/                 # Reverse proxy + tile cache (10 GB) — L3 above the L1+L2 in backend
   monitoring/            # Prometheus + Grafana + alertes
   Slides/                # Test data (~60 GB, gitignored)
-  docs/                  # Architecture, deployment, manual, standards, plans
-  Archives/              # Historical docs + future plans (MLOps, security, refactoring)
+  docs/                  # Architecture, deployment, manual, standards
+                         # plans/ contains active plans only; closed plans live in Archives/plans-historiques/
+  Archives/              # Historical docs + closed plans + future-phase research
 ```
 
 Every folder has an `info.md` with: But, Pourquoi, Comment, Structure.
@@ -98,8 +139,8 @@ npm run lint
 npx playwright test  # E2E
 
 # Docker
-docker compose -f docker-compose.dev.yml up -d --build            # dev
-docker compose -f docker-compose.production.yml up -d --build     # prod
+docker compose --profile dev up -d --build            # dev
+docker compose --profile prod --profile monitoring up -d --build     # prod
 ```
 
 ---
@@ -111,7 +152,7 @@ Before closing any issue:
 - [ ] Backend tests pass: `cd backend && pytest`
 - [ ] Frontend lint clean: `cd frontend && npm run lint`
 - [ ] E2E tests pass (if UI change): `cd frontend && npx playwright test`
-- [ ] Docker build works: `docker compose -f docker-compose.dev.yml build`
+- [ ] Docker build works: `docker compose --profile dev build`
 - [ ] Issue acceptance criteria met
 - [ ] Commit message follows rules
 - [ ] PR created and linked to issue

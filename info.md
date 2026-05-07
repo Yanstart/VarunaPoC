@@ -28,23 +28,27 @@ VarunaPoC/
 
 ## Fichiers racine
 ```
-README.md                      # Presentation projet
-QUICKSTART.md                  # Demarrage rapide
-docker-compose.dev.yml         # Dev local
-docker-compose.production.yml  # Production (nginx + cache + monitoring)
-docker-compose.mlops.yml       # Stack MLOps
-.env.production.example        # Template variables d'environnement
-.env.mlops.example             # Template MLOps
+README.md             # Presentation projet
+QUICKSTART.md         # Demarrage rapide
+CONTRIBUTING.md       # Workflow git
+docker-compose.yml    # Compose unifie, pilote par profils Docker
+.env.dev.example      # Template variables d'environnement (developpement)
+.env.prod.example     # Template variables d'environnement (production)
 ```
 
 ## Demarrage rapide
 ```bash
-# Dev
-docker compose -f docker-compose.dev.yml up -d --build
+# Dev workstation (db + redis + keycloak + orthanc + hapi-fhir)
+cp .env.dev.example .env
+docker compose --profile dev up -d
 
-# Production
-cp .env.production.example .env.production
-docker compose -f docker-compose.production.yml up -d --build
+# Production (full stack + monitoring)
+cp .env.prod.example .env
+# editer .env, remplacer chaque CHANGE_ME_*
+docker compose --profile prod --profile monitoring up -d
 ```
+
+Pour le manuel administrateur complet (topologie reseau, profils, ops), voir
+[`docs/Admin/`](./docs/Admin/).
 
 ## Chaque dossier contient un `info.md` avec: But, Pourquoi, Comment, Structure

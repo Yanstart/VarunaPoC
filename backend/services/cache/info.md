@@ -29,7 +29,7 @@ Variables d'environnement (voir `backend/.env.example`):
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_DB`, `REDIS_CONNECT_TIMEOUT`.
 
 ## Conteneur dev
-Le serveur Redis dev tourne via `docker-compose.dev.yml` sur le port hote `6380` (production: `6379`).
+Le serveur Redis dev tourne via `docker compose --profile cache` (inclus aussi dans `--profile dev`) sur le port hote `6380` (production: `6379`).
 ```bash
-docker compose -f docker-compose.dev.yml up -d redis
+docker compose --profile dev up -d redis
 ```

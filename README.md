@@ -62,17 +62,29 @@ Viewer vendor-neutral de lames histologiques (WSI) avec annotations, detection M
 
 ### Option 1 : Docker (Recommande)
 
-```bash
-# Deploiement Phase 2 (backend + frontend + PostgreSQL)
-docker compose -f docker-compose.dev.yml up -d
+Un seul `docker-compose.yml` pilote par profils. Le profil `dev` lance les
+services de soutien (db + redis + keycloak + orthanc + hapi-fhir) ; le backend
+et le frontend tournent en local.
 
-# Acces:
-# Frontend: http://localhost
-# Backend:  http://localhost:8000
-# API Docs: http://localhost:8000/docs
+```bash
+cp .env.dev.example .env
+docker compose --profile dev up -d
+
+# Backend et frontend en local :
+cd backend && uvicorn main:app --reload --port 8000
+cd frontend && npm run dev   # http://localhost:5173
 ```
 
-Voir [DOCKER_DEPLOYMENT_CHECKLIST.md](DOCKER_DEPLOYMENT_CHECKLIST.md) pour le guide complet.
+Pour un deploiement full (backend + frontend + nginx + monitoring) :
+
+```bash
+cp .env.prod.example .env
+# editer .env, remplacer chaque CHANGE_ME_*
+docker compose --profile prod --profile monitoring up -d
+```
+
+Manuel administrateur complet : [`docs/Admin/`](docs/Admin/) — topologie reseau,
+matrice ports/roles, comment activer/desactiver chaque profil, fiches par service.
 
 ### Option 2 : Developpement Local
 
@@ -99,7 +111,7 @@ npm run dev
 
 **PostgreSQL + PostGIS (pour annotations) :**
 ```bash
-docker compose -f docker-compose.dev.yml up postgres -d
+docker compose --profile dev up postgres -d
 cd backend && alembic upgrade head
 ```
 
@@ -159,8 +171,9 @@ VarunaPoC/
 │   └── Deployment/             # Guides deploiement
 │
 ├── Slides/                     # Lames de test (gitignored)
-├── docker-compose.dev.yml      # PostgreSQL+PostGIS (port 5433)
-└── HOSPITAL_DEPLOYMENT_EVALUATION.md  # Evaluation deploiement hospitalier
+├── docker-compose.yml          # Compose unifie (profils : core / cache / auth / pacs / fhir / monitoring / mlops / dev / prod)
+├── .env.dev.example            # Template variables d'env (workstation dev)
+└── .env.prod.example           # Template variables d'env (production)
 ```
 
 ## Tests

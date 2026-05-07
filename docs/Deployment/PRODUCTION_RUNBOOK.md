@@ -142,7 +142,7 @@ GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 24)
 ### 3.1 Services de base (sans auth, sans monitoring)
 
 ```bash
-docker compose -f docker-compose.production.yml \
+docker compose --profile prod --profile monitoring \
     --env-file .env.production \
     up -d
 ```
@@ -151,7 +151,7 @@ docker compose -f docker-compose.production.yml \
 
 ```bash
 # S'assurer que AUTH_ENABLED=true dans .env.production
-docker compose -f docker-compose.production.yml \
+docker compose --profile prod --profile monitoring \
     --env-file .env.production \
     --profile auth \
     up -d
@@ -160,7 +160,7 @@ docker compose -f docker-compose.production.yml \
 ### 3.3 Stack complet (auth + monitoring)
 
 ```bash
-docker compose -f docker-compose.production.yml \
+docker compose --profile prod --profile monitoring \
     --env-file .env.production \
     --profile auth --profile monitoring \
     up -d
@@ -170,10 +170,10 @@ docker compose -f docker-compose.production.yml \
 
 ```bash
 # Verifier que tous les services sont sains
-docker compose -f docker-compose.production.yml ps
+docker compose --profile prod --profile monitoring ps
 
 # Attendre que tous les healthchecks passent (2-3 min)
-watch -n 5 'docker compose -f docker-compose.production.yml ps'
+watch -n 5 'docker compose --profile prod --profile monitoring ps'
 
 # Tester le backend
 curl -k https://localhost/api/health
@@ -192,63 +192,63 @@ curl -sk https://localhost/ | head -5
 
 ```bash
 # Tous les services
-docker compose -f docker-compose.production.yml logs --tail 100
+docker compose --profile prod --profile monitoring logs --tail 100
 
 # Un service specifique
-docker compose -f docker-compose.production.yml logs backend --tail 200 -f
+docker compose --profile prod --profile monitoring logs backend --tail 200 -f
 
 # Erreurs uniquement
-docker compose -f docker-compose.production.yml logs backend 2>&1 | grep -i error
+docker compose --profile prod --profile monitoring logs backend 2>&1 | grep -i error
 ```
 
 ### 4.2 Redemarrer un service
 
 ```bash
 # Redemarrer le backend (sans downtime grace aux replicas)
-docker compose -f docker-compose.production.yml restart backend
+docker compose --profile prod --profile monitoring restart backend
 
 # Redemarrer nginx (breve coupure)
-docker compose -f docker-compose.production.yml restart nginx
+docker compose --profile prod --profile monitoring restart nginx
 ```
 
 ### 4.3 Mise a jour de l'application
 
 ```bash
 # 1. Tirer les nouvelles images
-docker compose -f docker-compose.production.yml pull
+docker compose --profile prod --profile monitoring pull
 
 # 2. Recreer les services modifies (rolling update)
-docker compose -f docker-compose.production.yml \
+docker compose --profile prod --profile monitoring \
     --env-file .env.production \
     up -d --no-deps backend frontend nginx
 
 # 3. Verifier les healthchecks
-docker compose -f docker-compose.production.yml ps
+docker compose --profile prod --profile monitoring ps
 ```
 
 ### 4.4 Backup de la base de donnees
 
 ```bash
 # Backup
-docker compose -f docker-compose.production.yml exec db \
+docker compose --profile prod --profile monitoring exec db \
     pg_dump -U varuna -Fc varuna > backup_$(date +%Y%m%d_%H%M%S).dump
 
 # Restore (arret du backend necessaire)
-docker compose -f docker-compose.production.yml stop backend
-docker compose -f docker-compose.production.yml exec -T db \
+docker compose --profile prod --profile monitoring stop backend
+docker compose --profile prod --profile monitoring exec -T db \
     pg_restore -U varuna -d varuna --clean < backup_YYYYMMDD.dump
-docker compose -f docker-compose.production.yml start backend
+docker compose --profile prod --profile monitoring start backend
 ```
 
 ### 4.5 Vider le cache tuiles
 
 ```bash
 # Cache nginx (10 GB max)
-docker compose -f docker-compose.production.yml exec nginx \
+docker compose --profile prod --profile monitoring exec nginx \
     rm -rf /var/cache/nginx/tiles/*
 
 # Cache Redis
-docker compose -f docker-compose.production.yml exec redis \
+docker compose --profile prod --profile monitoring exec redis \
     redis-cli -a $REDIS_PASSWORD FLUSHDB
 ```
 
@@ -260,7 +260,7 @@ docker compose -f docker-compose.production.yml exec redis \
 
 ```bash
 # 1. Services actifs ?
-docker compose -f docker-compose.production.yml ps
+docker compose --profile prod --profile monitoring ps
 
 # 2. Espace disque ?
 df -h /var/lib/docker
@@ -270,7 +270,7 @@ df -h /mnt/chu-slides
 curl -k https://localhost/api/health
 
 # 4. Base de donnees accessible ?
-docker compose -f docker-compose.production.yml exec db \
+docker compose --profile prod --profile monitoring exec db \
     pg_isready -U varuna
 
 # 5. NAS monte ?
@@ -302,7 +302,7 @@ docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 
 # Connexions nginx
 curl -s http://localhost/nginx_status 2>/dev/null || \
-    docker compose -f docker-compose.production.yml exec nginx \
+    docker compose --profile prod --profile monitoring exec nginx \
     wget -qO- http://localhost/nginx_status
 ```
 
@@ -313,7 +313,7 @@ curl -s http://localhost/nginx_status 2>/dev/null || \
 ### 6.1 Arret propre
 
 ```bash
-docker compose -f docker-compose.production.yml \
+docker compose --profile prod --profile monitoring \
     --profile auth --profile monitoring \
     down
 ```
@@ -322,7 +322,7 @@ docker compose -f docker-compose.production.yml \
 
 ```bash
 # ATTENTION : supprime toutes les donnees (DB, cache, Grafana)
-docker compose -f docker-compose.production.yml \
+docker compose --profile prod --profile monitoring \
     --profile auth --profile monitoring \
     down -v
 ```

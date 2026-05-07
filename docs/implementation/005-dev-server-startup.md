@@ -13,7 +13,7 @@
 
 ```bash
 cd /data/VarunaPoC
-docker compose -f docker-compose.dev.yml up -d
+docker compose --profile dev up -d
 ```
 
 Attendre que Keycloak soit ready (~60s) :
@@ -103,8 +103,8 @@ done
 ```bash
 # Frontend/Backend : Ctrl+C
 # Docker :
-docker compose -f docker-compose.dev.yml down      # garde les volumes
-docker compose -f docker-compose.dev.yml down -v    # reset complet
+docker compose --profile dev down      # garde les volumes
+docker compose --profile dev down -v    # reset complet
 ```
 
 ## Ne PAS demarrer

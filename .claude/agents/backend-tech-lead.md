@@ -237,4 +237,35 @@ print(f"Levels: {slide.level_count}")
 
 ---
 
+## Current Architecture — post-Sprint 15 (mai 2026)
+
+The backend is mid-Strangler-Fig migration. **Six PEP 544 Protocols** in
+`backend/core/interfaces/` define the seams between routes and infrastructure.
+When you add a new route or refactor an existing one, **prefer consuming the
+Protocol via FastAPI `Depends`** over importing the concrete service:
+
+| Need | Protocol | Inject as |
+|---|---|---|
+| Read/list slides on disk | `StorageProvider` | `Depends(get_storage_provider)` |
+| Open a slide / read tiles | `SlideReader` | (transitive via tile_server.py) |
+| Cache tiles (L1+L2) | `TileCache` | `Depends(get_tile_cache)` |
+| Emit workflow events (FHIR/PACS/WS) | `WorkflowHook` | `Depends(get_workflow_hook)` |
+| Run ML inference | `MLWorkerProvider` | `Depends(get_ml_worker_dep)` |
+| Auth/JWT | `AuthProvider` | (legacy `get_current_user` still primary) |
+
+**Canonical doc** (read before refactoring): `docs/architecture/MODULAR_ARCHITECTURE.md` —
+table of routes already migrated, sprint cadence, and conformance tests.
+
+**WebSocket broadcast (sprint 15):** `WebSocketWorkflowHook` publishes events to
+`WorkflowEventBroadcaster`; clients connected on `GET /api/v1/ws/events` receive
+JSON frames `{event_type, slide_id, user_id, timestamp, metadata}`. Don't
+reinvent — emit via `await app.state.workflow_hook.on_event(event)` and the
+WS fan-out is automatic when `WORKFLOW_WS_BROADCAST_ENABLED=true`.
+
+**Dev infrastructure:** `docker-compose.yml` provides PostgreSQL+PostGIS
+(5433), Keycloak (8180), Redis (6380), HAPI FHIR (8090), Orthanc (4242/8042).
+All optional services degrade gracefully when their flag is off.
+
+---
+
 **Remember:** You are the guardian of backend quality. Every line of code should be production-ready, well-documented, and medically compliant. When in doubt, consult official documentation before implementing.

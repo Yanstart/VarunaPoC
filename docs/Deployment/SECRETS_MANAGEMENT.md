@@ -56,7 +56,7 @@ services:
       POSTGRES_USER: varuna
 ```
 
-See `docker-compose.production.yml` for the concrete example in the `db` service.
+See `docker-compose.yml` for the concrete example in the `db` service.
 
 ### Secret file security
 
@@ -153,11 +153,11 @@ Target state: secrets are mounted as files; env vars are removed or left empty.
    # REDIS_PASSWORD=...
    ```
 
-3. **Deploy** with the updated `docker-compose.production.yml` that declares the `secrets:` block.
+3. **Deploy** with the updated `docker-compose.yml` that declares the `secrets:` block.
 
 4. **Verify** the backend resolves secrets correctly:
    ```bash
-   docker compose -f docker-compose.production.yml exec backend \
+   docker compose --profile prod --profile monitoring exec backend \
        python -c "from backend.core.secrets import get_secret; print(bool(get_secret('db_password')))"
    # Expected output: True
    ```
@@ -178,7 +178,7 @@ Target state: secrets are mounted as files; env vars are removed or left empty.
 ## See also
 
 - `backend/core/secrets.py` — implementation
-- `docker-compose.production.yml` — compose secrets example
+- `docker-compose.yml` — compose secrets example
 - `docs/Deployment/DEPLOYMENT_GUIDE.md` — full deployment guide
 - Docker Secrets reference: https://docs.docker.com/engine/swarm/secrets/
 - HashiCorp Vault: https://developer.hashicorp.com/vault/docs

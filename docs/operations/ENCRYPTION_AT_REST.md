@@ -49,7 +49,7 @@ sudo systemd-cryptenroll --tpm2-device=auto /dev/sdX
 
 ### Docker Mount (Read-Only)
 
-In `docker-compose.production.yml`:
+In `docker-compose.yml`:
 
 ```yaml
 services:

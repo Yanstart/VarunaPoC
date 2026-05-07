@@ -117,9 +117,9 @@
 
 **Contexte:** Installation PostgreSQL + PostGIS pour annotations
 **Probleme:** Port 5432 deja occupe par TimescaleDB existant
-**Solution:** Utiliser port 5433 partout: docker-compose.dev.yml, .env, .env.example, .env.phase1, alembic.ini, core/database.py (default fallback)
+**Solution:** Utiliser port 5433 partout: docker-compose.yml, .env, .env.example, .env.phase1, alembic.ini, core/database.py (default fallback)
 **A Retenir:** Toujours verifier les ports disponibles. Mettre a jour TOUS les fichiers de config si on change un port.
-**Fichiers:** `docker-compose.dev.yml`, `.env*`, `backend/alembic.ini`, `backend/core/database.py`
+**Fichiers:** `docker-compose.yml`, `.env*`, `backend/alembic.ini`, `backend/core/database.py`
 
 ---
 

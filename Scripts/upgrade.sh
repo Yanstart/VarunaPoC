@@ -67,7 +67,7 @@ fi
 
 # -- Configuration ------------------------------------------------------------
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.production.yml"
+COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.yml"
 ENV_FILE="${PROJECT_ROOT}/.env.production"
 BACKUP_SCRIPT="${PROJECT_ROOT}/scripts/backup.sh"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-120}"

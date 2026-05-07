@@ -1,7 +1,28 @@
-# Documentation Architecture V3 - VarunaPoC
+# Documentation Architecture - VarunaPoC
 
-**Date:** 2025-02-05 (Mise à jour architecture modulaire)
-**Version:** 3.1.0
+**Date:** 2026-05-07 (post-Sprint 15, migration Strangler Fig en cours)
+**Version:** 3.2.0
+
+---
+
+## Statut courant (2026-05-07)
+
+Le projet est sur le tag stable **v0.1.0** (Waves 1-4 + standards + CI/CD, 62 issues fermées).
+
+La migration **Strangler Fig** est partiellement livrée : **6 Protocols** ont au moins
+un implémenteur concret, et **9 routes** consomment ces Protocols via FastAPI `Depends`.
+
+| Protocol | Implémenteur(s) | Routes câblées |
+|---|---|---|
+| `AuthProvider` | `OIDCAuthProvider` | (legacy `dependencies.py` reste primaire) |
+| `StorageProvider` | `FilesystemStorageProvider` | `routes/ml.py`, `routes/slides.py` |
+| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` |
+| `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | `routes/slides.py:get_tile` |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `WebSocketWorkflowHook`, `Composite`, `NoOp` | `routes/exports.py`, `routes/annotations.py` |
+| `MLWorkerProvider` | `MLWorkerProxy`, `InProcessMLWorker`, `TritonClientMLWorker` | `routes/ml.py` |
+
+**Doc canonique unique** : [MODULAR_ARCHITECTURE.md](./MODULAR_ARCHITECTURE.md) — table de
+wirage à jour par sprint, cadence de migration, métriques observées.
 
 ---
 
@@ -10,8 +31,6 @@
 Cette documentation définit l'architecture cible pour transformer VarunaPoC d'un **viewer WSI simple** (Phase 1) en une **plateforme MLOps modulaire** (Phase 3).
 
 **Objectif TFE 2025-2026:** Développer un système d'intelligence artificielle pour l'analyse de lames histologiques, avec apprentissage continu et conformité réglementaire.
-
-**⭐ NOUVEAU:** Architecture modulaire avec interfaces Python (Protocols) - voir `MODULAR_ARCHITECTURE.md`
 
 ---
 
@@ -203,7 +222,7 @@ pas encore — la migration est progressive (voir REFACTORING_PLAN.md).
 - Tests unitaires (>80% coverage)
 - State management frontend (stores)
 
-**Status:** 🔄 En cours (voir REFACTORING_PLAN.md)
+**Status:** Livré (sprints 1-15, mai 2026 — voir MODULAR_ARCHITECTURE.md)
 
 ---
 
@@ -398,5 +417,5 @@ pas encore — la migration est progressive (voir REFACTORING_PLAN.md).
 
 ---
 
-**Dernière mise à jour:** 2025-12-31
-**Prochaine révision:** Après Phase 2.0 (Février 2026)
+**Dernière mise à jour:** 2026-05-07
+**Prochaine révision:** À l'issue de la prochaine vague de sprints Strangler Fig

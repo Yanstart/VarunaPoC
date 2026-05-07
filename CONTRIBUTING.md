@@ -111,14 +111,22 @@ npm run dev    # http://localhost:5173
 ```
 
 ### Docker (full stack)
-```bash
-# Dev
-docker compose -f docker-compose.dev.yml up -d --build
 
-# Production
-cp .env.production.example .env.production
-docker compose -f docker-compose.production.yml up -d --build
+Un seul `docker-compose.yml` pilote par profils.
+
+```bash
+# Dev workstation (db + redis + keycloak + orthanc + hapi-fhir)
+cp .env.dev.example .env
+docker compose --profile dev up -d
+
+# Production (full app + monitoring)
+cp .env.prod.example .env
+# editer .env, remplacer chaque CHANGE_ME_*
+docker compose --profile prod --profile monitoring up -d
 ```
+
+Manuel admin complet : [`docs/Admin/`](docs/Admin/) — topologie, profils,
+ports, fiches par service.
 
 ### Tests
 ```bash

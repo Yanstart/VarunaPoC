@@ -22,7 +22,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMPOSE_FILE="docker-compose.production.yml"
+COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env.production"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-120}"
 

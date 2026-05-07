@@ -53,7 +53,9 @@ pip install -r requirements.txt
 
 ### 2. Start PostgreSQL (for annotations)
 ```bash
-docker compose -f ../docker-compose.dev.yml up -d
+cd .. && cp .env.dev.example .env
+docker compose --profile dev up -d db
+cd backend
 ```
 
 ### 3. Run database migrations
@@ -105,7 +107,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 PostgreSQL 16 + PostGIS 3.4 via Docker:
 ```bash
-docker compose -f docker-compose.dev.yml up -d  # port 5433
+docker compose --profile dev up -d  # port 5433
 ```
 
 Tables: `annotations` (with GIST spatial index), `annotation_labels`

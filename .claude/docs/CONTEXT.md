@@ -116,7 +116,7 @@ npm run dev
 
 ### PostgreSQL + PostGIS + Keycloak (pour auth + annotations)
 ```bash
-docker compose -f docker-compose.dev.yml up -d
+docker compose --profile dev up -d
 cd backend && alembic upgrade head
 # PostgreSQL port 5433, Keycloak port 8180
 ```

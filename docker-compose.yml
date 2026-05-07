@@ -1,0 +1,691 @@
+# =============================================================================
+# VarunaPoC — Unified Docker Compose
+# =============================================================================
+# A single compose file for every deployment target (dev workstation,
+# CI runner, on-prem prod). Service inclusion is driven by Compose profiles
+# so the same file describes the whole ecosystem; what runs is decided by
+# which profiles you activate.
+#
+# QUICK USAGE
+# -----------
+#   # Dev workstation (db + redis + keycloak + orthanc + hapi-fhir):
+#   cp .env.dev.example .env && docker compose --profile dev up -d
+#
+#   # Production-equivalent (full app + monitoring):
+#   cp .env.prod.example .env && docker compose --profile prod --profile monitoring up -d
+#
+#   # Specific module on top:
+#   docker compose --profile prod --profile monitoring --profile mlops up -d
+#
+# PROFILES
+# --------
+#   core         db (PostGIS) — never optional
+#   cache        redis (TileCache L2)
+#   auth         keycloak + keycloak-db (OIDC IdP)
+#   pacs         orthanc (DICOM sandbox; in prod, point at hospital PACS instead)
+#   fhir         hapi-fhir (FHIR R4 sandbox; in prod, point at hospital FHIR server)
+#   monitoring   prometheus + grafana + alertmanager + exporters + cadvisor
+#   mlops        mlflow + minio + minio-init + mlops-db
+#   dev          alias bundle: core + cache + auth + pacs + fhir   (workstation)
+#   prod         alias bundle: core + app (backend+frontend+nginx) + cache + auth + monitoring
+#
+# Services that need to run in BOTH dev and prod (db, redis, keycloak) are
+# tagged with both their module profile AND the dev/prod alias, so a single
+# `--profile dev` or `--profile prod` flag resolves the right superset.
+#
+# DOCS
+# ----
+# - docs/Admin/                full admin manual (topology, ports, ops)
+# - docs/Admin/services/       one-page-per-service operator notes
+# - docs/Admin/PROFILES.md     when to enable / disable each module
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Logging anchors — capped JSON-file logging to prevent disk exhaustion.
+# ---------------------------------------------------------------------------
+x-logging-default: &logging-default
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-logging-high-volume: &logging-high-volume
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "10"
+
+x-logging-low-volume: &logging-low-volume
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-logging-oneshot: &logging-oneshot
+  logging:
+    driver: json-file
+    options:
+      max-size: "5m"
+      max-file: "2"
+
+services:
+
+  # ===========================================================================
+  # CORE — PostgreSQL + PostGIS
+  # Stores annotations, audit trail, sessions, quality reports.
+  # Always required.
+  # ===========================================================================
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: varuna-db
+    profiles: ["core", "dev", "prod"]
+    <<: *logging-default
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-varuna}
+      POSTGRES_USER: ${POSTGRES_USER:-varuna}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-varuna_dev}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - varuna-db-data:/var/lib/postgresql/data
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-varuna} -d ${POSTGRES_DB:-varuna}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ===========================================================================
+  # CACHE — Redis (TileCache L2)
+  # Backend's TwoLevelTileCache uses Redis as its L2 store. Disabled if
+  # TILE_CACHE_L2_ENABLED=false in backend env (graceful fallback to L1 only).
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: varuna-redis
+    profiles: ["cache", "dev", "prod"]
+    <<: *logging-default
+    command: >
+      sh -c '
+      if [ -n "$$REDIS_PASSWORD" ]; then
+        exec redis-server
+        --requirepass "$$REDIS_PASSWORD"
+        --maxmemory ${REDIS_MAX_MEMORY:-2gb}
+        --maxmemory-policy allkeys-lru
+        --save 60 1000
+        --appendonly yes;
+      else
+        exec redis-server
+        --maxmemory ${REDIS_MAX_MEMORY:-2gb}
+        --maxmemory-policy allkeys-lru
+        --save 60 1000
+        --appendonly yes;
+      fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "${REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - varuna-redis-data:/data
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+-a $$REDIS_PASSWORD} ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ===========================================================================
+  # AUTH — Keycloak DB + Keycloak (OIDC Identity Provider)
+  # Optional. Backend runs anonymous-admin when AUTH_ENABLED=false.
+  # ===========================================================================
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: varuna-keycloak-db
+    profiles: ["auth", "dev", "prod"]
+    <<: *logging-default
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_dev}
+    volumes:
+      - varuna-keycloak-db-data:/var/lib/postgresql/data
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: varuna-keycloak
+    profiles: ["auth", "dev", "prod"]
+    <<: *logging-default
+    command: ${KEYCLOAK_COMMAND:-start-dev --import-realm}
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_dev}
+      KC_HTTP_PORT: 8080
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: ${KC_PROXY:-edge}
+      KC_HOSTNAME: ${KC_HOSTNAME:-keycloak}
+      KC_HOSTNAME_STRICT_HTTPS: ${KC_HOSTNAME_STRICT_HTTPS:-false}
+    ports:
+      - "${KEYCLOAK_HOST_PORT:-8180}:8080"
+    volumes:
+      - ./backend/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && timeout 2 grep -q '\"UP\"' <&3"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+
+  # ===========================================================================
+  # PACS — Orthanc (DICOM sandbox)
+  # Dev/test backend for the PACSWorkflowHook. In production, set PACS_HOST
+  # to the hospital PACS and DO NOT activate this profile.
+  # Two ports: 4242 (DICOM C-FIND/C-STORE/C-ECHO) and 8042 (HTTP REST API).
+  # ===========================================================================
+  orthanc:
+    image: orthancteam/orthanc:24.7.3
+    container_name: varuna-orthanc
+    profiles: ["pacs", "dev"]
+    <<: *logging-default
+    ports:
+      - "${ORTHANC_DICOM_HOST_PORT:-4242}:4242"
+      - "${ORTHANC_HTTP_HOST_PORT:-8042}:8042"
+    environment:
+      ORTHANC__DICOM_PORT: 4242
+      ORTHANC__HTTP_PORT: 8042
+      ORTHANC__NAME: varuna-orthanc
+      ORTHANC__DICOM_AET: ${PACS_AET_REMOTE:-ORTHANC}
+      ORTHANC__REGISTERED_USERS: '{"${ORTHANC_USER:-varuna}": "${ORTHANC_PASSWORD:-varuna_dev}"}'
+      ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
+      ORTHANC__AUTHENTICATION_ENABLED: "true"
+      ORTHANC__DICOM_MODALITIES: '{"varuna": ["${PACS_AET_LOCAL:-VARUNA_SCU}", "host.docker.internal", 4242]}'
+    volumes:
+      - varuna-orthanc-data:/var/lib/orthanc/db
+    healthcheck:
+      test: ["CMD", "Orthanc", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # FHIR — HAPI FHIR R4 (sandbox)
+  # Dev/test backend for the FHIRWorkflowHook. In production, set
+  # FHIR_BASE_URL to the hospital FHIR server and DO NOT activate this profile.
+  # Embedded H2 storage (no extra DB container). Cold start ~30-45s.
+  # ===========================================================================
+  hapi-fhir:
+    image: hapiproject/hapi:v7.4.0
+    container_name: varuna-hapi-fhir
+    profiles: ["fhir", "dev"]
+    <<: *logging-default
+    # Run as root so the distroless image can write to /data without
+    # permission gymnastics on the volume.
+    user: "0:0"
+    ports:
+      - "${FHIR_HOST_PORT:-8090}:8080"
+    environment:
+      hapi.fhir.fhir_version: R4
+      hapi.fhir.default_encoding: json
+      hapi.fhir.allow_external_references: "true"
+      hapi.fhir.allow_multiple_delete: "true"
+      spring.datasource.url: jdbc:h2:file:/data/h2;DB_CLOSE_DELAY=-1
+      spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
+    volumes:
+      - varuna-hapi-data:/data
+    # Distroless image: no shell, no curl. Skip Docker healthcheck and rely
+    # on external probes from the host or Prometheus blackbox-exporter.
+    healthcheck:
+      disable: true
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # APP — Database migration (run-once init container)
+  # Runs alembic upgrade head against the db service, then exits. In dev you
+  # typically run `alembic upgrade head` locally instead.
+  # ===========================================================================
+  migration:
+    image: ${BACKEND_IMAGE:-ghcr.io/yanstart/varunapoc/backend}:${BACKEND_IMAGE_TAG:-main}
+    container_name: varuna-migration
+    profiles: ["prod"]
+    <<: *logging-oneshot
+    command: python -m alembic upgrade head
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-varuna}:${POSTGRES_PASSWORD:-varuna_dev}@db:5432/${POSTGRES_DB:-varuna}"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: "no"
+
+  # ===========================================================================
+  # APP — Backend (FastAPI)
+  # Replicas via env (BACKEND_REPLICAS). Mount the slides directory read-only.
+  # ===========================================================================
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/yanstart/varunapoc/backend}:${BACKEND_IMAGE_TAG:-main}
+    container_name: varuna-backend
+    profiles: ["prod"]
+    <<: *logging-high-volume
+    expose:
+      - "8000"
+    volumes:
+      - ${SLIDES_HOST_PATH:-./Slides}:/slides:ro
+      - varuna-backend-logs:/app/logs
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-varuna}:${POSTGRES_PASSWORD:-varuna_dev}@db:5432/${POSTGRES_DB:-varuna}"
+      REDIS_URL: "redis://${REDIS_PASSWORD:+:$$REDIS_PASSWORD@}redis:6379"
+      SLIDES_REPOSITORY_PATH: /slides
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:5173}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://keycloak:8080/realms/varuna}
+      ML_ENABLED: ${ML_ENABLED:-true}
+      ML_PROVIDER: ${ML_PROVIDER:-slideflow}
+      ML_WORKER_BACKEND: ${ML_WORKER_BACKEND:-subprocess}
+      TILE_CACHE_L2_ENABLED: ${TILE_CACHE_L2_ENABLED:-true}
+      FHIR_ENABLED: ${FHIR_ENABLED:-false}
+      FHIR_BASE_URL: ${FHIR_BASE_URL:-http://hapi-fhir:8080/fhir}
+      PACS_ENABLED: ${PACS_ENABLED:-false}
+      PACS_HOST: ${PACS_HOST:-orthanc}
+      WORKFLOW_WS_BROADCAST_ENABLED: ${WORKFLOW_WS_BROADCAST_ENABLED:-true}
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: ${BACKEND_REPLICAS:-1}
+
+  # ===========================================================================
+  # APP — Frontend (static SPA)
+  # ===========================================================================
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/yanstart/varunapoc/frontend}:${FRONTEND_IMAGE_TAG:-main}
+    container_name: varuna-frontend
+    profiles: ["prod"]
+    <<: *logging-low-volume
+    expose:
+      - "80"
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================================================
+  # APP — Nginx reverse proxy (TLS termination + load balancing)
+  # ===========================================================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: varuna-nginx
+    profiles: ["prod"]
+    <<: *logging-high-volume
+    entrypoint: ["/docker-entrypoint-varuna.sh"]
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-localhost}
+      NGINX_SSL_CERT: ${NGINX_SSL_CERT:-/etc/nginx/ssl/varuna.crt}
+      NGINX_SSL_KEY: ${NGINX_SSL_KEY:-/etc/nginx/ssl/varuna.key}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
+      - ./nginx/docker-entrypoint.sh:/docker-entrypoint-varuna.sh:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - varuna-nginx-cache:/var/cache/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================================================
+  # MONITORING — Prometheus + Grafana + Alertmanager + Exporters
+  # ===========================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: varuna-prometheus
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts:/etc/prometheus/alerts:ro
+      - varuna-prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_HOST_PORT:-9090}:9090"
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: varuna-grafana
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: redis-datasource
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - varuna-grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_HOST_PORT:-3000}:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: varuna-alertmanager
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/alert-templates.tmpl:/etc/alertmanager/alert-templates.tmpl:ro
+      - varuna-alertmanager-data:/alertmanager
+    ports:
+      - "${ALERTMANAGER_HOST_PORT:-9093}:9093"
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0-alpine
+    container_name: varuna-redis-exporter
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    command:
+      - '--redis.addr=redis:6379'
+      - '--redis.password=${REDIS_PASSWORD:-}'
+    expose:
+      - "9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.0.0
+    container_name: varuna-nginx-exporter
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/nginx_status'
+    expose:
+      - "9113"
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: varuna-node-exporter
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: varuna-cadvisor
+    profiles: ["monitoring", "prod"]
+    <<: *logging-low-volume
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - varuna-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # MLOPS — MLflow + MinIO + MinIO bootstrap + MLflow DB
+  # ===========================================================================
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.2
+    container_name: varuna-mlflow
+    profiles: ["mlops"]
+    <<: *logging-default
+    ports:
+      - "${MLFLOW_HOST_PORT:-5000}:5000"
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://mlflow:${MLOPS_DB_PASSWORD:-mlops_dev}@mlops-db:5432/mlflow
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: s3://mlflow-artifacts
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-varuna-admin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-varuna_dev}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://mlflow:${MLOPS_DB_PASSWORD:-mlops_dev}@mlops-db:5432/mlflow
+      --default-artifact-root s3://mlflow-artifacts
+    depends_on:
+      mlops-db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  minio:
+    image: minio/minio:RELEASE.2024-10-02T17-50-41Z
+    container_name: varuna-minio
+    profiles: ["mlops"]
+    <<: *logging-default
+    ports:
+      - "${MINIO_HOST_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-varuna-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-varuna_dev}
+    command: server /data --console-address ":9001"
+    volumes:
+      - varuna-mlops-minio-data:/data
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-10-02T08-27-28Z
+    container_name: varuna-minio-init
+    profiles: ["mlops"]
+    <<: *logging-oneshot
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set varuna http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc mb --ignore-existing varuna/varuna-ml-data;
+      mc mb --ignore-existing varuna/mlflow-artifacts;
+      echo 'Buckets created successfully';
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-varuna-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-varuna_dev}
+    networks:
+      - varuna-network
+    restart: "no"
+
+  mlops-db:
+    image: postgres:16-alpine
+    container_name: varuna-mlops-db
+    profiles: ["mlops"]
+    <<: *logging-default
+    environment:
+      POSTGRES_DB: mlflow
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: ${MLOPS_DB_PASSWORD:-mlops_dev}
+    volumes:
+      - varuna-mlops-db-data:/var/lib/postgresql/data
+    networks:
+      - varuna-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# =============================================================================
+# NETWORKS
+# A single bridge network. Service-to-service communication uses the service
+# name (`db`, `redis`, ...). Production hardening (auth-only network for
+# Keycloak, monitoring isolation) is applied via override files when needed
+# and documented in docs/Admin/INFRASTRUCTURE.md.
+# =============================================================================
+networks:
+  varuna-network:
+    driver: bridge
+    name: varuna-network
+
+# =============================================================================
+# VOLUMES
+# Named volumes per service. Backups: see docs/Admin/DEPLOYMENT.md and
+# scripts/backup.sh.
+# =============================================================================
+volumes:
+  varuna-db-data:
+    name: varuna-db-data
+  varuna-keycloak-db-data:
+    name: varuna-keycloak-db-data
+  varuna-redis-data:
+    name: varuna-redis-data
+  varuna-orthanc-data:
+    name: varuna-orthanc-data
+  varuna-hapi-data:
+    name: varuna-hapi-data
+  varuna-backend-logs:
+    name: varuna-backend-logs
+  varuna-nginx-cache:
+    name: varuna-nginx-cache
+  varuna-prometheus-data:
+    name: varuna-prometheus-data
+  varuna-grafana-data:
+    name: varuna-grafana-data
+  varuna-alertmanager-data:
+    name: varuna-alertmanager-data
+  varuna-mlops-db-data:
+    name: varuna-mlops-db-data
+  varuna-mlops-minio-data:
+    name: varuna-mlops-minio-data

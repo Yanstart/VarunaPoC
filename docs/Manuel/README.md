@@ -1,7 +1,7 @@
 # Manuel Utilisateur - VarunaPoC
 
-**Version:** 1.0
-**Date de dernière mise à jour:** 2025-10-21
+**Version:** 1.1
+**Date de dernière mise à jour:** 2026-05-07
 **Public cible:** Utilisateurs finaux (médecins, techniciens de laboratoire, chercheurs)
 
 ---
@@ -33,7 +33,16 @@ Ce manuel est organisé par fonctionnalité validée et prête à l'emploi:
 5. **[05-VISUALISATION_LAMES.md](./05-VISUALISATION_LAMES.md)**
    Comment ouvrir et naviguer dans une lame (zoom, déplacement, mini-carte)
 
-6. **[99-FAQ.md](./99-FAQ.md)**
+6. **[06-ANNOTATIONS.md](./06-ANNOTATIONS.md)**
+   Création, édition, validation et rejet d'annotations (CRUD + batch)
+
+7. **[07-ML_FEATURES.md](./07-ML_FEATURES.md)**
+   Détection, prédiction, heatmap, comptage cellulaire (assistance IA)
+
+8. **[08-QUALITE.md](./08-QUALITE.md)**
+   Métriques d'accord inter-annotateurs (kappa de Cohen et Fleiss)
+
+9. **[99-FAQ.md](./99-FAQ.md)**
    Questions fréquentes et dépannage
 
 ---
@@ -108,6 +117,7 @@ Ce manuel est mis à jour automatiquement par l'agent de développement chaque f
 
 **Historique des versions:**
 - **v1.0 (2025-10-21):** Version initiale avec navigation dossiers et formats de base
+- **v1.1 (2026-05-07):** Index complété avec annotations (06), IA assistance (07) et qualité (08)
 
 ---
 

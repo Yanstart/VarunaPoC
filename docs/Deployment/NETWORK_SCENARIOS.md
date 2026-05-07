@@ -178,7 +178,7 @@ For hospitals with no internet access on production servers.
 ```bash
 # On a machine with internet access
 cd VarunaPoC
-docker compose -f docker-compose.production.yml build
+docker compose --profile prod --profile monitoring build
 
 # Save all images to tar archives
 docker save varuna-backend:latest | gzip > varuna-backend.tar.gz
@@ -195,7 +195,7 @@ docker save redis:7-alpine | gzip > redis-alpine.tar.gz
 ```bash
 # Copy to USB drive or secure transfer
 cp *.tar.gz /media/usb/varuna-images/
-cp docker-compose.production.yml /media/usb/varuna-images/
+cp docker-compose.yml /media/usb/varuna-images/
 cp .env.production.example /media/usb/varuna-images/
 ```
 
@@ -213,14 +213,14 @@ done
 
 ```bash
 # Copy compose and config
-cp /media/usb/varuna-images/docker-compose.production.yml .
+cp /media/usb/varuna-images/docker-compose.yml .
 cp /media/usb/varuna-images/.env.production.example .env
 
 # Edit .env with local values
 vi .env
 
 # Start services
-docker compose -f docker-compose.production.yml up -d
+docker compose --profile prod --profile monitoring up -d
 ```
 
 ### Update Procedure (Air-Gapped)
@@ -238,7 +238,7 @@ docker compose -f docker-compose.production.yml up -d
 docker images | grep -E "varuna|nginx|postgres|prometheus|grafana|redis"
 
 # Check services are running
-docker compose -f docker-compose.production.yml ps
+docker compose --profile prod --profile monitoring ps
 
 # Test health
 curl -k https://localhost/health

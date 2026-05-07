@@ -1,5 +1,10 @@
 # Quick Start Guide - VarunaPoC
 
+> **Pour le déploiement officiel** (dev workstation, prod hôpital), voir
+> [`docs/Admin/DEPLOYMENT.md`](docs/Admin/DEPLOYMENT.md). Cette page-ci
+> traite uniquement de la mise au point Python/Node locale (Windows MSYS2,
+> bootstrap npm) — utile en complément, pas en remplacement.
+
 Guide rapide pour démarrer le projet après avoir suivi les corrections.
 
 ## Vous avez installé OpenSlide via MSYS2 ✅

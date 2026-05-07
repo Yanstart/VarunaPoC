@@ -1025,7 +1025,7 @@ def deidentify_dicom(dcm: pydicom.Dataset) -> pydicom.Dataset:
 
 ### Infrastructure (Current: 60%)
 
-- ✅ Docker containerization (docker-compose.dev.yml exists)
+- ✅ Docker containerization (docker-compose.yml exists)
 - ✅ PostgreSQL + PostGIS (for annotations)
 - ✅ Network share for slides (SLIDES_REPOSITORY_PATH)
 - ⚠️ HTTPS/TLS (depends on nginx config, not verified)

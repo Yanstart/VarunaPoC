@@ -4,7 +4,7 @@
 #
 # Usage:
 #   ./nginx/generate-ssl-certs.sh
-#   docker compose -f docker-compose.production.yml up -d
+#   docker compose --profile prod --profile monitoring up -d
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

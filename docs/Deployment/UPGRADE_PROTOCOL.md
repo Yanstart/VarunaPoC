@@ -11,7 +11,7 @@
 This document describes how to upgrade VarunaPoC to a new version and how to
 roll back if something goes wrong. Both operations are automated through scripts
 in the `scripts/` directory and are designed for the Docker Compose production
-deployment (`docker-compose.production.yml`).
+deployment (`docker-compose.yml`).
 
 ---
 
@@ -28,7 +28,7 @@ Before starting any upgrade:
 - [ ] **Confirm current version** -- note the running image tags so you know
       what to roll back to:
       ```bash
-      docker compose -f docker-compose.production.yml --env-file .env.production ps --format '{{.Image}}'
+      docker compose --profile prod --profile monitoring --env-file .env.production ps --format '{{.Image}}'
       ```
 - [ ] **Read the release notes** -- check the GitHub release page for the
       target version. Look for breaking changes, new environment variables,
@@ -72,7 +72,7 @@ If you prefer to run each step manually:
 cd /path/to/VarunaPoC
 source .env.production
 
-COMPOSE_CMD="docker compose -f docker-compose.production.yml --env-file .env.production"
+COMPOSE_CMD="docker compose --profile prod --profile monitoring --env-file .env.production"
 NEW_VERSION="v1.1.0"
 
 # 1. Backup database
@@ -127,7 +127,7 @@ The script performs the following steps:
 cd /path/to/VarunaPoC
 source .env.production
 
-COMPOSE_CMD="docker compose -f docker-compose.production.yml --env-file .env.production"
+COMPOSE_CMD="docker compose --profile prod --profile monitoring --env-file .env.production"
 OLD_VERSION="v1.0.0"
 BACKUP_FILE="backups/varuna_db_20260311_020000.sql.gz"
 
@@ -274,7 +274,7 @@ docker login ghcr.io
 
 ```bash
 # Check migration logs
-docker compose -f docker-compose.production.yml --env-file .env.production logs migration
+docker compose --profile prod --profile monitoring --env-file .env.production logs migration
 
 # Roll back to previous version
 ./scripts/rollback.sh <previous-version> <backup-file>
@@ -287,10 +287,10 @@ or resource constraints.
 
 ```bash
 # Check which services are unhealthy
-docker compose -f docker-compose.production.yml --env-file .env.production ps
+docker compose --profile prod --profile monitoring --env-file .env.production ps
 
 # Check logs of unhealthy service
-docker compose -f docker-compose.production.yml --env-file .env.production logs backend
+docker compose --profile prod --profile monitoring --env-file .env.production logs backend
 
 # Roll back
 ./scripts/rollback.sh <previous-version> <backup-file>

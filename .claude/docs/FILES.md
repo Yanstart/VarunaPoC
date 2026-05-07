@@ -252,7 +252,7 @@ backend/
 - `backend/models/annotation.py` → ORM models
 - `backend/core/database.py` → Engine SQLAlchemy async
 - `backend/alembic/` → Migrations (alembic revision --autogenerate)
-- `docker-compose.dev.yml` → PostgreSQL + PostGIS (port 5433)
+- `docker-compose.yml` → PostgreSQL + PostGIS (port 5433)
 
 ---
 

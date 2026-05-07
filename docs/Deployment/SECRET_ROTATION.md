@@ -29,7 +29,7 @@ This document lists all secrets used by VarunaPoC in production, explains how to
 | `GRAFANA_ADMIN_PASSWORD` | grafana | monitoring | Yes (with `--profile monitoring`) | Grafana admin UI password |
 | TLS certificate + key | nginx | core | Yes (for HTTPS) | Located in `nginx/ssl/` |
 
-All password variables use the `${VAR:?error}` syntax in `docker-compose.production.yml`, which means Docker Compose will refuse to start if any required secret is missing.
+All password variables use the `${VAR:?error}` syntax in `docker-compose.yml`, which means Docker Compose will refuse to start if any required secret is missing.
 
 ---
 
@@ -82,7 +82,7 @@ For every secret rotation:
 
 2. Connect to the running database and change the password:
    ```bash
-   docker compose -f docker-compose.production.yml exec db \
+   docker compose --profile prod --profile monitoring exec db \
      psql -U varuna -d varuna -c "ALTER USER varuna WITH PASSWORD 'NEW_PASSWORD_HERE';"  # pragma: allowlist secret
    ```
 
@@ -93,7 +93,7 @@ For every secret rotation:
 
 4. Restart services that use the database connection:
    ```bash
-   docker compose -f docker-compose.production.yml --env-file .env.production \
+   docker compose --profile prod --profile monitoring --env-file .env.production \
      restart backend
    ```
 
@@ -114,7 +114,7 @@ For every secret rotation:
 
 2. Update the password on the running Redis instance:
    ```bash
-   docker compose -f docker-compose.production.yml exec redis \
+   docker compose --profile prod --profile monitoring exec redis \
      redis-cli -a 'OLD_PASSWORD' CONFIG SET requirepass 'NEW_PASSWORD_HERE'
    ```
 
@@ -125,11 +125,11 @@ For every secret rotation:
 
 4. Restart all services that connect to Redis:
    ```bash
-   docker compose -f docker-compose.production.yml --env-file .env.production \
+   docker compose --profile prod --profile monitoring --env-file .env.production \
      restart backend
 
    # If monitoring profile is active:
-   docker compose -f docker-compose.production.yml --env-file .env.production \
+   docker compose --profile prod --profile monitoring --env-file .env.production \
      --profile monitoring restart redis-exporter
    ```
 
@@ -174,7 +174,7 @@ For every secret rotation:
 
 2. Change the password in the Keycloak database:
    ```bash
-   docker compose -f docker-compose.production.yml exec keycloak-db \
+   docker compose --profile prod --profile monitoring exec keycloak-db \
      psql -U keycloak -d keycloak -c "ALTER USER keycloak WITH PASSWORD 'NEW_PASSWORD_HERE';"  # pragma: allowlist secret
    ```
 
@@ -185,7 +185,7 @@ For every secret rotation:
 
 4. Restart Keycloak (it reads the DB password from environment):
    ```bash
-   docker compose -f docker-compose.production.yml --env-file .env.production \
+   docker compose --profile prod --profile monitoring --env-file .env.production \
      --profile auth restart keycloak
    ```
 
@@ -204,7 +204,7 @@ For every secret rotation:
 
 2. Change the password using the Grafana CLI inside the container:
    ```bash
-   docker compose -f docker-compose.production.yml exec grafana \
+   docker compose --profile prod --profile monitoring exec grafana \
      grafana cli admin reset-admin-password 'NEW_PASSWORD_HERE'
    ```
 
@@ -237,7 +237,7 @@ For every secret rotation:
 
 3. Reload nginx without downtime:
    ```bash
-   docker compose -f docker-compose.production.yml exec nginx nginx -s reload
+   docker compose --profile prod --profile monitoring exec nginx nginx -s reload
    ```
 
 4. Verify:
@@ -271,20 +271,20 @@ After rotating any secret, verify the affected services are working correctly:
 
 ```bash
 # Check all containers are running and healthy
-docker compose -f docker-compose.production.yml --env-file .env.production ps
+docker compose --profile prod --profile monitoring --env-file .env.production ps
 
 # Backend health check
 curl -f http://localhost/api/health
 
 # Check backend logs for connection errors
-docker compose -f docker-compose.production.yml logs --tail=50 backend | grep -i error
+docker compose --profile prod --profile monitoring logs --tail=50 backend | grep -i error
 
 # Verify database connectivity
-docker compose -f docker-compose.production.yml exec db \
+docker compose --profile prod --profile monitoring exec db \
   pg_isready -U varuna -d varuna
 
 # Verify Redis connectivity
-docker compose -f docker-compose.production.yml exec redis \
+docker compose --profile prod --profile monitoring exec redis \
   redis-cli -a 'NEW_PASSWORD' ping
 # Expected output: PONG
 ```
@@ -303,7 +303,7 @@ curl -s -X POST http://localhost:8180/realms/master/protocol/openid-connect/toke
   -d "grant_type=password" | python3 -m json.tool
 
 # Check Keycloak logs
-docker compose -f docker-compose.production.yml --profile auth logs --tail=50 keycloak | grep -i error
+docker compose --profile prod --profile monitoring --profile auth logs --tail=50 keycloak | grep -i error
 ```
 
 ### Monitoring Services (GRAFANA_ADMIN_PASSWORD)
@@ -331,7 +331,7 @@ openssl s_client -connect localhost:443 -servername varuna.chu-ucl.be </dev/null
   | openssl x509 -noout -dates -subject
 
 # Verify no TLS errors in nginx logs
-docker compose -f docker-compose.production.yml logs --tail=50 nginx | grep -i "ssl\|tls\|cert"
+docker compose --profile prod --profile monitoring logs --tail=50 nginx | grep -i "ssl\|tls\|cert"
 ```
 
 ---
@@ -342,14 +342,14 @@ docker compose -f docker-compose.production.yml logs --tail=50 nginx | grep -i "
 
 1. Check that `.env.production` has no trailing whitespace or stray quotes around the password.
 2. Verify the password was changed in the service **before** updating `.env.production` and restarting consumers.
-3. Check logs: `docker compose -f docker-compose.production.yml logs <service>`.
+3. Check logs: `docker compose --profile prod --profile monitoring logs <service>`.
 
 ### "authentication failed" errors in backend logs
 
 The backend reads `POSTGRES_PASSWORD` and `REDIS_PASSWORD` from its environment. If the database password was changed but the backend was not restarted, it will still use the old password. Restart the backend:
 
 ```bash
-docker compose -f docker-compose.production.yml --env-file .env.production restart backend
+docker compose --profile prod --profile monitoring --env-file .env.production restart backend
 ```
 
 ### Redis exporter shows connection errors after Redis password rotation
@@ -357,6 +357,6 @@ docker compose -f docker-compose.production.yml --env-file .env.production resta
 The redis-exporter must also be restarted after changing `REDIS_PASSWORD`:
 
 ```bash
-docker compose -f docker-compose.production.yml --env-file .env.production \
+docker compose --profile prod --profile monitoring --env-file .env.production \
   --profile monitoring restart redis-exporter
 ```

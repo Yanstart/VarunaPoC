@@ -207,7 +207,7 @@ git push origin feature/storage-abstraction
 **A:** Utiliser Docker Compose pour lancer tous services.
 
 ```yaml
-# docker-compose.dev.yml
+# docker-compose.yml
 
 version: '3.8'
 
@@ -246,7 +246,7 @@ volumes:
   pgdata:
 ```
 
-Lancer: `docker compose -f docker-compose.dev.yml up -d`
+Lancer: `docker compose --profile dev up -d`
 
 ---
 
