@@ -1,319 +1,264 @@
-# Etat du Projet - VarunaPoC
+# État du Projet — VarunaPoC
 
-**Derniere mise a jour:** 2026-02-20
-**Mis a jour par:** Cerveau d'Orchestration
+**Dernière mise à jour:** 2026-05-07
+**Mis à jour par:** Cerveau d'orchestration
+**Commit courant:** `47651d1` sur `main`
 
 ---
 
-## Snapshot Actuel
+## Snapshot
 
-### Version & Phase
-- **Version:** 2.0.0
-- **Phase:** Phase 3.1 (Auth) COMPLETE, Phase 4 (Quality) COMPLETE
-- **Branche Git:** `main` (commit 96261b2)
-- **Plan:** MVP 15 semaines (cf. PROPOSAL_VARUNA_v2.md)
-- **Prochaine etape:** Phase 3.3 Integration PACS Telemis
-- **Issues:** 124/124 closed, all PRs merged
+### Versionnage
 
-### Sante du Projet
+| | Valeur |
+|---|---|
+| Tag courant | `v0.3.0` |
+| Tags publiés | `v0.1.0`, `v0.2.0`, `v0.3.0` |
+| Branche active | `main` |
+| Dernier commit | `47651d1 docs(docs): refresh broken refs, version drift, and obsolete content` |
+
+### GitHub project (post pivot stratégique 2026-05-07)
+
+| Wave | Closed/Total | Statut |
+|---|---|---|
+| 1 — Le viewer qui parle pathologiste | 11/11 | DONE |
+| 2 — L'IA qui assiste | 10/10 | DONE |
+| 3 — Le cas, pas le fichier | 8/8 | DONE |
+| 4 — L'écosystème intelligent | 11/11 | DONE |
+| 5 — Robustesse ML & Compatibilité | 5/7 | #147 fermée (wheel-reinvention), #145 #146 priority:low |
+| 6 — Intelligence Visible | 29/29 | DONE |
+| 7 — Platform Hardening | 45/45 | DONE |
+| 8 — Annotation Clinique | 6/8 | 2 open priority:critical (#330, #331) |
+| **9 — Quality-First Deep** | **0/4** | CREATED 2026-05-07 |
+| **10 — Foundation Models & Validation** | **0/8** | CREATED + PIVOTED 2026-05-07 |
+| **11 — Radical Simplicity Polish** | **0/2** | CREATED 2026-05-07 |
+| **12 — Stratégie 2026 : AI Act + Workflow + Réseau** | **0/5** | CREATED 2026-05-07 |
+| **13 — Scalability & Multi-tenant** | **0/8** | CREATED 2026-05-07 (pivot produit) |
+
+**Total : 126 closed, 27 open.** Standards (#103-#124) tous fermés. #358 doublon fermé.
+
+**Chemin critique 2026** (8 issues `priority:critical`) :
+- #330, #331 — annotations cliniques validées pathologiste
+- #337 — versioning Git-like (AI Act + publication académique)
+- #346, #347 — foundation models registry + fine-tuning workflow
+- #349 — AI Act compliance doc (Notified Bodies)
+- #350 — IMS workflow integration (mandate non-négociable acheteurs)
+- **#354 — multi-tenant data isolation + auth federation (pivot produit)**
+
+### Santé projet
 
 | Aspect | Score | Commentaire |
-|--------|-------|-------------|
-| Fonctionnalite | 9/10 | Viewer, annotations, ML, compare mode, detection, counting, quality metrics |
-| Architecture | 9/10 | Patterns solides (Factory, Singleton, Observer, Mediator), modules isoles |
-| Securite | 7/10 | OIDC PKCE, RBAC 4 roles, JWT RS256/ES256, audit trail, break-glass |
-| Tests | 8/10 | 156 tests backend (pytest), 21 skipped. Pas de tests E2E frontend |
-| Documentation | 9/10 | Proposal v2, hospital evaluation, architecture, manuel, API docs |
-| MLOps | 5/10 | Slideflow + Phikon-v2 integre, pas de monitoring/drift/feedback loop |
-| Performance | 8/10 | Tiles < 15ms keep-alive, 94 lames 10 formats |
-| CI/CD | 9/10 | 10/10 CI jobs pass, security scans, CD pipeline (GHCR), all green |
+|---|---|---|
+| Fonctionnalité | 9/10 | Viewer 10 formats, annotations, ML, compare, quality, FHIR, PACS, WS broadcast |
+| Architecture | 10/10 | 6 Protocols PEP 544, Strangler Fig sprints 1-15, conformance verrouillée |
+| Sécurité | 8/10 | OIDC PKCE, RBAC 4 rôles, JWT RS256/ES256, audit dual DB+JSON, break-glass |
+| Tests | 9/10 | 1033 tests collectés (3 collection errors fixables), conformance Protocol locked |
+| Documentation | 9/10 | docs/Admin manuel admin, docs/Manuel clinicien, MODULAR_ARCHITECTURE.md canonique |
+| MLOps | 5/10 | Inférence Slideflow + Phikon-v2 OK ; drift / feedback / CI-CD modèles MANQUE (Wave 10) |
+| Performance | 9/10 | P95 65ms, keep-alive 0-13ms, cache hit 75-85%, dispo 99.73% |
+| CI/CD | 9/10 | 10/10 jobs CI, security scans (Trivy/Bandit/CodeQL/Gitleaks), CD GHCR |
 
 ---
 
-## Ce Qui Fonctionne
+## Architecture post-`v0.1.0` (Strangler Fig)
+
+Six Protocols PEP 544 dans `backend/core/interfaces/`. Implémenteurs concrets
+dans `backend/services/`. Routes consomment via FastAPI `Depends`.
+
+| Protocol | Implémenteur(s) | Wirage |
+|---|---|---|
+| `AuthProvider` | `OIDCAuthProvider` | available, legacy `dependencies.py` primaire |
+| `StorageProvider` | `FilesystemStorageProvider` | `routes/ml.py` (9 sites), `routes/slides.py` (5 sites async) |
+| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | `services/tile_server.py` (transitif) |
+| `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | `routes/slides.py:get_tile` |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `WebSocketWorkflowHook` (sprint 15), `CompositeWorkflowHook`, `NoOpWorkflowHook` | `routes/exports.py`, `routes/annotations.py` (CRUD + reject + batch) |
+| `MLWorkerProvider` | `MLWorkerProxy` (subprocess), `InProcessMLWorker` (ONNX/OpenVINO), `TritonClientMLWorker` (stub) | `routes/ml.py` (sprint 12, 9 handlers) |
+
+**Sprint 15** (WebSocket broadcast) : `WebSocketWorkflowHook` + `WorkflowEventBroadcaster`
+publient les `WorkflowEvent` (REPORT_SIGNED, ANNOTATION_*) aux clients connectés
+sur `GET /api/v1/ws/events`. Frontend : `WorkflowEventService` singleton réémet
+sur l'EventBus sous `workflow:<event_type>` et `workflow:event`.
+
+**Doc canonique :** `docs/architecture/MODULAR_ARCHITECTURE.md`. Conformance Protocol
+verrouillée par `tests/unit/test_protocol_conformance.py`.
+
+---
+
+## Infrastructure dev (`docker-compose.yml --profile dev`)
+
+| Service | Port host | Rôle | Activation |
+|---|---|---|---|
+| `postgres` (PostGIS 16) | 5433 | Annotations, audit, sessions, quality | toujours |
+| `keycloak` | 8180 | OIDC dev | `AUTH_ENABLED=true` |
+| `redis` | 6380 | TileCache L2 | `TILE_CACHE_L2_ENABLED=true` |
+| `hapi-fhir` | 8090 | FHIR R4 sandbox | `FHIR_ENABLED=true` |
+| `orthanc` | 4242 (DICOM) / 8042 (HTTP) | PACS sandbox | `PACS_ENABLED=true` |
+
+Docker-compose unifié multi-profiles (`core`, `auth`, `cache`, `pacs`, `fhir`,
+`monitoring`, `mlops`, `dev`, `prod`). Cf. `docs/Admin/PROFILES.md`.
+
+---
+
+## Alignement avec `vision.pdf §2` + pivot stratégique mai 2026
+
+Synthèse — détail dans `.claude/memory/VISION_ALIGNMENT.md` (§0 = pivot,
+§1-§7 = analyse PDF originale).
+
+### Pivot foundation models (mai 2026)
+
+Le PDF v2.0 (déc. 2025 §2.3.2) décrivait MLOps classique 2022-2023 (training
+from scratch). Trajectoire dominante 2026 :
+**foundation model pré-entraîné (UNI/CONCH/Virchow) → fine-tuning local sur
+cas annotés Quality-First → validation prospective multi-centrique →
+déploiement supervisé**.
+
+Wave 10 a été pivotée. Wave 12 créée pour les axes stratégiques 2026 hors PDF.
+
+### Les 3 angles morts critiques (PDF §2.3) + axes stratégiques 2026
+
+**1. Quality-First Annotation Platform** — fondation OK, deep features Wave 9 (4 issues)
+- ✅ Cohen + Fleiss kappa, IoU, F1, confusion matrix, disagreement heatmap
+- 🔵 Wave 9 : outliers (#335), adjudication (#336), **versioning Git-like (#337 priority:critical)**, métriques prédictives qualité (#338)
+
+**2. Foundation Models & Validation** (pivot Wave 10, 8 issues)
+- ✅ Inférence Slideflow + Phikon-v2 (CUDA), uncertainty brut
+- 🔵 Wave 10 : foundation model registry (#346 priority:critical), fine-tuning workflow (#347 priority:critical), validation prospective (#348), CI/CD fine-tuning (#341), drift (#339), feedback loops (#340), calibration AI Act (#342), active learning (#343)
+
+**3. Radical Simplicity** — fondation OK, polish Wave 11 (2 issues)
+- ✅ Zero-config browser, P95 <100ms, OIDC SSO, PACS deep-link
+- 🔵 Wave 11 : onboarding 3min (#344 DEFER), audit geste-mimétique (#345)
+
+**4. Axes stratégiques 2026** (Wave 12, 5 issues) — non couverts par PDF v2.0
+- 🔵 AI Act compliance doc (#349 priority:critical) — différenciateur Notified Bodies + publication académique
+- 🔵 IMS workflow integration deep (#350 priority:critical) — mandate non-négociable acheteurs hospitaliers
+- 🔵 RCP collaborative (#351) — réseau hôpitaux + second avis
+- 🔵 Federated learning architecture-ready (#352) — Horizon Europe / EU4Health
+- 🔵 Copilote IA conversationnel (#353 EXPLORATOIRE) — signal AstraZeneca/Modella
+
+**Score révisé** :
+- PDF original §2.3 : 6/4/4 sur 14 capacités → cible **18/4/1 sur 23 capacités** après livraison Waves 9-12.
+- Chemin critique 2026 : **7 issues `priority:critical`** (#330, #331, #337, #346, #347, #349, #350).
+
+---
+
+## Ce qui fonctionne (en bref)
 
 ### Backend (port 8000)
-- [x] Detection 10+ formats de slides (FormatDetector + _try_open_slide)
-- [x] Navigation hierarchique `/api/slides/browse`
-- [x] Metadata slides `/api/slides/{id}/info`
-- [x] Tile streaming DZI `/api/slides/{id}/tiles/{level}/{x}_{y}.jpg`
-- [x] Overview/thumbnail generation
-- [x] LRU cache (5 slides max)
-- [x] Prometheus metrics (optionnel)
-- [x] Annotations CRUD `/api/annotations/{slide_id}` (PostgreSQL + PostGIS)
-- [x] Labels avec couleurs `/api/annotations/labels`
-- [x] Stats annotations `/api/annotations/{slide_id}/stats`
-- [x] ML heatmap `/api/ml/heatmap/{slide_id}` (Slideflow + Phikon-v2)
-- [x] ML detection `/api/ml/detect/{slide_id}` (heatmap -> scipy -> shapely -> GeoJSON)
-- [x] ML predict `/api/ml/predict/{slide_id}` (classification + uncertainty)
-- [x] DB lifespan graceful (async context manager)
-- [x] Routes synchrones (def, pas async def) pour OpenSlide threadpool
-- [x] **Auth OIDC PKCE** (Keycloak dev, Azure AD prod-ready)
-- [x] **RBAC 4 roles claims-based** (LECTURE_SEULE, INFIRMIER, MEDECIN, ADMIN_TECHNIQUE)
-- [x] **JWT validation RS256/ES256** avec JWKS cache TTL 1h
-- [x] **Audit trail** dual DB+JSON (INFO/WARNING/CRITICAL)
-- [x] **Break-glass** emergency sessions 30min
-- [x] **Session roaming** cross-workstation (PostgreSQL)
-- [x] **FHIR R4 stub** DiagnosticReport builder
-- [x] **Quality metrics** `/api/quality/{slide_id}/...` (7 endpoints)
-- [x] **Cohen's kappa** pairwise + IoU spatial matching (PostGIS)
-- [x] **Fleiss' kappa** multi-rater + grid-based matching
-- [x] **Confusion matrix, F1/P/R per label, IoU distribution**
-- [x] **Disagreement heatmap** GeoJSON overlay
-- [x] **Quality cache table** `quality_reports` (JSONB, TTL 5min)
+- Viewer WSI 10 formats (94 lames testées) — DZI tile streaming
+- Annotations PostGIS (CRUD, labels, stats, GeoJSON, batch)
+- ML Slideflow + Phikon-v2 + 3 backends (subprocess / inprocess ONNX-OpenVINO / triton stub)
+- Quality metrics (Cohen + Fleiss kappa, F1, confusion, IoU, disagreement)
+- Auth OIDC PKCE + RBAC 4 rôles + audit dual DB+JSON + break-glass + session roaming
+- FHIR R4 (DiagnosticReport builder + WorkflowHook)
+- PACS Telemis deep-link (`/slide/{name}` resolution)
+- WebSocket broadcaster (sprint 15) `GET /api/v1/ws/events`
+- Cache 3 niveaux : L1 mem + L2 Redis + L3 nginx (10 GB)
 
 ### Frontend (port 5173)
-- [x] Page Home avec FolderBrowser
-- [x] Page Viewer single slide
-- [x] Page Compare multi-viewer (2x1, 2x2, etc.)
-- [x] Synchronisation pan/zoom (toggle)
-- [x] Mini-map (navigator) sur chaque viewer
-- [x] EventBus pour communication (avec unsubscribe pattern)
-- [x] ViewerManager singleton
-- [x] ViewerFactory avec presets
-- [x] AnnotationLayer (SVG overlay)
-- [x] DrawingTools (rectangle, polygone, point, cercle, freehand)
-- [x] LayerManager (visibilite, opacite)
-- [x] DetectionPanel (auto-detect workflow, label selector, confidence bar)
-- [x] CountingPanel (stats temps reel par label/type)
-- [x] HeatmapOverlay (canvas overlay, cached image, coordinate mapping)
-- [x] MLPanel (predict, heatmap trigger)
-- [x] AnnotationStore (CRUD client, loadStats, computeLocalStats)
-- [x] **AuthService PKCE** (login/logout, token refresh)
-- [x] **LoginPage** + **UserMenu** (role display, session info)
-- [x] **Role-based UI** (component visibility per role)
-- [x] **QualityPanel** (annotator selector, kappa badge, confusion matrix, F1 table, IoU histogram)
-- [x] **Disagreement overlay** (hatched SVG polygons)
-
-### 10 Formats Supportes (94 lames testees)
-- [x] Aperio SVS (.svs, .tif)
-- [x] Hamamatsu NDPI (.ndpi)
-- [x] 3DHistech MIRAX (.mrxs)
-- [x] Leica SCN (.scn)
-- [x] Ventana BIF (.bif)
-- [x] Philips TIFF (.tif)
-- [x] Trestle (.tif)
-- [x] Sakura (.svslide)
-- [x] Zeiss CZI (.czi) - sauf JPEG XR
-- [x] DICOM WSI (.dcm)
-- [x] Generic TIFF pyramidal (.tif)
-
-### Formats Non Supportes (identifies)
-- Olympus VSI (3 lames) - necessite Bio-Formats
-- Zeiss ZVI (5 lames) - format legacy
-- Zeiss CZI JPEG XR (4 lames) - codec manquant
-- Fichiers corrompus (3) : Hamamatsu-1.ndpi, Leica-3.scn, Leica-Fluorescence-1.scn
+- Pages Home / Viewer / Compare (multi-viewer 2x1, 2x2)
+- 5 outils dessin (rectangle, polygone, point, cercle, freehand)
+- Panels : ML, Detection, Counting, Quality, Heatmap overlay
+- Auth PKCE + role-based UI + WorkflowEventService (WS subscriber)
+- 31 components, 18 e2e suites Playwright
 
 ---
 
-## Ce Qui Ne Fonctionne Pas / Manque
+## Ce qui manque (post pivot 2026-05-07)
 
-### Prochaine Etape (Phase 3.3)
-- [ ] **Integration PACS Telemis** - Command plugin (lancement viewer depuis PACS)
-- [ ] **Endpoint by-accession** - Resolution accession number -> slide
-- [ ] **Contexte patient automatique** - slide_id -> patient context
+19 issues open au total. Voir `ROADMAP.md §4` pour le détail priorisé.
 
-### Phase 4 Finalisation (Semaines 14-15)
-- [ ] **Tests E2E** - Playwright/Selenium
-- [ ] **Tests charge** - 10 utilisateurs simultanes
-- [ ] **Documentation formation** - Sessions utilisateurs
+### Chemin critique (`priority:critical`, 8 issues)
 
-### Post-MVP
-- [ ] **SSO institutionnel** (SAML 2.0/OAuth 2.0 complet)
-- [ ] **Collaboration temps reel** (WebSocket)
-- [ ] **Quality-First complet** (outlier detection, adjudication, versioning Git-like)
-- [ ] **MLOps complet** (drift monitoring, feedback loops, CI/CD modeles)
-- [ ] **Chiffrement au repos**
-- [ ] **Redis cache** tuiles
-- [ ] **DICOM export** (Supplement 145)
+| # | Wave | Titre |
+|---|---|---|
+| #330 | 8 | Édition contour des détections IA (E key, vertex drag) |
+| #331 | 8 | Historique versionné annotations (audit medicolegal) |
+| #337 | 9 | Versioning Git-like annotations (AI Act + publication académique) |
+| #346 | 10 | Foundation model registry + adapter (UNI, CONCH, Virchow…) |
+| #347 | 10 | Fine-tuning workflow local (LoRA + full FT, MLflow) |
+| #349 | 12 | Documentation AI Act (Art. 9-15) pour Notified Bodies |
+| #350 | 12 | IMS workflow integration (LIS/HIS deep, au-delà PACS) |
+| **#354** | **13** | **Multi-tenant data isolation + auth federation (pivot produit)** |
 
----
+### Backlog priority:high+medium+low (19 issues)
 
-## Fichiers Cles (Reference Rapide)
+- Wave 5 : #145 (low), #146 (low) — wheel-reinvention OpenSlide
+- Wave 9 : #335, #336 (high), #338 (medium)
+- Wave 10 : #339, #340, #341, #348 (high), #342, #343 (medium)
+- Wave 11 : #344 DEFER, #345 (medium)
+- Wave 12 : #351 (high), #352 (medium), #353 (low EXPLORATOIRE)
+- Wave 13 : #355, #356, #357, #359, #360, #361 (high), #362 (medium)
 
-### Backend
-```
-backend/
-├── main.py                          # Entry point FastAPI v2.0.0
-├── config_openslide.py              # DLL config Windows
-├── routes/
-│   ├── slides.py                    # API slides (6 routes, sync def)
-│   ├── annotations.py               # CRUD annotations + labels + stats
-│   └── ml.py                        # ML inference endpoints
-├── services/
-│   ├── format_detector.py           # Detection 10+ formats (+ _try_open_slide)
-│   ├── tile_server.py               # Streaming tuiles DZI
-│   ├── folder_browser.py            # Navigation hierarchique
-│   ├── slide_scanner.py             # Scan recursif + cache
-│   ├── detection/                   # Pipeline heatmap -> GeoJSON
-│   │   ├── pipeline.py              # scipy ndimage -> skimage -> shapely
-│   │   └── heatmap_processor.py     # Traitement heatmaps
-│   └── ml/
-│       ├── tag_extractor.py         # Extraction tags organe/stain
-│       ├── tag_router.py            # Routage ML par tags
-│       └── slideflow_service.py     # Integration Slideflow + Phikon-v2
-├── auth/                            # Phase 3.1 - Auth OIDC
-│   ├── __init__.py                  # AUTH_ENABLED flag
-│   ├── config.py                    # OIDC configuration
-│   ├── oidc.py                      # OIDC PKCE flow
-│   ├── jwt_validator.py             # JWT RS256/ES256 validation
-│   ├── dependencies.py              # FastAPI auth dependencies
-│   ├── audit.py                     # Audit trail (DB + JSON)
-│   ├── models.py                    # User/Session ORM
-│   ├── schemas.py                   # Auth Pydantic schemas
-│   ├── routes.py                    # Auth endpoints
-│   ├── rbac.py                      # Role-based access control
-│   └── break_glass.py               # Emergency access
-├── fhir/                            # Phase 3.1 - FHIR R4
-│   ├── __init__.py                  # FHIR_ENABLED flag
-│   ├── resources.py                 # DiagnosticReport builder
-│   ├── routes.py                    # FHIR endpoints
-│   └── patient_context.py           # Patient context
-├── quality/                         # Phase 4 - Quality Metrics
-│   ├── __init__.py                  # QUALITY_ENABLED flag
-│   ├── config.py                    # Thresholds, Landis-Koch scale
-│   ├── metrics.py                   # Cohen/Fleiss kappa, F1, confusion matrix
-│   ├── schemas.py                   # Pydantic models
-│   ├── matching.py                  # IoU spatial + grid matching (PostGIS)
-│   ├── services.py                  # Orchestration layer
-│   └── routes.py                    # 7 API endpoints
-├── models/
-│   ├── annotation.py                # ORM Annotation + AnnotationLabel
-│   ├── quality_report.py            # ORM cache table (JSONB)
-│   └── __init__.py
-├── schemas/
-│   ├── annotation.py                # Pydantic schemas
-│   ├── geojson.py                   # GeoJSON models
-│   └── detection.py                 # Detection schemas
-├── core/database.py                 # SQLAlchemy async + PostGIS
-├── alembic/                         # Migrations DB (001, 002, 003)
-├── tests/                           # 156 tests pytest
-├── monitoring.py                    # Prometheus metrics
-└── requirements.txt
-```
+### Décisions stratégiques 2026-05-07
 
-### Frontend
-```
-frontend/src/
-├── main.js                          # Entry + routing (HOME/VIEWER/COMPARE)
-├── core/
-│   ├── EventBus.js                  # Observer pattern (with unsubscribe)
-│   └── Constants.js                 # Config centralisee
-├── viewers/
-│   ├── ViewerManager.js             # Singleton gestionnaire
-│   ├── ViewerFactory.js             # Factory pattern
-│   ├── ViewerInstance.js            # Wrapper OSD
-│   ├── ViewerState.js               # State machine
-│   └── SyncController.js            # Mediator sync
-├── components/
-│   ├── AnnotationLayer.js           # SVG overlay annotations + disagreement
-│   ├── DrawingTools.js              # 5 outils dessin
-│   ├── LayerManager.js              # Visibilite/opacite
-│   ├── DetectionPanel.js            # Auto-detect workflow
-│   ├── CountingPanel.js             # Stats temps reel
-│   ├── HeatmapOverlay.js            # Canvas overlay ML
-│   ├── MLPanel.js                   # Panel analyse ML
-│   ├── QualityPanel.js              # Phase 4 - Quality metrics panel
-│   ├── CompareLayout.js             # Grid multi-viewer
-│   ├── ViewerPanel.js               # Panel individuel
-│   ├── FolderBrowser.js             # Explorateur dossiers
-│   ├── SyncControls.js              # UI sync
-│   ├── LoginPage.js                 # Phase 3.1 - Login
-│   └── UserMenu.js                  # Phase 3.1 - User info
-├── services/
-│   ├── ApiService.js                # Client API singleton + quality methods
-│   ├── AnnotationStore.js           # Etat annotations (CRUD, stats)
-│   └── AuthService.js               # Phase 3.1 - OIDC PKCE client
-├── css/
-│   ├── login.css                    # Phase 3.1
-│   ├── user-menu.css                # Phase 3.1
-│   └── quality-panel.css            # Phase 4
-└── ...
-```
-
-### Documentation strategique
-```
-docs/
-├── PROPOSAL_VARUNA_v2.md            # Proposition projet v2 (marche, architecture, roadmap)
-├── ARCHITECTURE.md                  # Architecture technique
-├── ML_INTEGRATION.md                # Integration Slideflow
-├── FORMATS_SUPPORTED.md             # Formats supportes
-├── Manuel/                          # Documentation utilisateur
-├── Deployment/
-│   ├── TELEMIS_INTEGRATION_GUIDE.md # Guide integration PACS Telemis
-│   └── ...                          # Network, monitoring guides
-└── architecture/
-    └── SYSTEM_PATTERNS.md           # Phase 3.1 patterns doc
-
-HOSPITAL_DEPLOYMENT_EVALUATION.md    # Evaluation deploiement hospitalier (racine)
-```
+- **#147 fermée** : wheel-reinvention sur 22 lames marginales (formats que OpenSlide/Bio-Formats devraient gérer ou ignorer)
+- **#358 fermée** : doublon de #359 (504 GitHub timeout)
+- **#145 downgrade priority:low** : bug upstream OpenSlide, pas de différenciateur stratégique
+- **Wave 10 pivotée** : "Continuous Learning MLOps" → "Foundation Models & Validation"
+- **Wave 13 créée** : "Scalability & Multi-tenant" — pivot produit acté
+- **23 issues open ré-alignées** : commentaire d'alignement multi-tenant + scalabilité posté sur chaque
+- **4 issues genericized** dans body : #339, #341, #343, #351 ("CHU UCL Namur" → "tenant (CHU UCL Namur = customer-zero)")
 
 ---
 
-## Metriques de Performance (Mesures Reelles)
+## Métriques (mesures réelles)
 
-| Metrique | Valeur Mesuree | Source |
-|----------|----------------|--------|
-| Tile load (keep-alive) | 0-13ms | Tests Phase 2 |
-| 28 tiles (premier chargement) | ~2.1s | Tests Phase 2 |
-| ML heatmap (Phikon-v2, CUDA) | ~2.5 min | Tests Phase 2 |
-| Formats supportes | 10 | 94 lames testees |
-| Tests backend | 156 pass, 21 skip | pytest |
-| Detection regions | 3 regions (72-88% confidence) | threshold=0.3 |
-
----
-
-## Git Status (2026-02-20)
-
-### Branches
-- `main` - Production stable (commit 96261b2)
-- `develop` - Development branch
-
-### Commits Recents
-```
-96261b2 fix(ci): share runner network namespace for E2E backend container
-5acb054 fix(ci): use container bridge IP for E2E Playwright tests
-b79f143 fix(ci): add docker prune before builds to prevent disk full errors
-f899aae fix(ci): use --network=host for e2e backend container
-5f6fbc9 fix(ci): use docker exec for health checks (DooD compatible)
-```
-
-### CI/CD Pipeline Status
-**CI (ci.yml)** — 10 jobs, ALL PASS:
-- Detect Changes, Backend Lint/Test/Docker, Frontend Lint/Build/Docker, Integration, E2E Playwright, CI Status
-
-**Security (security.yml)** — 7 jobs:
-- PASS: Secret Scan, Dependency Scan (x2), Docker Scan (x2)
-- FAIL (informational, continue-on-error): CodeQL (x2), Python Security, JS Security, HIPAA Compliance
-
-**CD (cd.yml)** — on push to main:
-- Build + push to GHCR, GitHub Release on tags, deployment manifest update
-
-**Other**: notify-failure.yml, update-project.yml
-
-**Self-hosted runner toggle**: `vars.USE_SELF_HOSTED` (DooD compatible)
+| Métrique | Valeur | Source |
+|---|---|---|
+| Tests backend | 1033 collectés | `pytest --collect-only -q` |
+| Tile load (keep-alive) | 0-13 ms | tests Phase 2 |
+| Tile load P95 (premier chargement) | ~65 ms | benchmarks |
+| 28 tiles premier chargement | ~2.1 s | tests Phase 2 |
+| ML heatmap (Phikon-v2 CUDA) | ~2.5 min | tests Phase 2 |
+| Cache hit rate (L1+L2+nginx) | 75-85% | Prometheus |
+| Disponibilité (Phase 2.5) | 99.73% | benchmarks |
+| Lames testées | 94 (10 formats) | `test_format_detector.py` |
+| Détection régions auto | 3 régions (72-88% conf.) | threshold 0.3 |
 
 ---
 
-## Positionnement & Contexte
+## Positionnement
 
-### Recherche Use Only
-- **Aujourd'hui** : outil de recherche et d'enseignement (IVDR Classe A, FDA Exempt)
-- **Objectif moyen terme** : outil d'aide a la decision consultatif
-- **Option long terme** : certification IVDR Classe C / FDA 510(k) si validation clinique
+### Recherche Use Only (status 2026-05-07)
+- Aujourd'hui : outil de recherche et d'enseignement (IVDR Classe A, FDA Exempt)
+- Moyen terme : outil d'aide à la décision consultatif
+- Long terme : certification IVDR Classe C / FDA 510(k) si validation clinique
 
-### 3 Differenciateurs (cf. PROPOSAL_VARUNA_v2.md)
-1. **Quality-First Annotations** - Metriques IAA (kappa FAIT), detection outliers, versioning
-2. **Continuous Learning MLOps** - Drift monitoring, feedback loops, CI/CD modeles
-3. **Radical Simplicity** - Zero-config, onboarding 3 min, < 100ms latence
+### Différenciateurs (PDF §2.3 + pivot mai 2026) vs marché
+- **Quality-First** — kappa auto + outlier detection + adjudication + versioning Git-like (vs marché : annotations sans QA)
+- **Foundation Models & Validation** (pivot 2026) — fine-tuning UNI/CONCH/Virchow + validation prospective + drift sur fine-tuned (vs marché : training from scratch ou black-box vendor)
+- **Radical Simplicity + IMS deep** — zero-config + onboarding 3min + SSO transparent + accès navigateur direct + intégration LIS/HIS bidirectionnelle (vs marché : formation 2-4 semaines + manuel 100 pages + système séparé du workflow IMS)
+- **AI Act compliance différenciateur réglementaire** (axe 2026) — traçabilité versioning Git-like + transparence calibration + audit dossier Notified Bodies (vs marché : compliance theatre)
+- **Réseau RCP + federated learning** (axe 2026) — co-visualisation sync + chat ancré + architecture-ready Horizon Europe (vs marché : silos hospitaliers)
 
-### Gaps Critiques pour Deploiement Hospitalier (cf. HOSPITAL_DEPLOYMENT_EVALUATION.md)
-1. ~~Authentification (RBAC + JWT)~~ FAIT (Phase 3.1)
-2. ~~Audit trail (structured logging + table)~~ FAIT (Phase 3.1)
-3. Integration PACS (command plugin Telemis) - PROCHAIN
-4. Protection PHI (de-identification) - Post-MVP
-5. HTTPS/TLS - Depends on nginx config
+### Multiplicateur produit (pivot 2026-05-07)
+- **Multi-tenant + scalabilité** : la plateforme sert N tenants (hôpitaux, laboratoires, instituts) avec isolation stricte (DB, storage, ML, auth, cache, observability per-tenant). C'est un **multiplicateur** des différenciateurs Q+F+A+N, pas un différenciateur en soi. Wheel-reinvention évitée : intégration de standards (Kubernetes, Helm, Triton, Redis Cluster, OpenTelemetry, ArgoCD).
+- CHU UCL Namur reste **customer-zero / early adopter**, plus le périmètre cible.
+
+### Gaps déploiement hospitalier (cf. `docs/HOSPITAL_DEPLOYMENT_EVALUATION.md`)
+1. ~~Authentification (RBAC + JWT)~~ FAIT (Wave 3)
+2. ~~Audit trail (structured logging + table)~~ FAIT (Wave 3)
+3. ~~Intégration PACS Telemis~~ FAIT (Wave 3 — deep-link)
+4. Protection PHI (de-identification) — Wave 5+
+5. HTTPS/TLS — `nginx/` profile prod
 
 ---
 
-**Ce fichier est mis a jour au debut de chaque session Claude Code.**
+## Liens rapides
+
+| Quoi | Path |
+|---|---|
+| Roadmap | `.claude/memory/ROADMAP.md` |
+| Vision alignment PDF §2 | `.claude/memory/VISION_ALIGNMENT.md` |
+| Cerveau orchestration | `.claude/BRAIN.md` |
+| Décisions techniques | `.claude/memory/DECISIONS.md` |
+| Learnings (bugs, workarounds) | `.claude/memory/LEARNINGS.md` |
+| Architecture canonique | `docs/architecture/MODULAR_ARCHITECTURE.md` |
+| Manuel admin | `docs/Admin/` |
+| Manuel utilisateur | `docs/Manuel/` |
+| Vision source | `vision.pdf` |
+| Proposal opérationnel | `docs/PROPOSAL_VARUNA_v2.md` |
+
+---
+
+**Ce fichier est mis à jour au début de chaque session Claude Code et après chaque tâche significative.**

@@ -11,7 +11,7 @@
 
 ## PROJECT STATE
 
-### Milestones (GitHub)
+### Milestones (GitHub) — au 2026-05-07
 
 | Milestone | Issues | Status |
 |-----------|--------|--------|
@@ -19,11 +19,23 @@
 | Wave 2 — L'IA qui assiste | 10/10 closed | DONE |
 | Wave 3 — Le cas, pas le fichier | 8/8 closed | DONE |
 | Wave 4 — L'ecosysteme intelligent | 11/11 closed | DONE |
+| Wave 5 — Robustesse ML & Compatibilité | 4/7 closed | EN COURS (3 open : #145, #146, #147) |
+| Wave 6 — Intelligence Visible | 29/29 closed | DONE |
+| Wave 7 — Platform Hardening | 45/45 closed | DONE |
+| Wave 8 — Annotation Clinique | 6/8 closed | EN COURS (2 open : #330, #331) |
 | Standards (no milestone) | #103-#124, all closed | DONE |
 
-**All 62 issues closed. 0 open issues.**
+**Total : 124 closed, 5 open. Standards tous fermés.**
 
-### Current tag: `v0.1.0` — baseline stable (Waves 1-4 + standards + CI/CD)
+**Waves à créer pour combler `vision.pdf §2.3`** :
+- Wave 9 — Quality-First Deep (outliers, adjudication, versioning Git-like, métriques prédictives qualité)
+- Wave 10 — Continuous Learning MLOps (drift, feedback loops, CI/CD modèles, calibration, active learning)
+- Wave 11 — Radical Simplicity Polish (onboarding 3min, geste-mimétique)
+
+Mapping détaillé : `.claude/memory/VISION_ALIGNMENT.md`.
+
+### Current tag: `v0.3.0` — baseline + Strangler Fig sprints 1-15 (mai 2026)
+Tags publiés : `v0.1.0` (Waves 1-4), `v0.2.0`, `v0.3.0` (post-sprint 15).
 
 ### Architecture post-v0.1.0 — Strangler Fig migration (in progress)
 
