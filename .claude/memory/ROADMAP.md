@@ -1,471 +1,324 @@
-# VarunaPoC - Roadmap & Checklist
+# VarunaPoC — Roadmap & Alignement Vision
 
-**Version:** 3.0
-**Date:** 2026-02-08
-**Statut:** Document vivant - Aligne avec PROPOSAL_VARUNA_v2.md
+**Version:** 6.1
+**Date:** 2026-05-07
+**Statut:** Document vivant — aligné avec `vision.pdf §2` **+ pivot stratégique mai 2026 (foundation models + produit multi-tenant)**
 
-Ce document centralise la vision projet, les phases, et le suivi d'avancement.
-Lie au cerveau d'orchestration (`.claude/BRAIN.md`).
+Roadmap unique et à jour. **Deux pivots stratégiques actés le 2026-05-07** :
+
+1. **Pivot foundation models** : MLOps classique (training from scratch + retrain) → foundation model pré-entraîné + fine-tuning local + validation rigoureuse + déploiement supervisé. Wave 10 pivotée. Wave 12 créée (AI Act, IMS deep, RCP, Federated, Copilote IA).
+2. **Pivot produit multi-tenant** (v6.1) : sortie du PoC mono-tenant CHU UCL Namur → produit / plateforme déployable sur N tenants. Wave 13 créée (Scalability & Multi-tenant, 8 issues). Toutes les issues open enrichies d'une dimension multi-tenant + scalabilité (commentaire d'alignement).
+
+Voir `.claude/memory/VISION_ALIGNMENT.md §0` (foundation models) et **§0.6** (produit multi-tenant) pour le détail.
 
 **GitHub Project Board:** https://github.com/users/Yanstart/projects/6
+**Commit courant:** `47651d1` sur `main`. Tags : `v0.1.0`, `v0.2.0`, `v0.3.0`.
 
-**Documents strategiques:**
-- `docs/PROPOSAL_VARUNA_v2.md` - Proposition projet v2 (marche, architecture, couts)
-- `HOSPITAL_DEPLOYMENT_EVALUATION.md` - Evaluation deploiement hospitalier
-
----
-
-## Table des Matieres
-
-1. [Vue d'Ensemble](#vue-densemble)
-2. [Gantt Chart Global](#gantt-chart-global)
-3. [Phase 1 - Initialisation](#phase-1---initialisation-termine)
-4. [Phase 2 - Core](#phase-2---core-termine)
-5. [Phase 3 - Enrichissement](#phase-3---enrichissement-a-venir)
-6. [Phase 4 - Finalisation](#phase-4---finalisation-a-venir)
-7. [Post-MVP - Cercles](#post-mvp---cercles-concentriques)
-8. [Dependances Critiques](#dependances-critiques)
-9. [Risques & Mitigations](#risques--mitigations)
-10. [Metriques](#metriques)
-11. [Changelog](#changelog)
+**Documents stratégiques:**
+- `vision.pdf` — vision projet v2.0 (déc. 2025), section 2 = cadre conceptuel + 12 angles morts + 3 critiques
+- `docs/PROPOSAL_VARUNA_v2.md` — déclinaison opérationnelle de la vision
+- `docs/architecture/MODULAR_ARCHITECTURE.md` — architecture canonique (6 Protocols)
+- `.claude/memory/VISION_ALIGNMENT.md` — mapping détaillé PDF §2 ↔ implémentation
 
 ---
 
-## Vue d'Ensemble
+## 1. État global
 
-### Statut Global (Plan 15 semaines MVP)
+### 1.1. Milestones GitHub (au 2026-05-07, après pivot stratégique)
 
-| Phase | Nom | Semaines | Statut | Progress |
-|-------|-----|----------|--------|----------|
-| **1** | Initialisation | 1-3 | TERMINE | 100% |
-| **2** | Core | 4-9 | TERMINE | 100% |
-| **3.1** | Auth OIDC + RBAC + Audit | 10-11 | TERMINE | 100% |
-| **3.2** | Quality Metrics (kappa) | 11-12 | TERMINE | 100% |
-| **3.3** | Integration PACS Telemis | 12-13 | EN COURS | 0% |
-| **4** | Finalisation | 14-15 | A VENIR | 0% |
+| Wave | Thème | Closed / Total | Statut |
+|---|---|---|---|
+| 1 | Le viewer qui parle pathologiste | 11/11 | DONE |
+| 2 | L'IA qui assiste | 10/10 | DONE |
+| 3 | Le cas, pas le fichier | 8/8 | DONE |
+| 4 | L'écosystème intelligent | 11/11 | DONE |
+| 5 | Robustesse ML & Compatibilité | 5/7 | EN COURS — #147 fermée (wheel-reinvention), #145 downgrade priority:low, #146 priority:low |
+| 6 | Intelligence Visible | 29/29 | DONE |
+| 7 | Platform Hardening | 45/45 | DONE |
+| 8 | Annotation Clinique | 6/8 | EN COURS — 2 open (#330 priority:critical, #331 priority:critical) |
+| **9** | **Quality-First Deep** | **0/4** | **CREATED 2026-05-07** — outliers, adjudication, versioning Git-like (priority:critical), métriques prédictives qualité |
+| **10** | **Foundation Models & Validation** (pivot du 2026-05-07) | **0/8** | **CREATED + PIVOTED** — drift, feedback, fine-tuning workflow CI/CD, calibration, active learning + N1 registry, N2 fine-tuning workflow, N3 validation prospective |
+| **11** | **Radical Simplicity Polish** | **0/2** | **CREATED** — onboarding 3min (DEFER), audit geste-mimétique |
+| **12** | **Stratégie 2026 : AI Act + Workflow + Réseau** | **0/5** | **CREATED 2026-05-07** — N4 AI Act doc (priority:critical), N5 IMS deep (priority:critical), N6 RCP collab, N7 federated learning, N8 copilote IA (exploratoire) |
+| **13** | **Scalability & Multi-tenant** | **0/8** | **CREATED 2026-05-07 (pivot produit)** — multi-tenant data isolation (priority:critical), storage S3, DB scaling, ML inference Triton, cache+WS scaling, observability OTel, Helm+GitOps, perf+FinOps |
 
-### Direction Strategique
+**Total : 126 closed (#358 doublon fermé), 27 open** (Standards #103-#124 tous fermés). Détail
+dans §4.
 
-**Ce qui est FAIT:**
-- [x] Web-first (vs desktop QuPath)
-- [x] Monolithe modulaire (vs microservices Cytomine)
-- [x] OpenSlide 4.0 (10 formats, 94 lames testees)
-- [x] API-first (OpenAPI 3.0 auto-documentee)
-- [x] Annotations PostGIS (CRUD, labels, stats, GeoJSON)
-- [x] ML integration (Slideflow + Phikon-v2, CUDA)
-- [x] Compare mode (multi-viewer synchronise)
-- [x] CI/CD (GitHub Actions: lint, tests, Docker, security scans)
-- [x] 94 tests automatises
+### 1.1.1. Note sur le pivot Wave 10
 
-**Ce qui est FAIT (Phase 3):**
-- [x] Auth OIDC PKCE + RBAC 4 roles + JWT RS256/ES256 + audit trail
-- [x] Quality metrics annotations (Cohen/Fleiss kappa, F1, confusion matrix, IoU, disagreement heatmap)
-- [x] FHIR R4 stub (DiagnosticReport)
-- [x] CI/CD all green (156 tests, 8/8 CI jobs)
+Wave 10 a été **renommée et recadrée le 2026-05-07** :
+- Ancien nom : "Continuous Learning MLOps" (paradigme 2022-2023, training from scratch)
+- Nouveau nom : "Foundation Models & Validation"
+- Issue #341 réécrite intégralement (Phikon retrain → fine-tuning UNI/CONCH workflow)
+- Issues #339, #340, #342, #343 recadrées (en support fine-tuning, plus retrain from scratch)
+- 3 nouvelles issues créées (N1, N2, N3)
 
-**Ce qui doit EVOLUER (Phase 3.3+):**
-- [ ] Integration PACS (Telemis command plugin)
-- [ ] Tests E2E
-- [ ] Documentation formation
+### 1.2. Architecture post-`v0.1.0` — Strangler Fig (sprints 1-15)
 
-### 3 Angles Morts Differenciateurs
+Six Protocols PEP 544 abstraient les seams du backend ; chaque Protocol a
+au moins un implémenteur concret câblé via FastAPI `Depends`.
 
-| Angle Mort | Description | Statut |
-|------------|-------------|--------|
-| **Quality-First Annotations** | Metriques IAA, detection outliers, versioning Git-like | AVANCE (CRUD + stats + kappa + F1 + confusion + IoU + disagreement FAIT, outliers/adjudication Post-MVP) |
-| **Continuous Learning MLOps** | Drift monitoring, feedback loops, CI/CD modeles | PARTIEL (inference fait, monitoring Post-MVP) |
-| **Radical Simplicity** | Zero-config, onboarding 3 min, <100ms latence | AVANCE (tiles <15ms, auth OIDC, PACS en cours) |
+| Protocol | Implémenteur(s) | Status |
+|---|---|---|
+| `AuthProvider` | `OIDCAuthProvider` | available — legacy `dependencies.py` reste primaire |
+| `StorageProvider` | `FilesystemStorageProvider` | wired (`routes/ml.py`, `routes/slides.py`) |
+| `SlideReader` | `OpenSlideReader`, `BioFormatsReader`, `OMETIFFReader`, `OMEZarrReader` | wired transitif (`services/tile_server.py`) |
+| `TileCache` | `TwoLevelTileCache` (L1 mem + L2 Redis) | wired (`routes/slides.py:get_tile`) |
+| `WorkflowHook` | `FHIRWorkflowHook`, `PACSWorkflowHook`, `WebSocketWorkflowHook` (sprint 15), `CompositeWorkflowHook`, `NoOpWorkflowHook` | wired (`routes/exports.py`, `routes/annotations.py`) |
+| `MLWorkerProvider` | `MLWorkerProxy`, `InProcessMLWorker`, `TritonClientMLWorker` | wired (`routes/ml.py`, sprint 12) |
 
----
+Conformance Protocol verrouillée par `tests/unit/test_protocol_conformance.py`.
 
-## Gantt Chart Global
+### 1.3. Métriques (mesures)
 
-```mermaid
-gantt
-    title VarunaPoC - MVP 15 semaines + Post-MVP
-    dateFormat  YYYY-MM-DD
-    axisFormat  %b %Y
-
-    section Phase 1 - Initialisation
-    Shadowing pathologistes           :done, p1a, 2025-10-01, 2025-10-21
-    Choix stack technique             :done, p1b, 2025-10-21, 2025-11-04
-    Setup environnements              :done, p1c, 2025-11-04, 2025-11-18
-
-    section Phase 2 - Core
-    Viewer basique (zoom/pan)         :done, p2a, 2025-11-18, 2025-12-09
-    Multi-formats 10 vendors          :done, p2b, 2025-12-09, 2026-01-06
-    Annotations PostGIS + CRUD        :done, p2c, 2026-01-06, 2026-01-27
-    ML Slideflow + Phikon-v2          :done, p2d, 2026-01-27, 2026-02-05
-    Compare mode + detection          :done, p2e, 2026-02-05, 2026-02-08
-
-    section Phase 3 - Enrichissement
-    Auth OIDC + RBAC + Audit          :done, p3a, 2026-02-10, 2026-02-11
-    Quality Metrics (kappa)           :done, p3b, 2026-02-11, 2026-02-12
-    Integration PACS Telemis          :active, p3c, 2026-02-12, 2026-02-20
-
-    section Phase 4 - Finalisation
-    Tests E2E + charge                :p4a, 2026-04-04, 2026-04-14
-    Documentation + formation         :p4b, 2026-04-14, 2026-04-21
-    Mise en production                :p4c, 2026-04-21, 2026-04-28
-
-    section Post-MVP - Cercle 1
-    SSO complet                       :post1a, 2026-05-01, 2026-06-01
-    Quality-First complet             :post1b, 2026-06-01, 2026-08-01
-    Collaboration temps reel          :post1c, 2026-07-01, 2026-09-01
-
-    section Post-MVP - Cercle 2
-    MLOps complet                     :post2a, 2026-09-01, 2026-12-01
-    Continuous Learning               :post2b, 2026-10-01, 2027-01-01
-    Validation clinique               :post2c, 2026-11-01, 2027-02-01
-```
+| Métrique | Valeur |
+|---|---|
+| Tests backend collectés | 1033 (3 collection errors fixables) |
+| Lames testées | 94 (10 formats supportés) |
+| Tile load (keep-alive) | 0-13 ms |
+| Tile load P95 (chargement initial) | ~65 ms |
+| Disponibilité (Phase 2.5) | 99.73% |
+| Cache hit rate (L1+L2+nginx) | 75-85% |
+| ML heatmap (Phikon-v2 CUDA) | ~2.5 min |
 
 ---
 
-## Phase 1 - Initialisation (TERMINE)
+## 2. Alignement avec `vision.pdf §2`
 
-**Objectif:** Shadowing, choix techniques, setup
-**Semaines:** 1-3
-**Progress:** `[####################] 100%`
+Mapping condensé — détail dans `VISION_ALIGNMENT.md`.
 
-- [x] Observation ethnographique pathologistes (shadowing)
-- [x] Ateliers co-conception avec utilisateurs cles
-- [x] Choix stack technique (FastAPI, OpenSlide, OpenSeadragon, PostGIS)
-- [x] Setup environnements (dev, Docker, CI/CD)
-- [x] Structure projet (backend/, frontend/, docs/)
-- [x] Cerveau orchestration (.claude/BRAIN.md)
+### 2.1. Les 12 angles morts structurels (PDF §2.2)
 
----
+| # | Angle mort | Couverture VarunaPoC |
+|---|---|---|
+| 1 | Interopérabilité (vendor lock-in) | OK — 10 formats OpenSlide, FHIR R4, DICOM WSI |
+| 2 | Qualité annotations | PARTIEL — kappa+F1+IoU+confusion FAIT, outliers/adjudication MANQUE |
+| 3 | MLOps | FAIBLE — inférence FAIT, drift/feedback/CI-CD modèles MANQUE |
+| 4 | Explicabilité | PARTIEL — heatmaps + uncertainty existent, calibration par région MANQUE |
+| 5 | Feedback loops | MANQUE |
+| 6 | Simplicité | OK — web zero-config, perf <100ms, intégration SI |
+| 7 | Collaboration | PARTIEL — WebSocket events FAIT (sprint 15), co-annotation temps réel MANQUE |
+| 8 | Privacy AI | NON ABORDÉ — federated learning Post-MVP |
+| 9 | Reproductibilité | PARTIEL — versioning code OK, versioning datasets/runs ML MANQUE |
+| 10 | Cas rares | MANQUE — out-of-distribution detection |
+| 11 | Intégration SI | OK — OIDC SSO, PACS Telemis deep-link, FHIR DiagnosticReport |
+| 12 | Modèle économique | OK — open source MIT, hébergement interne |
 
-## Phase 2 - Core (TERMINE)
+### 2.2. Les 3 angles morts critiques (PDF §2.3)
 
-**Objectif:** Viewer complet, annotations, ML, compare mode
-**Semaines:** 4-9
-**Progress:** `[####################] 100%`
+#### 2.2.1. Quality-First Annotation Platform
 
-### 2.1 Viewer WSI (TERMINE)
+| Capacité PDF | État |
+|---|---|
+| Mesure auto kappa/Dice inter-annotateur | FAIT (Cohen+Fleiss+IoU+F1+confusion+disagreement heatmap) |
+| Détection annotations suspectes (outliers spatial/taille/forme) | MANQUE → Wave 9 #1 |
+| Workflows d'adjudication structurés | MANQUE → Wave 9 #2 |
+| Versioning Git-like (branches, merge, diff visuel, rollback) | PARTIEL — issue #331 (audit medicolegal) ; deep version → Wave 9 #3 |
+| Métriques prédictives qualité dataset | MANQUE → Wave 9 #4 |
 
-- [x] Tile streaming DZI (< 15ms keep-alive)
-- [x] Navigation fluide (zoom progressif multi-resolution)
-- [x] Overview/thumbnail generation
-- [x] Mini-map navigator
-- [x] Plein ecran, navigation clavier
-- [x] LRU cache slides (max 5)
-- [x] Routes synchrones (def pas async def) pour threadpool OpenSlide
+#### 2.2.2. Continuous Learning System / MLOps complet
 
-### 2.2 Multi-Format Support (TERMINE)
+| Capacité PDF | État |
+|---|---|
+| Monitoring drift automatique | MANQUE → Wave 10 #1 |
+| Feedback loops auto (corrections → ré-entraînement) | MANQUE → Wave 10 #2 |
+| Pipeline CI/CD modèles avec rollback | MANQUE → Wave 10 #3 |
+| Calibration incertitude par région | PARTIEL → Wave 10 #4 |
+| Active learning intelligent | MANQUE → Wave 10 #5 |
 
-- [x] FormatDetector (10+ formats)
-- [x] `_try_open_slide()` pour detecter fichiers corrompus
-- [x] Aperio SVS, Hamamatsu NDPI, 3DHistech MRXS
-- [x] Leica SCN, Ventana BIF, Philips TIFF, Trestle
-- [x] Sakura SVSLIDE, Zeiss CZI, DICOM WSI
-- [x] Generic TIFF pyramidal
-- [x] 94 lames testees, 3 corrompues rejetees
-- [x] Routes safety net (OpenSlideError -> 422)
+#### 2.2.3. Radical Simplicity
 
-### 2.3 Annotations (TERMINE)
+| Capacité PDF | État |
+|---|---|
+| Zero-config browser | FAIT |
+| Interface geste-mimétique (zoom molette, double-clic centrer) | À VÉRIFIER → Wave 11 #2 |
+| Onboarding tutoriel contextuel 3min | MANQUE → Wave 11 #1 |
+| Performance perceptuelle <100ms | FAIT (P95 65ms, keep-alive 0-13ms) |
+| Intégration transparente SI (SSO + PACS) | FAIT |
 
-- [x] PostgreSQL + PostGIS (port 5433, SRID=0)
-- [x] Alembic migrations
-- [x] CRUD complet (create, read, update, delete)
-- [x] Labels avec couleurs
-- [x] Export GeoJSON
-- [x] Stats endpoint (total, by_label, by_type, confidence_distribution)
-- [x] Frontend SVG overlay (AnnotationLayer)
-- [x] 5 outils dessin (DrawingTools: rectangle, polygon, point, circle, freehand)
-- [x] LayerManager (visibilite, opacite)
-- [x] AnnotationStore (client state, CRUD, loadStats, computeLocalStats)
+### 2.3. Score d'alignement
 
-### 2.4 ML Integration (TERMINE)
+**14 capacités critiques (PDF §2.3) :** 6 livrées, 4 partielles, 4 manquantes.
 
-- [x] Slideflow + Phikon-v2 (CUDA GPU)
-- [x] Heatmap generation (attention map 64x64, ~2.5 min)
-- [x] Detection automatique regions tissulaires (heatmap -> scipy ndimage -> skimage -> shapely -> GeoJSON)
-- [x] Classification tissue/background avec uncertainty quantification
-- [x] Tag extractor + tag router
-- [x] Frontend MLPanel + HeatmapOverlay (canvas, cached image)
-- [x] DetectionPanel (label selector, confidence distribution)
-- [x] CountingPanel (stats temps reel)
-
-### 2.5 Compare Mode (TERMINE)
-
-- [x] CompareLayout (grid multi-viewer 2x1, 2x2)
-- [x] ViewerPanel (full components: annotations, drawing, detection, counting)
-- [x] Synchronisation pan/zoom
-- [x] AnnotationStore context switch (setSlide on panel activation)
-
-### 2.6 Infrastructure (TERMINE)
-
-- [x] 94 tests pytest (unit, detection, format_detector)
-- [x] CI/CD GitHub Actions (lint, tests, Docker build, Trivy, Bandit, CodeQL, Gitleaks)
-- [x] Pre-commit hooks (detect-secrets)
-- [x] Docker multi-container
-- [x] Prometheus metrics (optionnel)
-- [x] EventBus unsubscribe pattern (fix memory leaks)
+Le projet a la **fondation alignée**. Les 4 manquantes + 4 partielles
+constituent les **Waves 9, 10, 11** (à créer en GitHub project, voir §4).
 
 ---
 
-## Phase 3.1 - Auth OIDC + RBAC + Audit (TERMINE)
+## 3. Phases historiques (référence)
 
-**Objectif:** Authentification, audit trail, securite runtime
-**Date:** 2026-02-11
-**Progress:** `[####################] 100%`
+Les phases originales de la `vision.pdf §5.1` (Initialisation 1-3, Core 4-9,
+Enrichissement 10-13, Finalisation 14-15) ont été remappées en **8 Waves**
+GitHub. Mapping :
 
-- [x] **P3-A01** OIDC PKCE authentication (Keycloak dev, Azure AD prod-ready)
-- [x] **P3-A02** 4 roles claims-based (LECTURE_SEULE, INFIRMIER, MEDECIN, ADMIN_TECHNIQUE)
-- [x] **P3-A03** JWT validation RS256/ES256 avec JWKS cache TTL 1h
-- [x] **P3-A04** `require_role()` FastAPI dependency + backward compatible (AUTH_ENABLED=false)
-- [x] **P3-A05** Frontend AuthService PKCE, LoginPage, UserMenu, role-based UI
-- [x] **P3-A06** Audit trail dual DB+JSON (INFO/WARNING/CRITICAL)
-- [x] **P3-A07** Break-glass emergency sessions (30min, CRITICAL audit)
-- [x] **P3-A08** Session roaming cross-workstation (PostgreSQL)
-- [x] **P3-A09** FHIR R4 stub (DiagnosticReport builder)
-- [x] **P3-A10** Alembic migration 002 (auth + audit tables)
-
-### Commits
-- `56cb8a7` feat(phase3): Add OIDC PKCE auth, RBAC, audit trail, and system patterns doc
+| Phase PDF | Sprint | Wave correspondante |
+|---|---|---|
+| 1 — Initialisation (sem. 1-3) | shadowing, stack, setup | (pré-Wave 1) |
+| 2 — Core (sem. 4-9) | viewer, formats, annotations, ML, compare | Waves 1-2 |
+| 3 — Enrichissement (sem. 10-13) | auth, audit, quality, PACS | Waves 3-4 |
+| 4 — Finalisation (sem. 14-15) | tests E2E, docs, prod | Waves 6-7 + Standards |
+| Post-MVP Cercle 1 (mois 4-8) | SSO, quality complet, collab temps réel | Waves 5+8 + sprints Strangler Fig |
+| Post-MVP Cercle 2 (mois 8-14) | MLOps complet, continuous learning | **Wave 10 (à créer)** |
 
 ---
 
-## Phase 3.2 - Quality Metrics (TERMINE)
+## 4. Backlog opérationnel — 19 issues open
 
-**Objectif:** Metriques qualite inter-annotateur (kappa)
-**Date:** 2026-02-12
-**Progress:** `[####################] 100%`
+### 4.1. Wave 5 — Robustesse ML (downgrade après pivot 2026-05-07)
 
-- [x] **P3-Q01** Cohen's kappa pairwise agreement (IoU spatial matching PostGIS)
-- [x] **P3-Q02** Fleiss' kappa multi-rater agreement (grid-based matching)
-- [x] **P3-Q03** Confusion matrix, F1/Precision/Recall per label
-- [x] **P3-Q04** IoU distribution statistics
-- [x] **P3-Q05** Disagreement heatmap (GeoJSON overlay)
-- [x] **P3-Q06** QualityPanel frontend (annotator selector, kappa badge, confusion matrix, F1 table, IoU histogram)
-- [x] **P3-Q07** Cache table `quality_reports` (JSONB, TTL 5min)
-- [x] **P3-Q08** 7 API endpoints `/api/quality/{slide_id}/...`
-- [x] **P3-Q09** 31 unit tests + 7 integration tests
-- [x] **P3-Q10** Alembic migration 003 (quality_reports table)
+| # | Titre | Priorité | Note |
+|---|---|---|---|
+| #145 | BIF direction error workaround | priority:low | Wheel-reinvention OpenSlide. Upstream-only ou accepter gap. |
+| #146 | Uvicorn multi-worker / gunicorn | priority:low | Production hardening, indirect. |
 
-### Commits
-- `ec3303a` feat(quality): Add inter-annotator agreement metrics (Phase 4)
-- `52a293f` fix(lint): Resolve all ESLint errors and Bandit false positives
+#147 fermée le 2026-05-07 (wheel-reinvention sur 22 lames marginales — voir comment de fermeture).
 
----
+### 4.2. Wave 8 — Annotation Clinique (héritage interview pathologiste)
 
-## Phase 3.3 - Integration PACS Telemis (EN COURS)
+| # | Titre | Priorité | Alignement stratégique |
+|---|---|---|---|
+| #330 | Édition contour des détections IA (E key, vertex drag) | priority:critical | Q + F — corrections expertes = data fine-tuning Wave 10 |
+| #331 | Historique versionné annotations (audit medicolegal) | priority:critical | A — fondation AI Act + base Wave 9 #337 |
 
-**Objectif:** Lancement viewer depuis PACS via command plugin
-**Progress:** `[....................] 0%`
+### 4.3. Wave 9 — Quality-First Deep (créée 2026-05-07)
 
-- [ ] **P3-P01** Backend: endpoint `/api/slides/by-accession/{accession_id}` (resolution accession -> slide)
-- [ ] **P3-P02** Frontend: route `/slide/{id}` avec extraction ID depuis URL
-- [ ] **P3-P03** Backend: contexte patient automatique (slide_id -> patient context)
-- [ ] **P3-P04** Plugin config `.cfg` template dans le repo
-- [ ] **P3-P05** Tests avec environnement Telemis
+| # | Titre | Priorité | Alignement |
+|---|---|---|---|
+| #335 | Outlier detection annotations (DBSCAN spatial/taille/forme) | priority:high | Q + F — filter dataset avant fine-tuning |
+| #336 | Workflow adjudication par pairs | priority:high | Q + A + N — peer review = AI Act + base RCP |
+| **#337** | **Versioning Git-like annotations** | **priority:critical** | **A core + Q + N — LE différenciateur AI Act + publication académique** |
+| #338 | Métriques prédictives qualité dataset | priority:medium | Q + F — gate avant fine-tuning |
 
----
+### 4.4. Wave 10 — Foundation Models & Validation (pivot 2026-05-07)
 
-## Phase 4 - Finalisation (A VENIR)
+| # | Titre | Priorité | Alignement |
+|---|---|---|---|
+| **#346 (N1)** | **Foundation model registry + adapter (UNI, CONCH, Virchow, GigaPath, mSTAR)** | **priority:critical** | **F core — pierre angulaire de Wave 10** |
+| **#347 (N2)** | **Fine-tuning workflow local (LoRA + full FT, MLflow)** | **priority:critical** | **F core + Q — moteur du fine-tuning** |
+| #348 (N3) | Validation prospective multi-centrique | priority:high | F + Q + A + N — étape "Évaluer" trajectoire 2026 |
+| #341 (réécrite) | CI/CD fine-tuning + champion/challenger + auto-rollback | priority:high | F + A — automatisation #347 |
+| #339 | Drift monitoring sur fine-tuned foundation model | priority:high | F + A — déclencheur auto fine-tuning |
+| #340 | Feedback loops (corrections → dataset MLflow + commit Wave 9 #337) | priority:high | Q + F + A — boucle complète |
+| #342 | Calibration uncertainty (Platt/temperature scaling) | priority:medium | A core + F — transparence AI Act |
+| #343 | Active learning (entropy + diversity sampling sur embeddings foundation models) | priority:medium | F + Q — sélection cas pour fine-tuning |
 
-**Objectif:** Tests E2E, documentation, mise en production
-**Semaines:** 14-15
-**Progress:** `[....................] 0%`
+### 4.5. Wave 11 — Radical Simplicity Polish
 
-### 4.1 Tests
+| # | Titre | Priorité | Alignement |
+|---|---|---|---|
+| #344 | Onboarding tutoriel contextuel 3min | priority:medium | R — DEFER (attend Wave 12 N5 IMS) |
+| #345 | Audit geste-mimétique (double-clic centrer, etc.) | priority:medium | R — non bloqué |
 
-- [ ] **P4-T01** Tests E2E (Playwright ou Selenium)
-- [ ] **P4-T02** Tests de charge (10 utilisateurs, 50 lames)
-- [ ] **P4-T03** Tests integration annotation CRUD (fix async loop Windows)
+### 4.6. Wave 12 — Stratégie 2026 : AI Act + Workflow + Réseau (créée 2026-05-07)
 
-### 4.2 Documentation & Formation
+| # | Titre | Priorité | Alignement |
+|---|---|---|---|
+| **#349 (N4)** | **Documentation AI Act (Art. 9-15) pour Notified Bodies** | **priority:critical** | **A core + N — différenciateur réglementaire + paper-ready** |
+| **#350 (N5)** | **IMS workflow integration (LIS/HIS deep, au-delà PACS)** | **priority:critical** | **R core — mandate non-négociable acheteurs hospitaliers** |
+| #351 (N6) | RCP collaborative (co-visualisation sync + chat contextuel ancré) | priority:high | N core — réseau hôpitaux + second avis |
+| #352 (N7) | Federated learning architecture-ready (Horizon Europe / EU4Health) | priority:medium | N core + F — financement EU + Privacy AI |
+| #353 (N8) | Copilote IA conversationnel (PathChat-like) — EXPLORATOIRE | priority:low | F — optionnel, à valider trimestriellement |
 
-- [ ] **P4-D01** Manuel utilisateur complet
-- [ ] **P4-D02** Sessions formation (2h par groupe de 5)
-- [ ] **P4-D03** Guide installation production
+### 4.7. Wave 13 — Scalability & Multi-tenant (créée 2026-05-07, pivot produit)
 
-### 4.3 Deploiement
+| # | Titre | Priorité | Alignement |
+|---|---|---|---|
+| **#354 (N9)** | **Multi-tenant data isolation + auth federation** | **priority:critical** | **S core — pierre angulaire pivot produit** |
+| #355 (N10) | Storage S3-compatible + tiering hot/cold + multi-tenant | priority:high | S — sortie filesystem local |
+| #356 (N11) | DB scaling (read replicas + pgbouncer + partitioning) | priority:high | S — passage à l'échelle PostgreSQL |
+| #357 (N12) | ML inference scaling (Triton + GPU pool + batch + queue) | priority:high | S + F — sortie inference in-process |
+| #359 (N13) | Cache cluster + WebSocket scaling (Redis Sentinel + sticky session) | priority:high | S — multi-réplicas cohérents |
+| #360 (N14) | Observability at scale (OpenTelemetry + log aggregation + multi-tenant SLO) | priority:high | S + A — opérer aveugle = échec |
+| #361 (N15) | Helm chart + GitOps deployment + multi-region readiness | priority:high | S — sortie docker-compose mono-host |
+| #362 (N16) | Performance benchmarks + FinOps monitoring (k6 + cost dashboards par tenant) | priority:medium | S — capacity planning + tarification |
 
-- [ ] **P4-K01** Nginx HTTPS/TLS configuration
-- [ ] **P4-K02** Docker Compose production
-- [ ] **P4-K03** Monitoring Prometheus + Grafana
-- [ ] **P4-K04** Periode accompagnement renforce (2 semaines)
+### 4.8. Vue priorisée
 
----
+**8 issues `priority:critical`** = les vrais bloqueurs stratégiques (chemin critique 2026) :
+- #330, #331 (annotations cliniques validées par pathologiste)
+- #337 (versioning Git-like — AI Act + publication)
+- #346 / #347 (foundation models registry + fine-tuning workflow)
+- #349 (AI Act doc) / #350 (IMS deep)
+- **#354 (multi-tenant data isolation + auth federation — pivot produit)**
 
-## Post-MVP - Cercles Concentriques
-
-### Cercle 1 - Consolidation Clinique (mois 4-8)
-
-- [ ] SSO institutionnel (SAML 2.0/OAuth 2.0)
-- [ ] Audit trail immutable (conformite RGPD Article 32)
-- [ ] Quality-First complet (outlier detection, adjudication, versioning Git-like)
-- [ ] Collaboration temps reel (WebSocket, co-visualisation)
-- [ ] Chiffrement au repos (PostgreSQL transparent encryption)
-
-### Cercle 2 - MLOps et IA Clinique (mois 8-14)
-
-- [ ] Pipeline CI/CD modeles (retraining automatise, rollback)
-- [ ] Monitoring drift (comparaison predictions vs validations experts)
-- [ ] Feedback loops (corrections experts -> enrichissement datasets)
-- [ ] Expansion foundation models (UNI, CONCH)
-- [ ] Validation clinique formelle (ISO 13485, 3+ pathologistes)
-
-### Cercle 3 - Extension Domaines (mois 14+)
-
-- [ ] Cytologie et hematologie (memes formats, modeles specifiques)
-- [ ] Microscopie fluorescence (multi-canal, quantification intensite)
-- [ ] PACS avance (pynetdicom: C-FIND, C-MOVE, C-STORE)
-- [ ] HL7 FHIR (DiagnosticReport)
-- [ ] DICOM WSI export (Supplement 145)
-- [ ] EHDS compliance (echeance mars 2031)
+Ces 8 issues constituent le **chemin critique 2026**.
 
 ---
 
-## Dependances Critiques
+## 5. Risques & mitigations
 
-```mermaid
-flowchart TD
-    subgraph P2_DONE["Phase 2 - TERMINE"]
-        P2_VIEW["Viewer 10 formats<br/>94 lames"]
-        P2_ANNOT["Annotations PostGIS<br/>CRUD + SVG"]
-        P2_ML["ML Slideflow<br/>Phikon-v2"]
-        P2_COMPARE["Compare Mode"]
-        P2_CI["CI/CD + 94 tests"]
-    end
-
-    subgraph P3_DONE["Phase 3.1+3.2 - TERMINE"]
-        P3_AUTH["Auth OIDC PKCE<br/>RBAC 4 roles"]
-        P3_AUDIT["Audit Trail<br/>DB+JSON"]
-        P3_QUAL["Quality Metrics<br/>kappa + F1 + IoU"]
-    end
-
-    subgraph P3_NEXT["Phase 3.3 - NEXT"]
-        P3_PACS["PACS Telemis<br/>(command plugin)"]
-    end
-
-    subgraph P4["Phase 4"]
-        P4_E2E["Tests E2E"]
-        P4_DOCS["Docs + Formation"]
-        P4_PROD["Mise en Production"]
-    end
-
-    subgraph POST["Post-MVP"]
-        POST_SSO["SSO Complet"]
-        POST_COLLAB["Collaboration<br/>Temps Reel"]
-        POST_MLOPS["MLOps Complet"]
-        POST_PACS2["PACS Avance<br/>(pynetdicom)"]
-    end
-
-    P2_ANNOT --> P3_QUAL
-    P2_VIEW --> P3_PACS
-    P2_CI --> P3_AUTH
-    P3_AUTH --> P3_AUDIT
-    P3_AUTH --> P3_PACS
-    P3_QUAL --> P4_E2E
-    P3_AUDIT --> P4_E2E
-    P4_E2E --> P4_PROD
-    P4_DOCS --> P4_PROD
-    P3_AUTH --> POST_SSO
-    P2_ANNOT --> POST_COLLAB
-    P2_ML --> POST_MLOPS
-    P3_PACS --> POST_PACS2
-
-    style P2_DONE fill:#c8e6c9,stroke:#388E3C
-    style P3_DONE fill:#c8e6c9,stroke:#388E3C
-    style P3_PACS fill:#f7b731
-```
-
-**Chemin critique:** ~~Auth RBAC~~ FAIT -> ~~Audit Trail~~ FAIT -> PACS Telemis -> Tests E2E -> Production
+| ID | Risque | Impact | Probabilité | Statut | Mitigation |
+|---|---|---|---|---|---|
+| R1 | Auth non déployée | CRITIQUE | HIGH | RÉSOLU | OIDC PKCE + RBAC + audit (Wave 3) |
+| R2 | Bus factor = 1 | CRITIQUE | HIGH | ATTÉNUATION | Open source MIT, 1033 tests, CI/CD, stack standard |
+| R3 | Adoption limitée | CRITIQUE | MOYEN | ATTÉNUATION | Co-conception pathologistes (Wave 8), Radical Simplicity (Wave 11) |
+| R4 | Compliance RGPD | ÉLEVÉ | MOYEN | PARTIEL | Auth + audit FAIT, de-identification Post-MVP, EHDS (échéance mars 2031) |
+| R5 | Performance annotations | MOYEN | FAIBLE | OK | PostgreSQL + PostGIS indices |
+| R6 | Incompatibilité PACS | MOYEN | MOYEN | OK | PACS Telemis deep-link FAIT, fallback partagé |
+| R7 | ML drift post-déploiement | MOYEN | MOYEN | PLANIFIÉ | Wave 10 (drift monitoring + feedback loops) |
+| R8 | Annotations non-fiables | ÉLEVÉ | MOYEN | PLANIFIÉ | Wave 9 (outlier detection + adjudication) |
 
 ---
 
-## Risques & Mitigations
+## 6. Liens
 
-| ID | Risque | Impact | Prob. | Mitigation | Statut |
-|----|--------|--------|-------|------------|--------|
-| R1 | ~~Auth non deployee~~ | ~~CRITIQUE~~ | ~~HIGH~~ | OIDC PKCE + RBAC + audit trail | RESOLU (Phase 3.1) |
-| R2 | Bus factor = 1 | CRITIQUE | HIGH | Open source, 156 tests, CI/CD, stack standard | ATTENUATION |
-| R3 | Adoption limitee | CRITIQUE | MOYEN | Co-conception pathologistes, Radical Simplicity | ATTENUATION |
-| R4 | Compliance RGPD | ELEVE | MOYEN | Auth + audit FAIT, de-identification Post-MVP | PARTIEL |
-| R5 | Performance annotations | MOYEN | FAIBLE | PostgreSQL PostGIS indices | OK |
-| R6 | Incompatibilite PACS | MOYEN | MOYEN | Mode fallback (repertoire partage) | NON TESTE |
-| R7 | ML drift post-deploiement | MOYEN | MOYEN | Monitoring Post-MVP Cercle 2 | PLANIFIE |
-
----
-
-## Metriques
-
-### Phase 2 Resultats (Mesures Reelles)
-
-| Metrique | Valeur | Source |
-|----------|--------|--------|
-| Tile load (keep-alive) | 0-13ms | Tests reels |
-| 28 tiles premier chargement | ~2.1s | Tests reels |
-| Formats supportes | 10 | FormatDetector |
-| Lames testees | 94 | test_format_detector.py |
-| Tests backend | 156 pass, 21 skip | pytest |
-| ML heatmap | ~2.5 min (CUDA) | Slideflow Phikon-v2 |
-| Detection regions | 3 (72-88% conf.) | threshold=0.3 |
-
-### KPIs Cibles (Phase 3-4)
-
-| Metrique | Cible | Actuel |
-|----------|-------|--------|
-| Auth implementation | 100% | 100% (OIDC PKCE, RBAC 4 roles) |
-| Audit trail coverage | 100% routes | 80% (auth + annotation routes) |
-| Test coverage backend | > 80% | ~80% (156 tests) |
-| Tests E2E | > 0 | 0 |
-| Security score CI/CD | Pass | Pass (Trivy, Bandit, CodeQL) |
+| Doc | Path | Description |
+|---|---|---|
+| Vision | `vision.pdf` | Document source v2.0 (déc. 2025) |
+| Proposal | `docs/PROPOSAL_VARUNA_v2.md` | Déclinaison opérationnelle |
+| Architecture canonique | `docs/architecture/MODULAR_ARCHITECTURE.md` | 6 Protocols + sprint log |
+| Vision alignment | `.claude/memory/VISION_ALIGNMENT.md` | Mapping détaillé PDF §2 ↔ code |
+| Cerveau | `.claude/BRAIN.md` | Orchestration |
+| Decisions | `.claude/memory/DECISIONS.md` | ADRs |
+| Learnings | `.claude/memory/LEARNINGS.md` | Erreurs capitalisées |
+| Project State | `.claude/memory/PROJECT_STATE.md` | Snapshot courant |
+| Hospital Eval | `docs/HOSPITAL_DEPLOYMENT_EVALUATION.md` | Évaluation déploiement hospitalier |
 
 ---
 
 ## Changelog
 
-### v4.0 (2026-02-12)
-- Phase 3.1 (Auth OIDC + RBAC + Audit): marque 100% TERMINE
-- Phase 3.2 (Quality Metrics): marque 100% TERMINE
-- Phase 3.3 (PACS Telemis): EN COURS
-- Mise a jour dependency graph, Gantt, KPIs, risques
-- Tests backend: 156 pass, 21 skip (up from 94 pass, 3 skip)
-- CI/CD: 8/8 jobs all green
+### v6.1 (2026-05-07) — pivot produit multi-tenant + scalabilité
+- **Wave 13 créée** : "Scalability & Multi-tenant" — 8 issues #354-#362 (multi-tenant data isolation `priority:critical` cœur, storage S3, DB scaling, ML inference Triton, cache+WS scaling, observability OTel, Helm+GitOps, perf+FinOps)
+- **Pivot produit acté** : sortie du PoC mono-tenant CHU UCL Namur → produit / plateforme multi-tenant. CHU UCL Namur reste customer-zero / early adopter.
+- **23 issues open ré-alignées** : commentaire d'alignement multi-tenant + scalabilité posté sur chaque issue. 4 issues genericized dans le body (#339, #341, #343, #351 — "CHU UCL Namur" → "tenant (CHU UCL Namur = customer-zero)").
+- **VISION_ALIGNMENT.md §0.6 ajouté** : pivot produit + critère **S** (Scalabilité / multi-tenant) ajouté à la grille (Q, F, R, A, N, S, W).
+- **#358 fermé** : doublon de #359 créé suite à un 504 GitHub.
+- Chemin critique : 7 → 8 issues `priority:critical` (#354 ajoutée).
 
-### v3.0 (2026-02-08)
-- **Realignement complet** avec PROPOSAL_VARUNA_v2.md (plan 15 semaines)
-- Phase 1: marque 100% TERMINE
-- Phase 2: marque 100% TERMINE (annotations, ML, compare, detection, counting)
-- Phase 3: redefinie (Auth RBAC, audit trail, quality metrics, PACS)
-- Phase 4: redefinie (Tests E2E, documentation, production)
-- Ajout Post-MVP Cercles Concentriques (aligne avec Proposal)
-- Mise a jour Gantt avec dates reelles
-- Mise a jour metriques avec mesures reelles
-- Suppression phases 3-5 anciennes (obsoletes)
+### v6.0 (2026-05-07) — pivot stratégique foundation models
+- **Pivot Wave 10** : "Continuous Learning MLOps" → "Foundation Models & Validation". Issue #341 réécrite (Phikon retrain → fine-tuning UNI/CONCH workflow). Issues #339/#340/#342/#343 recadrées (support fine-tuning, plus retrain from scratch). 3 nouvelles issues créées : #346 (N1 registry), #347 (N2 fine-tuning workflow), #348 (N3 validation prospective)
+- **Wave 12 créée** : "Stratégie 2026 : AI Act + Workflow + Réseau" — 5 issues #349 (N4 AI Act doc), #350 (N5 IMS deep), #351 (N6 RCP), #352 (N7 federated), #353 (N8 copilote IA exploratoire)
+- **Hisse #337 priority:critical** (LE différenciateur AI Act + publication académique)
+- **Wave 9 recadrée** : 4 issues (#335-#338) avec angles fine-tuning + AI Act explicites
+- **Issue #147 fermée** (wheel-reinvention sur 22 lames marginales)
+- **Issue #145 downgrade priority:low** (wheel-reinvention OpenSlide upstream-only)
+- **Issue #344 marquée DEFER** (attend Wave 12 N5 IMS pour ne pas faire un onboarding incohérent avec workflow réel)
+- **VISION_ALIGNMENT.md §0 ajouté** : pivot foundation models + carte océan bleu vs hors scope + 6 opportunités stratégiques (AI Act, Foundation models open, CPT codes, RCP, federated EU, publication académique)
 
-### v2.1 (2026-02-04)
-- Ajout Cornerstone3D + VTK.js, Slideflow Compatibility
-- Ajout Collaboration Simplifiee, Radical Simplicity
-- Ajout section "Angles Morts Differenciateurs"
+### v5.0 (2026-05-07) — première mise à jour PDF §2
+- Réalignement complet avec `vision.pdf §2` (cadre conceptuel + 12 angles morts + 3 critiques)
+- Remplace v4.x (qui ignorait Waves 5-8 et Strangler Fig sprints 1-15)
+- Ajout section "Alignement vision PDF" avec score 6/4/4 sur les 14 capacités critiques
+- Création initiale Waves 9, 10, 11 (avant pivot v6.0)
+- Mise à jour métriques : 1033 tests, tag v0.3.0, commit 47651d1
+- Risque R8 ajouté (annotations non-fiables)
 
-### v2.0 (2026-02-04)
-- Fusion avec ANALYSE_DIRECTION_PROJET.md
-- Format checklist detaille par phase
+### v4.0 (2026-02-12) — obsolète
+- Phase 3.1 et 3.2 marquées TERMINE, Phase 3.3 PACS EN COURS
 
-### v1.0 (2026-02-04)
-- Creation initiale
+### v3.0 (2026-02-08) — obsolète
+- Réalignement avec PROPOSAL_VARUNA_v2.md plan 15 semaines
 
----
+### v2.0 (2026-02-04) — obsolète
+- Fusion ANALYSE_DIRECTION_PROJET.md
 
-## Liens
-
-| Document | Path | Description |
-|----------|------|-------------|
-| Proposal v2 | `docs/PROPOSAL_VARUNA_v2.md` | Vision, marche, architecture, couts |
-| Hospital Eval | `HOSPITAL_DEPLOYMENT_EVALUATION.md` | Evaluation deploiement hospitalier |
-| Cerveau | `.claude/BRAIN.md` | Orchestration, processus |
-| Decisions | `.claude/memory/DECISIONS.md` | ADRs |
-| Learnings | `.claude/memory/LEARNINGS.md` | Erreurs capitalisees |
-| Project State | `.claude/memory/PROJECT_STATE.md` | Etat courant |
-| Architecture | `docs/ARCHITECTURE.md` | Architecture technique |
+### v1.0 (2026-02-04) — obsolète
+- Création initiale
 
 ---
 
-**Derniere mise a jour:** 2026-02-12
-**Prochaine review:** Fin Phase 3.3 (PACS)
-**Responsable:** Admin
+**Dernière mise à jour:** 2026-05-07
+**Prochaine review:** Après création Waves 9-11 (gh CLI)
+**Responsable:** Cerveau d'orchestration
