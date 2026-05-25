@@ -44,7 +44,21 @@ async def get_discovery(config: OIDCConfig | None = None) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(config.discovery_url)
             response.raise_for_status()
-            _discovery_cache = response.json()
+            data = response.json()
+            # Discovery returns PUBLIC URLs (jwks_uri, token_endpoint, ...).
+            # If internal_url is set, rewrite endpoints we fetch server-side
+            # so they target the in-cluster service instead of unreachable
+            # public hostname (e.g. 'localhost:8180' from inside container).
+            if config.internal_url and config.issuer_url:
+                for key in (
+                    "jwks_uri",
+                    "token_endpoint",
+                    "userinfo_endpoint",
+                    "introspection_endpoint",
+                ):
+                    if key in data and isinstance(data[key], str):
+                        data[key] = data[key].replace(config.issuer_url, config.internal_url)
+            _discovery_cache = data
             _discovery_cache_time = now
             logger.info(f"OIDC discovery fetched from {config.discovery_url}")
             return _discovery_cache

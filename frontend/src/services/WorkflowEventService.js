@@ -145,7 +145,11 @@ class WorkflowEventService {
         const overrideHost = (typeof localStorage !== 'undefined')
             ? localStorage.getItem('varuna_ws_host')
             : null;
-        const host = overrideHost || `${window.location.hostname}:8000`;
+        // Same-origin by default (nginx proxies /api/v1/ws/events to backend).
+        // Vite dev server on :5173 needs explicit :8000 since it has no proxy.
+        const isViteDev = window.location.port === '5173';
+        const host = overrideHost
+            || (isViteDev ? `${window.location.hostname}:8000` : window.location.host);
         const params = new URLSearchParams();
         if (token) params.set('token', token);
         const query = params.toString();

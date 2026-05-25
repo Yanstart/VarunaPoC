@@ -276,7 +276,7 @@ export const Events = Object.freeze({
  * @readonly
  */
 export const API = Object.freeze({
-    BASE_URL: 'http://localhost:8000',
+    BASE_URL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000',
     VERSION: 'v1',
     ENDPOINTS: {
         HEALTH: '/api/v1/health',

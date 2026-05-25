@@ -9,8 +9,10 @@
  *   - Erreurs HTTP propagées comme exceptions
  */
 
-const envApiUrl = (import.meta.env?.VITE_API_URL || '').replace(/\/$/, '');
-export const API_BASE = envApiUrl || 'http://localhost:8000';
+// Read VITE_API_URL with `??` so an explicitly-empty value (prod build served
+// through nginx) yields same-origin relative URLs. `||` would fall back to dev.
+const rawApiUrl = import.meta.env?.VITE_API_URL ?? 'http://localhost:8000';
+export const API_BASE = rawApiUrl.replace(/\/$/, '');
 
 /**
  * Récupère liste des lames depuis backend.
@@ -74,11 +76,8 @@ export function getOverviewUrl(slideId) {
  *   - Voir docs/Manuel/02-NAVIGATION_DOSSIERS.md
  */
 export async function fetchBrowse(path = '/') {
-    const encodedPath = encodeURIComponent(path);
-    const res = await fetch(`${API_BASE}/api/v1/slides/browse?path=${encodedPath}`);
-    if (!res.ok) {
-        const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(error.detail || 'Failed to browse directory');
-    }
-    return res.json();
+    // Delegate to ApiService so the Authorization Bearer header is injected
+    // consistently with the rest of the app. Avoids a 401 when AUTH_ENABLED=true.
+    const { apiService } = await import('../services/ApiService.js');
+    return apiService.browse(path);
 }
