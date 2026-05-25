@@ -14,6 +14,11 @@ class OIDCConfig:
     """OIDC provider configuration from environment variables."""
 
     issuer_url: str = ""
+    # In split deployments the IdP's PUBLIC URL (used in JWT `iss` claim,
+    # in `issuer_url`) is unreachable from the backend container. Set
+    # `internal_url` to the in-cluster URL used to fetch discovery + JWKS.
+    # When empty, falls back to `issuer_url`.
+    internal_url: str = ""
     client_id: str = "varuna-viewer"
     # PKCE flow: no client secret needed for public clients
     audience: str = "varuna-viewer"
@@ -28,8 +33,9 @@ class OIDCConfig:
 
     @property
     def discovery_url(self) -> str:
-        """OpenID Connect discovery endpoint."""
-        return f"{self.issuer_url.rstrip('/')}/.well-known/openid-configuration"
+        """OpenID Connect discovery endpoint (uses internal URL when set)."""
+        base = self.internal_url or self.issuer_url
+        return f"{base.rstrip('/')}/.well-known/openid-configuration"
 
     @property
     def is_configured(self) -> bool:
@@ -41,6 +47,7 @@ def get_oidc_config() -> OIDCConfig:
     """Build OIDCConfig from environment variables."""
     return OIDCConfig(
         issuer_url=os.getenv("OIDC_ISSUER_URL", "http://localhost:8180/realms/varuna"),
+        internal_url=os.getenv("OIDC_INTERNAL_URL", ""),
         client_id=os.getenv("OIDC_CLIENT_ID", "varuna-viewer"),
         audience=os.getenv("OIDC_AUDIENCE", "varuna-viewer"),
         role_claim=os.getenv("OIDC_ROLE_CLAIM", "realm_access.roles"),

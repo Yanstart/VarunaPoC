@@ -347,3 +347,10 @@ frontend/e2e/playwright-report/
 backups/
 .claude/worktrees/
 .claude/settings.json
+
+# Local docker-compose override (host-specific quirks: Windows, ports, builds)
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# TFE / Report work-in-progress (kept out of the application repo history)
+Report/

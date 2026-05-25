@@ -70,17 +70,23 @@ class AuthService {
     async init() {
         if (this._initialized) {return this._authEnabled;}
 
+        // Always load any previously-stored tokens first so a transient init
+        // error (e.g. stale /callback refresh) doesn't lose an existing session.
+        this._loadTokensFromStorage();
+
         try {
-            // Check if we're on the callback page
-            if (window.location.pathname === '/callback') {
+            // Only run the callback exchange if we are on /callback AND the
+            // URL still carries a fresh authorization code. Refreshing on a
+            // post-redirect /callback page (code already consumed) used to
+            // throw "State mismatch" and wipe the session.
+            const hasCallbackCode = window.location.pathname === '/callback'
+                && new URLSearchParams(window.location.search).get('code');
+            if (hasCallbackCode) {
                 await this._handleCallback();
                 this._initialized = true;
                 this._authEnabled = true;
                 return true;
             }
-
-            // Check if we have stored tokens
-            this._loadTokensFromStorage();
 
             // Check backend auth status
             const response = await fetch(`${API.BASE_URL}/api/v1/auth/me`, {
@@ -111,15 +117,41 @@ class AuthService {
                     this._initialized = true;
                     return true;
                 }
+
+                // Auth enabled, response 200, but backend sees us as anonymous —
+                // means the stored token (if any) was silently rejected. Purge
+                // so the login page is shown instead of a zombie session.
+                if (this._accessToken) {
+                    console.warn('[AuthService] Backend treats us as anonymous — clearing stored token.');
+                    this._clearTokens();
+                }
             }
 
-            if (response.status === 401 || (this._authEnabled && !this._accessToken)) {
+            if (response.status === 401) {
+                // Auth IS enabled but our stored token (if any) is rejected.
+                // Purge it so the app shows the login page instead of looping
+                // with an expired/invalid token attached to every request.
+                if (this._accessToken) {
+                    console.warn('[AuthService] Stored token rejected by backend — clearing.');
+                    this._clearTokens();
+                }
+                this._authEnabled = true;
+            } else if (this._authEnabled && !this._accessToken) {
                 this._authEnabled = true;
             }
 
             this._initialized = true;
             return this._authEnabled;
         } catch (err) {
+            // If we already have a cached token, keep the session alive —
+            // the init probe is best-effort. Without this, a transient
+            // network error or stale /callback page would log the user out.
+            if (this._accessToken) {
+                console.warn('[AuthService] Init probe failed, keeping cached session:', err.message);
+                this._authEnabled = true;
+                this._initialized = true;
+                return true;
+            }
             console.warn('[AuthService] Init check failed, assuming no auth:', err.message);
             this._authEnabled = false;
             this._initialized = true;
@@ -296,7 +328,9 @@ class AuthService {
 
     /** @returns {boolean} Whether user is authenticated */
     get isAuthenticated() {
-        return !this._authEnabled || !!this._accessToken;
+        // Either auth is disabled (anonymous mode) OR we have validated claims.
+        // A stored token alone is NOT enough — backend may have rejected it.
+        return !this._authEnabled || !!this._claims;
     }
 
     /** @returns {boolean} Whether auth is required */
