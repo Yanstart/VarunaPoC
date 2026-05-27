@@ -18,6 +18,9 @@ Ce manuel est organisé par fonctionnalité validée et prête à l'emploi:
 
 ### 📚 Documents Disponibles
 
+0. **[00-DEMARRAGE_INFRA.md](./00-DEMARRAGE_INFRA.md)**
+   Procédure de lancement de la stack Docker complète (dev / démo / captures)
+
 1. **[01-INTRODUCTION.md](./01-INTRODUCTION.md)**
    Présentation générale, prérequis système, premiers pas
 
