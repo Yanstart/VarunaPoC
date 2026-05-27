@@ -118,8 +118,18 @@ def _translate_ml_error(error: Exception) -> HTTPException:
             detail="Le service d'analyse IA n'est pas disponible actuellement.",
         )
 
-    # Check known patterns in the error message
     error_str = str(error).lower()
+
+    # Missing optional ML dependency (e.g. Slideflow not installed) — surface
+    # as 503 so the frontend can degrade gracefully instead of treating it as
+    # an unexpected server crash.
+    if "not installed" in error_str or "no module named" in error_str:
+        return HTTPException(
+            status_code=503,
+            detail="Le moteur d'analyse IA n'est pas configure sur ce serveur.",
+        )
+
+    # Check known patterns in the error message
     for pattern, message in ML_ERROR_MESSAGES.items():
         if pattern in error_str:
             return HTTPException(status_code=500, detail=message)

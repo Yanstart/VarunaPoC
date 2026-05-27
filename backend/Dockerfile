@@ -29,9 +29,19 @@ COPY requirements.txt .
 # Note: slideflow pulls smac->pyrfr which fails to compile with modern GCC.
 # Install slideflow without deps first, then install requirements normally
 # (pyrfr/smac are only used for hyperparameter tuning, not needed here).
+# After requirements, install Slideflow's *minimal* runtime deps explicitly —
+# previously they were missing, so `import slideflow` blew up with
+# ModuleNotFoundError on pandas/torch and every ML endpoint returned 503.
+# Using PyTorch CPU wheels (~600 MB) instead of the default CUDA build (~2 GB).
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir slideflow==3.0.2 --no-deps && \
-    grep -v '^slideflow' requirements.txt | pip install --no-cache-dir -r /dev/stdin
+    grep -v '^slideflow' requirements.txt | pip install --no-cache-dir -r /dev/stdin && \
+    pip install --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        pandas 'Pillow>=10' tqdm scikit-image scikit-learn opencv-python-headless \
+        torch torchvision \
+        matplotlib 'seaborn<0.14' umap-learn zarr tabulate tensorboard \
+        triangle rasterio saliency fpdf2 pyopengl pyperclip
 
 # Remove build dependencies to reduce image size
 RUN apt-get purge -y --auto-remove \

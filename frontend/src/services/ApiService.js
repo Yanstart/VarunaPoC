@@ -282,7 +282,11 @@ class ApiService {
     async _retryableFetch(fetchFn, url) {
         const MAX_RETRIES = 3;
         const BACKOFF = [1, 2, 4];
-        const RETRYABLE = new Set([429, 503, 504]);
+        // 429 = rate limited, 504 = upstream timeout — both worth retrying.
+        // 503 means the backend dependency is missing (e.g. Slideflow not
+        // installed) or the worker is down for the foreseeable future; a
+        // retry burst can't help, only spams logs and slows the UI.
+        const RETRYABLE = new Set([429, 504]);
 
         let response = await fetchFn();
 
