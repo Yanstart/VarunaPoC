@@ -84,14 +84,22 @@ class MLWorkerProxy:
         if self._process and self._process.is_alive():
             return
 
-        self._job_queue = multiprocessing.Queue(maxsize=1)
-        self._result_queue = multiprocessing.Queue()
+        # Use the 'spawn' start method (not the Linux default 'fork') so
+        # PyTorch can initialise CUDA in the worker. After fork(), the
+        # parent's CUDA context is copied byte-for-byte and any subsequent
+        # `import torch; torch.cuda...` raises:
+        #   "Cannot re-initialize CUDA in forked subprocess"
+        # spawn re-imports modules from scratch in the child → clean CUDA.
+        # Also matches the default behaviour on macOS/Windows for portability.
+        ctx = multiprocessing.get_context("spawn")
+        self._job_queue = ctx.Queue(maxsize=1)
+        self._result_queue = ctx.Queue()
         self._running = True
 
         # daemon=False: Slideflow spawns multiprocessing.Pool internally
         # for tile extraction. Python forbids daemon processes from having
         # children, so we use non-daemon + atexit cleanup instead.
-        self._process = multiprocessing.Process(
+        self._process = ctx.Process(
             target=_worker_main,
             args=(self._job_queue, self._result_queue),
             daemon=False,
