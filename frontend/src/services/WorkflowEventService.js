@@ -228,13 +228,22 @@ class WorkflowEventService {
         if (this._reconnectTimer !== null) return;
 
         const delay = Math.min(this._reconnectDelayMs, this._reconnectMaxMs);
-        this._reconnectTimer = setTimeout(() => {
+        this._reconnectTimer = setTimeout(async () => {
             this._reconnectTimer = null;
             // Exponential backoff (capped). On the next failure, this
             // grows; on success the open handler resets it to 1s.
             this._reconnectDelayMs = Math.min(this._reconnectDelayMs * 2, this._reconnectMaxMs);
-            // Re-resolve token at reconnect time — it may have been refreshed.
-            const token = this._lastToken ?? null;
+            // Re-resolve token at reconnect time from AuthService — _lastToken
+            // is captured at the initial start() and goes stale after a silent
+            // refresh, producing an infinite 403 loop on the rejected old token.
+            // Dynamic import avoids a circular dep at module load.
+            let token = this._lastToken ?? null;
+            try {
+                const mod = await import('./AuthService.js');
+                token = mod.authService.accessToken || token;
+            } catch (_e) {
+                // AuthService unavailable — fall back to _lastToken.
+            }
             this.start({ token });
         }, delay);
     }
