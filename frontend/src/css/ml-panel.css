@@ -519,6 +519,14 @@
     white-space: nowrap;
 }
 
+.ml-panel__device-status--gpu {
+    color: var(--text-success, #2e7d32);
+}
+
+.ml-panel__device-status--cpu {
+    color: var(--text-warning, #ed6c02);
+}
+
 /* Quality warning banner */
 .ml-panel__quality-warning {
     background: #fff3cd;

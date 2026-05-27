@@ -388,9 +388,10 @@ class MLPanel {
                 this._deviceSelect.value = val;
             }
             if (this._deviceStatus) {
-                const icon = health.gpu_available ? '\u2705' : '\u26A0\uFE0F';
                 const name = health.gpu_name || 'CPU';
-                this._deviceStatus.textContent = ` ${icon} ${name}`;
+                this._deviceStatus.textContent = ` ${name}`;
+                this._deviceStatus.classList.toggle('ml-panel__device-status--gpu', !!health.gpu_available);
+                this._deviceStatus.classList.toggle('ml-panel__device-status--cpu', !health.gpu_available);
                 this._deviceStatus.title = health.gpu_available
                     ? `GPU: ${health.gpu_name} | Active: ${health.device}`
                     : 'No GPU detected - using CPU';
