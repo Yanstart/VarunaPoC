@@ -167,6 +167,10 @@ services:
     profiles: ["pacs", "dev", "prod"]
 ```
 
+> Si vous avez un GPU NVIDIA et voulez l'exposer au container (inférence ML
+> 10-50x plus rapide), voir [Activer le GPU](#activer-le-gpu-optionnel)
+> plus bas avant de continuer.
+
 Justification de chaque bloc :
 
 - `backend.build` + `pull_policy: never` : force le build local au lieu de tirer l'image depuis GHCR (registre privé, demanderait `docker login`).
@@ -323,6 +327,76 @@ ou recréation complète (utile après changement de code) :
 docker build -t ghcr.io/yanstart/varunapoc/backend:main ./backend
 docker compose up -d --force-recreate --no-deps backend
 ```
+
+---
+
+## Activer le GPU (optionnel)
+
+Le backend supporte l'inférence ML sur GPU NVIDIA. Sans GPU il bascule automatiquement en CPU — fonctionnel, mais 10 à 50× plus lent sur les modèles deep learning (heatmap, prédiction, comptage cellulaire).
+
+### Prérequis
+
+1. **GPU NVIDIA** avec driver à jour. Vérifier côté hôte :
+   ```bash
+   nvidia-smi
+   ```
+   Doit afficher la carte, la version du driver et la version CUDA supportée.
+
+2. **Docker Desktop sur le moteur WSL 2** (Settings → General → "Use the WSL 2 based engine"). Sur Linux pur, c'est inutile.
+
+3. **NVIDIA Container Toolkit** installé dans la distro WSL2 (Docker Desktop le bundle généralement depuis fin 2023). Vérifier :
+   ```bash
+   docker info --format '{{.Runtimes}}' | grep -o nvidia
+   ```
+   Doit retourner `nvidia`.
+
+### Ajouter le GPU au container backend
+
+Dans `docker-compose.override.yml`, ajouter au bloc `backend:` :
+
+```yaml
+  backend:
+    # (... reste de la config ...)
+    environment:
+      ML_DEVICE: "auto"   # backend choisit cuda si dispo, sinon cpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+```
+
+Puis recréer le container :
+
+```bash
+docker compose --profile prod up -d --force-recreate --no-deps backend
+```
+
+### Vérifier que le GPU est visible
+
+```bash
+docker exec varuna-backend python -c \
+  "import torch; print('cuda:', torch.cuda.is_available()); print('device:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+```
+
+Sortie attendue :
+```
+cuda: True
+device: NVIDIA GeForce RTX 4060 Laptop GPU
+```
+
+### Basculer entre CPU / GPU à la volée
+
+Une fois le GPU exposé, l'UI propose le toggle CPU / GPU / auto dans le panneau ML (haut à droite du viewer). Le backend redémarre son worker ML après chaque switch (~2 s). En CLI :
+
+```bash
+curl -sk -X POST "https://localhost:8443/api/v1/ml/device?device=cuda" \
+  -H "Authorization: Bearer <ton-token>"
+```
+
+> ⚠️ Si la route retourne `400 "CUDA requested but no GPU detected"`, c'est que le container n'a pas accès au GPU même si l'hôte en a un. Re-vérifier le `deploy.resources.devices` dans l'override et que Docker Desktop tourne sur WSL 2.
 
 ---
 
