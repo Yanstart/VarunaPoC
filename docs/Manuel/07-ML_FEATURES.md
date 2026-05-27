@@ -142,20 +142,25 @@ Le comptage cellulaire automatise l'evaluation des index immunohistochimiques (e
 
 ### Principe
 
-La recherche de similarite compare les embeddings (representations numeriques) d'une lame avec celles de toutes les lames indexees. Elle retourne les K lames les plus similaires.
+La recherche de lames similaires est **multi-critere** : l'utilisateur compose lui-meme sa requete en cochant les dimensions de similarite qui l'interessent (technique, apparence visuelle, semantique, workflow clinique). Aucune definition unique n'est imposee — le pathologiste sait ce qu'il cherche.
+
+> **Conception detaillee :** voir [`docs/architecture/SIMILARITY_DESIGN.md`](../architecture/SIMILARITY_DESIGN.md) — categories de criteres, flow, contrat API, strategie de cache et hors-scope.
 
 ### Comment l'Utiliser
 
 1. Ouvrez une lame dans la visionneuse
-2. Cliquez sur **"Lames similaires"** dans le panneau ML
-3. Les lames les plus similaires s'affichent avec un score de similarite
-4. Cliquez sur une lame similaire pour l'ouvrir
+2. Cliquez sur **"Lames similaires"** dans le panneau ML (accordeon)
+3. Cochez les criteres de comparaison parmi les 4 categories disponibles
+4. Cliquez sur **"Rechercher"**
+5. Les lames les plus similaires s'affichent avec leur score global et le detail par critere (au survol)
+6. Cliquez sur une vignette pour ouvrir la lame correspondante
 
 ### Cas d'Usage
 
-- Retrouver des cas similaires pour comparaison diagnostique
-- Identifier des groupes de lames morphologiquement proches
-- Recherche dans les archives par contenu visuel
+- Retrouver des cas similaires pour comparaison diagnostique (criteres semantique + workflow)
+- Identifier des groupes de lames morphologiquement proches (criteres apparence visuelle)
+- Recherche dans les archives par contenu visuel (criteres apparence + technique)
+- Audit des lames analysees par un meme modele AI (criteres workflow)
 
 ---
 
