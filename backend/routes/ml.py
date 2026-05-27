@@ -1722,10 +1722,12 @@ async def set_device(
 
     ServiceContainer.reset()
 
-    global _ml_worker
-    if _ml_worker and _ml_worker.is_alive():
-        _ml_worker.stop()
-        _ml_worker = None
+    # Stop the current worker so the next request picks up the new device.
+    # `worker` is the singleton injected by Depends(get_ml_worker_dep) — the
+    # old module-global _ml_worker reference disappeared in the sprint 12
+    # refactor, hence the previous `NameError: name '_ml_worker' is not defined`.
+    if worker and worker.is_alive():
+        worker.stop()
 
     logger.info(
         "ML device changed: %s -> %s (worker restarts on next request)",
