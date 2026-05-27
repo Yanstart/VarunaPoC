@@ -403,6 +403,17 @@ class ViewerInstance {
                 const openslideLevel = metadata.levels - 1 - level;
                 return `${baseUrl}/api/v1/slides/${slideId}/tiles/${openslideLevel}/${x}_${y}.jpg`;
             },
+
+            /**
+             * Per-tile auth header. Called by OSD on every tile fetch so we
+             * always use the current token even after a silent refresh —
+             * the viewer-level `ajaxHeaders` is captured at init time and
+             * can go stale (e.g. tiles requested before login completed).
+             */
+            getTileAjaxHeaders: function (_level, _x, _y) {
+                const token = authService.accessToken;
+                return token ? { Authorization: `Bearer ${token}` } : {};
+            },
         };
     }
 

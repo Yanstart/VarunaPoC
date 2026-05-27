@@ -40,7 +40,6 @@ from services.ml.worker import (
 )
 from services.slide_scanner import get_slide_path_by_id
 
-
 # Sprint 3 — backward-compat alias. New code should `from
 # routes._storage_helpers import resolve_slide_path` directly. Existing
 # tests in tests/unit/test_ml_storage_provider.py reference _resolve_slide_path
@@ -1645,11 +1644,12 @@ async def get_slide_tags(
 @router.get("/health")
 async def health_check(
     current_user: CurrentUser = Depends(get_current_user),
+    worker: MLWorkerProvider = Depends(get_ml_worker_dep),
 ):
     """Health check pour ML services with GPU detection."""
     provider_name = os.getenv("ML_PROVIDER", "slideflow")
     ml_device = os.getenv("ML_DEVICE", "auto")
-    worker_alive = _ml_worker.is_alive() if _ml_worker else False
+    worker_alive = bool(worker and getattr(worker, "is_alive", lambda: True)())
 
     gpu_available = False
     gpu_name = None
