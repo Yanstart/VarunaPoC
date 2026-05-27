@@ -13,12 +13,13 @@ from datetime import UTC, datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.audit import AuditEvents, log_audit_event
 from auth.dependencies import get_current_user, require_role
 from auth.schemas import CurrentUser
 from core.database import get_db
@@ -140,6 +141,7 @@ async def _get_or_404(db: AsyncSession, model_id: UUID, tenant_id: str) -> MLMod
 @router.post("", response_model=MLModelOut, status_code=201)
 async def create_ml_model(
     payload: MLModelCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
     tenant_id: str = Depends(get_current_tenant),
@@ -193,6 +195,23 @@ async def create_ml_model(
         obj.tenant_id,
         current_user.username,
     )
+    await log_audit_event(
+        event_type=AuditEvents.ML_MODEL_REGISTERED,
+        action="CREATE",
+        user=current_user,
+        request=request,
+        resource_type="ml_model",
+        resource_id=str(obj.id),
+        details={
+            "name": obj.name,
+            "version": obj.version,
+            "tenant_id": obj.tenant_id,
+            "task_type": obj.task_type,
+            "license": obj.license,
+            "mlflow_run_id": obj.mlflow_run_id,
+        },
+        data_classification="internal",
+    )
     return _safe_model_out(obj)
 
 
@@ -240,6 +259,7 @@ async def get_ml_model(
 async def patch_ml_model(
     model_id: UUID,
     payload: MLModelUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
     tenant_id: str = Depends(get_current_tenant),
@@ -261,12 +281,23 @@ async def patch_ml_model(
         await db.rollback()
         raise HTTPException(status_code=409, detail=str(exc.orig)) from exc
     await db.refresh(obj)
+    await log_audit_event(
+        event_type=AuditEvents.ML_MODEL_UPDATED,
+        action="UPDATE",
+        user=current_user,
+        request=request,
+        resource_type="ml_model",
+        resource_id=str(obj.id),
+        details={"changed_fields": sorted(data.keys())},
+        data_classification="internal",
+    )
     return _safe_model_out(obj)
 
 
 @router.post("/{model_id}/deploy", response_model=MLModelOut)
 async def deploy_ml_model(
     model_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
     tenant_id: str = Depends(get_current_tenant),
@@ -287,12 +318,23 @@ async def deploy_ml_model(
         await db.commit()
         await db.refresh(obj)
         logger.info("ML model deployed: %s by %s", obj.id, current_user.username)
+        await log_audit_event(
+            event_type=AuditEvents.ML_MODEL_DEPLOYED,
+            action="UPDATE",
+            user=current_user,
+            request=request,
+            resource_type="ml_model",
+            resource_id=str(obj.id),
+            details={"name": obj.name, "version": obj.version, "tenant_id": obj.tenant_id},
+            data_classification="internal",
+        )
     return _safe_model_out(obj)
 
 
 @router.post("/{model_id}/retire", response_model=MLModelOut)
 async def retire_ml_model(
     model_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
     tenant_id: str = Depends(get_current_tenant),
@@ -306,6 +348,17 @@ async def retire_ml_model(
         await db.commit()
         await db.refresh(obj)
         logger.info("ML model retired: %s by %s", obj.id, current_user.username)
+        await log_audit_event(
+            event_type=AuditEvents.ML_MODEL_RETIRED,
+            action="DELETE",
+            user=current_user,
+            request=request,
+            resource_type="ml_model",
+            resource_id=str(obj.id),
+            details={"name": obj.name, "version": obj.version, "tenant_id": obj.tenant_id},
+            data_classification="internal",
+            level="WARNING",
+        )
     return _safe_model_out(obj)
 
 
@@ -314,9 +367,10 @@ async def retire_ml_model(
 @router.delete("/{model_id}", response_model=MLModelOut)
 async def delete_ml_model(
     model_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
     tenant_id: str = Depends(get_current_tenant),
 ) -> MLModelOut:
     """DELETE = soft retire. The row is never physically removed."""
-    return await retire_ml_model(model_id, db, current_user, tenant_id)
+    return await retire_ml_model(model_id, request, db, current_user, tenant_id)
