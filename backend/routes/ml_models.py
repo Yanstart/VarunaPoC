@@ -25,7 +25,7 @@ from auth.schemas import CurrentUser
 from core.database import get_db
 from core.tenant import get_current_tenant
 from models.ml_model import MLModel
-from schemas.ml_model import License, MLModelCreate, MLModelOut, MLModelUpdate, TaskType
+from schemas.ml_model import MLModelCreate, MLModelOut, MLModelUpdate, TaskType
 
 logger = logging.getLogger(__name__)
 
