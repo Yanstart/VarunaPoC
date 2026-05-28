@@ -39,34 +39,77 @@ GLOBAL_TENANT = "global"
 # ---------------------------------------------------------------------------
 
 
-def _resolve_create_tenant(
-    payload_tenant: str | None,
-    caller_tenant: str,
-    caller: CurrentUser,
-) -> str:
-    """Resolve the tenant_id for a new model.
+async def _persist_new_model(
+    payload: MLModelCreate,
+    target_tenant: str,
+    current_user: CurrentUser,
+    request: Request,
+    db: AsyncSession,
+) -> MLModel:
+    """Common write path shared by `create_ml_model` and `create_global_ml_model`.
 
-    Rules:
-      * payload_tenant absent → caller's tenant
-      * payload_tenant == caller's tenant → OK
-      * payload_tenant == "global" → only ADMIN_TECHNIQUE may write shared models
-      * payload_tenant != caller's tenant → forbidden (no cross-tenant writes)
+    The tenant is decided by the caller — never read from the request payload —
+    which collapses the cross-tenant injection vector entirely.
     """
-    if payload_tenant is None:
-        return caller_tenant
-    if payload_tenant == caller_tenant:
-        return caller_tenant
-    if payload_tenant == GLOBAL_TENANT:
-        if not caller.has_role("ADMIN_TECHNIQUE"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only ADMIN_TECHNIQUE may register models in the 'global' tenant.",
-            )
-        return GLOBAL_TENANT
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"Cannot register a model under tenant '{payload_tenant}'.",
+    obj = MLModel(
+        tenant_id=target_tenant,
+        name=payload.name,
+        version=payload.version,
+        framework=payload.framework,
+        architecture=payload.architecture,
+        task_type=payload.task_type.value,
+        input_shape=payload.input_shape.model_dump() if payload.input_shape else None,
+        embedding_dim=payload.embedding_dim,
+        checkpoint_hash=payload.checkpoint_hash,
+        checkpoint_uri=payload.checkpoint_uri,
+        mlflow_run_id=payload.mlflow_run_id,
+        mlflow_experiment_id=payload.mlflow_experiment_id,
+        mlflow_model_uri=payload.mlflow_model_uri,
+        license=payload.license.value if payload.license else None,
+        usage_constraints=payload.usage_constraints,
+        description=payload.description,
+        metadata_extra=payload.metadata_extra,
+        registered_by=current_user.username,
     )
+    db.add(obj)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Model '{payload.name}' v{payload.version} already exists "
+                f"in tenant '{target_tenant}'."
+            ),
+        ) from exc
+    await db.refresh(obj)
+    logger.info(
+        "ML model registered: id=%s name=%s version=%s tenant=%s by=%s",
+        obj.id,
+        obj.name,
+        obj.version,
+        obj.tenant_id,
+        current_user.username,
+    )
+    await log_audit_event(
+        event_type=AuditEvents.ML_MODEL_REGISTERED,
+        action="CREATE",
+        user=current_user,
+        request=request,
+        resource_type="ml_model",
+        resource_id=str(obj.id),
+        details={
+            "name": obj.name,
+            "version": obj.version,
+            "tenant_id": obj.tenant_id,
+            "task_type": obj.task_type,
+            "license": obj.license,
+            "mlflow_run_id": obj.mlflow_run_id,
+        },
+        data_classification="internal",
+    )
+    return obj
 
 
 def _safe_model_out(orm_obj: MLModel) -> MLModelOut:
@@ -146,72 +189,29 @@ async def create_ml_model(
     current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
     tenant_id: str = Depends(get_current_tenant),
 ) -> MLModelOut:
-    """Register a new model.
+    """Register a new model under the caller's tenant.
 
     Identity is `(tenant_id, name, version)`. A duplicate returns 409.
-    `tenant_id='global'` is reserved to ADMIN_TECHNIQUE for shared
-    foundation models.
+    To register a model shared across tenants (foundation models), call
+    POST /api/v1/ml-models/global instead.
     """
-    resolved_tenant = _resolve_create_tenant(payload.tenant_id, tenant_id, current_user)
+    obj = await _persist_new_model(payload, tenant_id, current_user, request, db)
+    return _safe_model_out(obj)
 
-    obj = MLModel(
-        tenant_id=resolved_tenant,
-        name=payload.name,
-        version=payload.version,
-        framework=payload.framework,
-        architecture=payload.architecture,
-        task_type=payload.task_type.value,
-        input_shape=payload.input_shape.model_dump() if payload.input_shape else None,
-        embedding_dim=payload.embedding_dim,
-        checkpoint_hash=payload.checkpoint_hash,
-        checkpoint_uri=payload.checkpoint_uri,
-        mlflow_run_id=payload.mlflow_run_id,
-        mlflow_experiment_id=payload.mlflow_experiment_id,
-        mlflow_model_uri=payload.mlflow_model_uri,
-        license=payload.license.value if payload.license else None,
-        usage_constraints=payload.usage_constraints,
-        description=payload.description,
-        metadata_extra=payload.metadata_extra,
-        registered_by=current_user.username,
-    )
-    db.add(obj)
-    try:
-        await db.commit()
-    except IntegrityError as exc:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Model '{payload.name}' v{payload.version} already exists "
-                f"in tenant '{resolved_tenant}'."
-            ),
-        ) from exc
-    await db.refresh(obj)
-    logger.info(
-        "ML model registered: id=%s name=%s version=%s tenant=%s by=%s",
-        obj.id,
-        obj.name,
-        obj.version,
-        obj.tenant_id,
-        current_user.username,
-    )
-    await log_audit_event(
-        event_type=AuditEvents.ML_MODEL_REGISTERED,
-        action="CREATE",
-        user=current_user,
-        request=request,
-        resource_type="ml_model",
-        resource_id=str(obj.id),
-        details={
-            "name": obj.name,
-            "version": obj.version,
-            "tenant_id": obj.tenant_id,
-            "task_type": obj.task_type,
-            "license": obj.license,
-            "mlflow_run_id": obj.mlflow_run_id,
-        },
-        data_classification="internal",
-    )
+
+@router.post("/global", response_model=MLModelOut, status_code=201)
+async def create_global_ml_model(
+    payload: MLModelCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN_TECHNIQUE")),
+) -> MLModelOut:
+    """Register a model in the `global` tenant — visible to every tenant.
+
+    Use this for foundation models (UNI, CONCH, Virchow, GigaPath, …) and
+    public checkpoints whose lineage is shared across the platform.
+    """
+    obj = await _persist_new_model(payload, GLOBAL_TENANT, current_user, request, db)
     return _safe_model_out(obj)
 
 

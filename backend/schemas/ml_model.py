@@ -154,13 +154,13 @@ class MLModelBase(BaseModel):
 
 
 class MLModelCreate(MLModelBase):
-    """Payload for POST /api/v1/ml-models."""
+    """Payload for POST /api/v1/ml-models.
 
-    tenant_id: str | None = Field(
-        None,
-        max_length=100,
-        description="Defaults to the caller's tenant. Use 'global' for foundation models shared across tenants.",
-    )
+    `tenant_id` is intentionally absent — the caller's tenant is always
+    injected server-side from the authenticated context. To register a
+    model shared across tenants (foundation models), call the dedicated
+    POST /api/v1/ml-models/global endpoint (ADMIN_TECHNIQUE only).
+    """
 
     @model_validator(mode="after")
     def require_description_when_license_other(self) -> "MLModelCreate":

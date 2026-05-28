@@ -85,12 +85,13 @@ curl -sk -X POST https://localhost:8443/api/v1/ml-models \
 
 ### 3.2 Enregistrer un foundation model (tenant global)
 
+Endpoint dédié `POST /ml-models/global` — réservé `ADMIN_TECHNIQUE`. Le payload est identique à celui du POST sur le tenant courant, mais le `tenant_id` est imposé à `"global"` par l'endpoint, jamais lu du body.
+
 ```bash
-curl -sk -X POST https://localhost:8443/api/v1/ml-models \
+curl -sk -X POST https://localhost:8443/api/v1/ml-models/global \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "tenant_id": "global",
     "name": "phikon-v2",
     "version": "2025.02",
     "framework": "pytorch",
@@ -102,7 +103,7 @@ curl -sk -X POST https://localhost:8443/api/v1/ml-models \
   }'
 ```
 
-Tenant `global` est refusé pour tout rôle autre que `ADMIN_TECHNIQUE`.
+> Note de sécurité : le champ `tenant_id` n'existe pas dans `MLModelCreate`. Si vous l'incluez dans un payload `POST /ml-models`, il sera silencieusement ignoré et le tenant du caller s'appliquera. C'est volontaire — aucun cross-tenant injection possible via le body.
 
 ### 3.3 Bootstrap automatique via le seeder
 

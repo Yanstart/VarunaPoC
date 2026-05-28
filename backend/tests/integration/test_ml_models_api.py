@@ -10,10 +10,10 @@ The whole module is skipped when DATABASE_URL is missing (CI without DB).
 NOTE: The current `tests/conftest.py` has a session-scoped autouse fixture
 that tries to connect to localhost:5433 — inside the backend container this
 hangs because PostgreSQL is exposed only as `db:5432` on the docker network.
-Until that fixture is hardened (resolve the right host from DATABASE_URL),
-these tests must be run with the conftest.py shim adjusted. Smoke tests via
-curl in the dev stack validate the live behaviour in the meantime — see
-`docs/Admin/services/ml-models-registry.md` for the manual procedure.
+Tracked by #371 (chore(tests): fix conftest.py session-scoped fixture for
+docker-internal DB). Smoke tests via curl in the dev stack and the 22 unit
+tests in tests/unit/test_ml_model_schemas.py (100% coverage of the schema
+layer) cover the same surface in the meantime.
 """
 
 from __future__ import annotations
@@ -184,20 +184,32 @@ async def test_create_duplicate_returns_409():
 
 
 @pytest.mark.asyncio
-async def test_create_global_tenant_admin_ok():
+async def test_global_endpoint_admin_ok():
+    """ADMIN_TECHNIQUE can register a model in the global tenant."""
     async with client_as(_admin()) as client:
-        payload = _minimal_classifier() | {"tenant_id": "global"}
-        r = await client.post("/api/v1/ml-models", json=payload)
+        r = await client.post("/api/v1/ml-models/global", json=_minimal_classifier())
         assert r.status_code == 201, r.text
         assert r.json()["tenant_id"] == "global"
 
 
 @pytest.mark.asyncio
-async def test_create_cross_tenant_refused():
+async def test_global_endpoint_medecin_forbidden():
+    """MEDECIN cannot register a global model."""
+    async with client_as(_medecin()) as client:
+        r = await client.post("/api/v1/ml-models/global", json=_minimal_classifier())
+        assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_create_payload_tenant_silently_ignored():
+    """Even if the payload tries to set tenant_id, it's never honored —
+    the schema drops the field at validation time."""
     async with client_as(_admin(), tenant="foo") as client:
         payload = _minimal_classifier() | {"tenant_id": "bar"}
         r = await client.post("/api/v1/ml-models", json=payload)
-        assert r.status_code == 403
+        assert r.status_code == 201, r.text
+        # The caller's tenant wins — the payload's "bar" is ignored
+        assert r.json()["tenant_id"] == "foo"
 
 
 # ---------------------------------------------------------------------------
