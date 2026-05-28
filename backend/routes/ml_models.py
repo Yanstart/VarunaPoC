@@ -176,6 +176,59 @@ async def _get_or_404(db: AsyncSession, model_id: UUID, tenant_id: str) -> MLMod
     return obj
 
 
+# Fields that can be PATCH-merged onto an MLModel row. Excludes identity
+# fields (name, version, task_type) — these never appear in MLModelUpdate.
+_PATCHABLE_FIELDS: tuple[str, ...] = (
+    "framework",
+    "architecture",
+    "input_shape",
+    "embedding_dim",
+    "checkpoint_hash",
+    "checkpoint_uri",
+    "mlflow_run_id",
+    "mlflow_experiment_id",
+    "mlflow_model_uri",
+    "license",
+    "usage_constraints",
+    "description",
+    "metadata_extra",
+)
+
+
+def _validate_patch_merged_state(obj: MLModel, patch_data: dict) -> None:
+    """Validate the would-be post-PATCH state against the Create invariants.
+
+    `MLModelUpdate` is intentionally permissive (all fields optional). The
+    Create-side validators (license=OTHER requires description, extractor
+    requires embedding_dim) are NOT re-triggered when we mutate an ORM row.
+    This helper re-runs them on the merged dict so a PATCH cannot lead the
+    model into a state that `MLModelCreate` would have rejected.
+
+    Identity fields (name, version, task_type) come from the existing row
+    and are not patchable, so they keep their original value.
+
+    Raises HTTPException(422) on invalid merged state.
+    """
+    merged = {
+        "name": obj.name,
+        "version": obj.version,
+        "task_type": obj.task_type,
+    }
+    for field in _PATCHABLE_FIELDS:
+        merged[field] = patch_data[field] if field in patch_data else getattr(obj, field)
+
+    try:
+        MLModelCreate.model_validate(merged)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Patch would leave the model in an invalid state.",
+                "errors": exc.errors(include_url=False),
+            },
+        ) from exc
+
+
 # ---------------------------------------------------------------------------
 # CRUD
 # ---------------------------------------------------------------------------
@@ -272,6 +325,13 @@ async def patch_ml_model(
     # value in `model_dump`, so the resulting dict is ready to assign onto
     # the ORM columns as-is.
     data = payload.model_dump(exclude_unset=True)
+
+    # Re-validate the merged state — MLModelUpdate is permissive (R10) and
+    # would otherwise let a PATCH lead the row into an invalid combination
+    # (e.g. license=OTHER without description, extractor without
+    # embedding_dim). Raises 422 with the offending field details.
+    _validate_patch_merged_state(obj, data)
+
     for field, value in data.items():
         setattr(obj, field, value)
 
