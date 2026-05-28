@@ -40,7 +40,7 @@ from fastapi.responses import PlainTextResponse
 # (Nécessaire sur Windows pour trouver libopenslide-0.dll)
 import config_openslide
 from core.feature_flags import feature_registry
-from routes import capabilities, ml, slides, viewstate
+from routes import capabilities, ml, ml_models, slides, viewstate
 
 # Phase 2: Annotations (optional - requires sqlalchemy + asyncpg)
 try:
@@ -371,6 +371,7 @@ api_v1 = APIRouter(prefix="/api/v1")
 # Core routes
 api_v1.include_router(slides.router)
 api_v1.include_router(ml.router)
+api_v1.include_router(ml_models.router)
 api_v1.include_router(viewstate.router)
 api_v1.include_router(capabilities.router)
 if ANNOTATIONS_ENABLED:

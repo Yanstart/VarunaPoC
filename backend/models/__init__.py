@@ -1,8 +1,9 @@
-"""ORM Models for VarunaPoC Phase 2 + Phase 3 Auth + Phase 4 Quality + Phase 5 Corrections."""
+"""ORM Models for VarunaPoC Phase 2 + Phase 3 Auth + Phase 4 Quality + Phase 5 Corrections + Phase 6 ML Registry."""
 
 from .annotation import Annotation
 from .annotation_label import AnnotationLabel
 from .correction import Correction
+from .ml_model import MLModel
 from .view_history import ViewHistory
 from .worklist import WorklistAssignment
 
@@ -23,7 +24,14 @@ except ImportError:
     _QUALITY_MODELS = []
 
 __all__ = (
-    ["Annotation", "AnnotationLabel", "Correction", "ViewHistory", "WorklistAssignment"]
+    [
+        "Annotation",
+        "AnnotationLabel",
+        "Correction",
+        "MLModel",
+        "ViewHistory",
+        "WorklistAssignment",
+    ]
     + [m.__name__ for m in _AUTH_MODELS]
     + [m.__name__ for m in _QUALITY_MODELS]
 )

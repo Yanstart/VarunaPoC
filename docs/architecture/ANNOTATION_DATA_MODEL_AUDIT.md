@@ -46,7 +46,7 @@ Classés par criticité métier.
 | ID | Problème | Impact |
 |---|---|---|
 | **G1** | Annotations `auto` / `auto_confirmed` ne mémorisent **pas** quel modèle les a produites | Impossible de reconstituer le training set d'une future version du modèle. Bloque #340, #341, #346, #347. |
-| **G2** | Pas de registre `ml_models` — `model_name + model_version` sont des strings libres | Ambiguïtés (`"resnet50"` vs `"ResNet50"`), pas de FK, pas de hash de checkpoint |
+| ~~**G2**~~ ✅ **RESOLVED** par #370 | ~~Pas de registre `ml_models`~~ — table `ml_models` créée (migration 010), 8 endpoints CRUD (dont `/global` séparé pour ADMIN), seeder Phikon-v2, audit hooks, validation PATCH post-merge. Couverture : schemas/ml_model.py 100 % + routes/ml_models.py 46 % (helpers) = 71.98 % sur 31 unit tests. Tests d'intégration livrés mais hang dans le container backend à cause de la conftest, suivi par #371. Voir `docs/Admin/services/ml-models-registry.md`. | Ambiguïtés (`"resnet50"` vs `"ResNet50"`), pas de FK, pas de hash de checkpoint |
 | **G3** | Pas de snapshot du training dataset | Impossible de figer « voici les N annotations utilisées pour entraîner v2.3 ». Non reproductible. |
 | **G4** | Pas d'événement explicite déclenchant le retraining | Le pipeline « M corrections sur modèle X → retrain » n'est pas modélisé |
 | **G10** | Pas de référence aux **tiles** que le modèle a utilisées pour produire son score | Manque pour l'explicabilité AI Act (« pourquoi le modèle a-t-il marqué cette région ? ») |
