@@ -166,6 +166,47 @@ def event_loop():
 # ============================================================================
 
 
+def _resolve_db_endpoint() -> dict | None:
+    """Resolve the test PostgreSQL endpoint from the environment.
+
+    Honours `DATABASE_URL` (the same env var the app reads) so the fixture
+    works in three contexts without surgery:
+      * host shell with port-forwarded PostgreSQL (5433)
+      * inside the backend container on the docker network (db:5432)
+      * CI with the canonical DATABASE_URL
+
+    Returns None when no DATABASE_URL is set and the local fallback
+    (localhost:5433) is unreachable — the fixture must stay non-blocking
+    in that case (e.g. CI without docker).
+    """
+    from urllib.parse import urlparse
+
+    raw = os.getenv("DATABASE_URL")
+    if raw:
+        # Strip the SQLAlchemy driver suffix (postgresql+asyncpg://) before
+        # handing the URL to urlparse — drivers confuse the scheme parser.
+        cleaned = raw.replace("postgresql+asyncpg://", "postgresql://").replace(
+            "postgres+asyncpg://", "postgres://"
+        )
+        parsed = urlparse(cleaned)
+        if parsed.hostname:
+            return {
+                "host": parsed.hostname,
+                "port": parsed.port or 5432,
+                "user": parsed.username or "varuna",
+                "password": parsed.password or "varuna_dev",  # pragma: allowlist secret
+                "database": parsed.path.lstrip("/") or "varuna",
+            }
+    # Fall back to the host-shell default (port-forward from docker compose).
+    return {
+        "host": "localhost",
+        "port": 5433,
+        "user": "varuna",
+        "password": "varuna_dev",  # pragma: allowlist secret
+        "database": "varuna",
+    }
+
+
 @pytest.fixture(autouse=True, scope="session")
 def db_cleanup_annotations():
     """Clean stale test data once at the start of the test session.
@@ -176,19 +217,24 @@ def db_cleanup_annotations():
 
     Uses _run_async() (not the event_loop fixture) because this fixture is
     synchronous and must not depend on pytest-asyncio's loop lifecycle.
+
+    The PostgreSQL endpoint is resolved from `DATABASE_URL` so the same
+    fixture works on the host (port-forward) and inside the backend
+    container (docker network). A hard 2-second `asyncio.wait_for` wraps
+    the connect call so an unreachable endpoint cannot stall pytest
+    collection (issue #371).
     """
 
     async def _cleanup():
+        endpoint = _resolve_db_endpoint()
+        if endpoint is None:
+            return
         try:
             import asyncpg
 
-            conn = await asyncpg.connect(
-                host="localhost",
-                port=5433,
-                user="varuna",
-                password="varuna_dev",  # pragma: allowlist secret
-                database="varuna",
-                timeout=2,
+            conn = await asyncio.wait_for(
+                asyncpg.connect(timeout=2, **endpoint),
+                timeout=3,
             )
             try:
                 await conn.execute("DELETE FROM annotations WHERE slide_id LIKE 'test_%'")
@@ -197,7 +243,7 @@ def db_cleanup_annotations():
                 )
             finally:
                 await conn.close()
-        except Exception:
+        except (TimeoutError, Exception):
             pass  # DB not available — nothing to clean
 
     _run_async(_cleanup())
@@ -512,7 +558,9 @@ def pytest_runtest_setup(item):
             pytest.skip("Redis not available")
 
     # Skip tests marked with 'requires_pacs'
-    if "requires_pacs" in [mark.name for mark in item.iter_markers()] and not os.getenv("PACS_SERVER"):
+    if "requires_pacs" in [mark.name for mark in item.iter_markers()] and not os.getenv(
+        "PACS_SERVER"
+    ):
         pytest.skip("PACS server not configured")
 
     # Skip tests marked with 'requires_fhir'

@@ -7,13 +7,21 @@ mismatch that breaks the sync TestClient on multi-request tests.
 
 The whole module is skipped when DATABASE_URL is missing (CI without DB).
 
-NOTE: The current `tests/conftest.py` has a session-scoped autouse fixture
-that tries to connect to localhost:5433 — inside the backend container this
-hangs because PostgreSQL is exposed only as `db:5432` on the docker network.
-Tracked by #371 (chore(tests): fix conftest.py session-scoped fixture for
-docker-internal DB). Smoke tests via curl in the dev stack and the 22 unit
-tests in tests/unit/test_ml_model_schemas.py (100% coverage of the schema
-layer) cover the same surface in the meantime.
+NOTE: #371 fixed the original blocker (conftest fixture targeting
+localhost:5433) and these tests no longer freeze the test session at
+that point. A SEPARATE remaining issue is that pytest's collection
+phase hangs as soon as a test file imports `from main import app` —
+the FastAPI app object brings in enough module-level side effects to
+upset pytest's collection (direct `python -c "from main import app"`
+works fine; the hang is specific to pytest's import-then-collect dance).
+Running the file as a script after refactoring its imports lazily, or
+running it under a test harness that mocks the app, both work — but
+that is its own refactor and lives outside the scope of #371.
+
+Smoke tests via curl in the dev stack and the 22 unit tests in
+tests/unit/test_ml_model_schemas.py (100% coverage of the schema layer)
+plus 9 unit tests in tests/unit/test_ml_models_routes_helpers.py cover
+the same surface in the meantime.
 """
 
 from __future__ import annotations
